@@ -1,4 +1,4 @@
-use std::iter::{Chain, Rev};
+use std::iter::Chain;
 use std::slice::Iter as SliceIter;
 
 #[derive(PartialEq,Debug)]
