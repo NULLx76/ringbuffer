@@ -1,5 +1,6 @@
 use std::iter::Chain;
 use std::slice::Iter as SliceIter;
+use std::slice::IterMut as SliceIterMut;
 
 #[derive(PartialEq,Debug)]
 pub struct RingBuffer<T> {
@@ -20,6 +21,7 @@ pub struct RingBuffer<T> {
 }
 
 pub type Iter<'a, T> = Chain<SliceIter<'a, T>, SliceIter<'a, T>>;
+pub type IterMut<'a, T> = Chain<SliceIterMut<'a, T>, SliceIterMut<'a, T>>;
 
 const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
@@ -37,7 +39,7 @@ impl<T> RingBuffer<T> {
 
     #[inline]
     pub fn new() -> Self {
-        RingBuffer::default()
+        Self::default()
     }
 
     #[inline]
@@ -78,16 +80,18 @@ impl<T> RingBuffer<T> {
     }
 
     #[inline]
+    pub fn iter_mut(&mut self) -> IterMut<T> {
+        let (l, r) = self.buf.split_at_mut(self.index);
+        r.iter_mut().chain(l.iter_mut())
+    }
+
+    #[inline]
     pub fn to_vec(&self) -> Vec<T>
     where
         T: Copy,
     {
         self.iter().map(|&e| e).collect()
     }
-    // TODO:
-    //    pub fn iter_mut(&self) -> IterMut<T> {
-    //        unimplemented!();
-    //    }
 }
 
 impl<T> Default for RingBuffer<T> {
@@ -209,6 +213,34 @@ mod tests {
         let mut iter = b.iter();
         assert_eq!(&2u32, iter.next().unwrap());
         assert_eq!(&3u32, iter.next().unwrap());
+    }
+
+    #[test]
+    fn test_iter_mut() {
+        let mut b = RingBuffer::<u32>::new();
+        b.push(1);
+        b.push(2);
+        b.push(3);
+
+        for el in  b.iter_mut() {
+            *el += 1;
+        }
+
+        assert_eq!(vec![2,3,4], b.to_vec())
+    }
+
+    #[test]
+    fn test_iter_mut_wrap() {
+        let mut b = RingBuffer::<u32>::with_capacity(2);
+        b.push(1);
+        b.push(2);
+        b.push(3);
+
+        for el in b.iter_mut() {
+            *el += 1;
+        }
+
+        assert_eq!(vec![3,4], b.to_vec())
     }
 
     #[test]
