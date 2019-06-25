@@ -2,23 +2,32 @@ use std::iter::{Chain, Rev};
 use std::slice::Iter as SliceIter;
 
 pub struct RingBuffer<T> {
+    #[cfg(not(test))]
     buf: Vec<T>,
-    capacity: usize,
+    #[cfg(not(test))]
+    cap: usize,
+    #[cfg(not(test))]
     index: usize,
+
+    // Make the fields public for testing purposes
+    #[cfg(test)]
+    pub buf: Vec<T>,
+    #[cfg(test)]
+    pub cap: usize,
+    #[cfg(test)]
+    pub index: usize,
 }
 
-pub type Iter<'a, T> = Chain<Rev<SliceIter<'a, T>>, Rev<SliceIter<'a, T>>>;
+pub type Iter<'a, T> = Chain<SliceIter<'a, T>, SliceIter<'a, T>>;
 
 impl<T> RingBuffer<T> {
     #[inline]
-    pub fn with_capacity(capacity: usize) -> Self {
-        if capacity < 1 {
-            panic!("Capacity needs to be at least 1")
-        }
+    pub fn with_capacity(cap: usize) -> Self {
+        assert!(cap > 0, "Capacity must be greater than zero");
 
         Self {
-            buf: Vec::with_capacity(capacity),
-            capacity,
+            buf: Vec::with_capacity(cap),
+            cap,
             index: 0,
         }
     }
@@ -41,7 +50,7 @@ impl<T> RingBuffer<T> {
 
     #[inline]
     pub fn capacity(&self) -> usize {
-        self.capacity
+        self.cap
     }
 
     pub fn push(&mut self, e: T) {
@@ -57,7 +66,7 @@ impl<T> RingBuffer<T> {
     #[inline]
     pub fn iter(&self) -> Iter<T> {
         let (l, r) = self.buf.split_at(self.index);
-        l.iter().rev().chain(r.iter().rev())
+        r.iter().chain(l.iter())
     }
 
     #[inline]
@@ -74,10 +83,12 @@ impl<T> RingBuffer<T> {
 }
 
 impl<T> Default for RingBuffer<T> {
+    #[inline]
     fn default() -> Self {
+        let cap = 1024;
         Self {
-            buf: Vec::with_capacity(4096),
-            capacity: 4096,
+            buf: Vec::with_capacity(cap),
+            cap,
             index: 0,
         }
     }
@@ -87,8 +98,20 @@ impl<T> Default for RingBuffer<T> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn test_default() {
+        let b: RingBuffer<u32> = RingBuffer::default();
+        assert_eq!(1024, b.capacity());
+        assert_eq!(1024, b.buf.capacity());
+        assert_eq!(b.cap, b.capacity());
+        assert_eq!(b.buf.len(), b.len());
+        assert_eq!(0, b.index);
+        assert!(b.is_empty());
+        assert!(b.buf.is_empty());
+        assert_eq!(0, b.iter().count());
+        assert_eq!(Vec::<u32>::with_capacity(1024), b.buf);
+        assert_eq!(Vec::<u32>::with_capacity(1024), b.to_vec());
     }
 }
