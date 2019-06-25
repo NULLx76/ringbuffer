@@ -1,6 +1,7 @@
 use std::iter::{Chain, Rev};
 use std::slice::Iter as SliceIter;
 
+#[derive(PartialEq,Debug)]
 pub struct RingBuffer<T> {
     #[cfg(not(test))]
     buf: Vec<T>,
@@ -32,6 +33,11 @@ impl<T> RingBuffer<T> {
             cap,
             index: 0,
         }
+    }
+
+    #[inline]
+    pub fn new() -> Self {
+        RingBuffer::default()
     }
 
     #[inline]
@@ -96,8 +102,6 @@ impl<T> Default for RingBuffer<T> {
     }
 }
 
-// TODO: Some tests
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,5 +119,116 @@ mod tests {
         assert_eq!(0, b.iter().count());
         assert_eq!(Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY), b.buf);
         assert_eq!(Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY), b.to_vec());
+    }
+
+    #[test]
+    fn test_default_eq_new() {
+        assert_eq!(RingBuffer::<u32>::default(), RingBuffer::<u32>::new())
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_no_empty() {
+        RingBuffer::<u32>::with_capacity(0);
+    }
+
+    #[test]
+    fn test_len() {
+        let mut b = RingBuffer::<u32>::new();
+        assert_eq!(0, b.len());
+        b.push(1);
+        assert_eq!(1, b.len());
+        b.push(2);
+        assert_eq!(2, b.len())
+    }
+
+    #[test]
+    fn test_len_wrap() {
+        let mut b = RingBuffer::<u32>::with_capacity(2);
+        assert_eq!(0, b.len());
+        b.push(1);
+        assert_eq!(1, b.len());
+        b.push(2);
+        assert_eq!(2, b.len());
+        // Now we are wrapping
+        b.push(3);
+        assert_eq!(2, b.len());
+        b.push(4);
+        assert_eq!(2, b.len());
+    }
+
+    #[test]
+    fn test_clear() {
+        let mut b = RingBuffer::<u32>::new();
+        b.push(1);
+        b.push(2);
+        b.push(3);
+
+        b.clear();
+        assert!(b.is_empty());
+        assert_eq!(0, b.len());
+        assert_eq!(0, b.buf.len());
+    }
+
+    #[test]
+    fn test_empty() {
+        let mut b = RingBuffer::<u32>::new();
+        assert!(b.is_empty());
+        b.push(1);
+        b.push(2);
+        b.push(3);
+        assert_ne!(b.is_empty(), true);
+
+        b.clear();
+        assert!(b.is_empty());
+        assert_eq!(0, b.len());
+        assert_eq!(0, b.buf.len());
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut b = RingBuffer::<u32>::new();
+        b.push(1);
+        b.push(2);
+        b.push(3);
+
+        let mut iter = b.iter();
+        assert_eq!(&1u32, iter.next().unwrap());
+        assert_eq!(&2u32, iter.next().unwrap());
+        assert_eq!(&3u32, iter.next().unwrap());
+    }
+
+    #[test]
+    fn test_iter_wrap() {
+        let mut b = RingBuffer::<u32>::with_capacity(2);
+        b.push(1);
+        b.push(2);
+        // Wrap
+        b.push(3);
+
+        let mut iter = b.iter();
+        assert_eq!(&2u32, iter.next().unwrap());
+        assert_eq!(&3u32, iter.next().unwrap());
+    }
+
+    #[test]
+    fn test_to_vec() {
+        let mut b = RingBuffer::<u32>::with_capacity(3);
+        b.push(1);
+        b.push(2);
+        b.push(3);
+
+        assert_eq!(vec![1,2,3], b.to_vec())
+    }
+
+    #[test]
+    fn test_to_vec_wrap() {
+        let mut b = RingBuffer::<u32>::with_capacity(2);
+        b.push(1);
+        b.push(2);
+        // Wrap
+        b.push(3);
+
+        assert_eq!(vec![2,3], b.to_vec())
     }
 }
