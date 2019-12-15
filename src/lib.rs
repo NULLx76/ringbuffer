@@ -1,7 +1,28 @@
 use std::iter::Chain;
 use std::slice::Iter as SliceIter;
 use std::slice::IterMut as SliceIterMut;
+use std::ops::{Index, IndexMut};
 
+/// The RingBuffer struct.
+///
+/// # Example
+/// ```
+/// use ringbuffer::RingBuffer;
+///
+/// let mut buffer = RingBuffer::with_capacity(2);
+///
+/// // First entry of the buffer is now 5.
+/// buffer.push(5);
+///
+/// assert_eq!(buffer[0], 5);
+///
+/// // Second entry is now 42.
+/// buffer.push(42);
+///
+/// // Because capacity is reached the next push will be the first item of the buffer.
+/// buffer.push(1);
+/// assert_eq!(buffer[0], 1);
+/// ```
 #[derive(PartialEq,Debug)]
 pub struct RingBuffer<T> {
     #[cfg(not(test))]
@@ -20,12 +41,19 @@ pub struct RingBuffer<T> {
     pub index: usize,
 }
 
+/// The type returned by
+/// [iter](struct.RingBuffer.html#method.iter).
 pub type Iter<'a, T> = Chain<SliceIter<'a, T>, SliceIter<'a, T>>;
+/// The type returned by
+/// [iter_mut](struct.RingBuffer.html#method.iter_mut).
 pub type IterMut<'a, T> = Chain<SliceIterMut<'a, T>, SliceIterMut<'a, T>>;
 
-const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
+/// The capacity of a RingBuffer created by new or default (`1024`).
+pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
 impl<T> RingBuffer<T> {
+
+    /// Creates a RingBuffer with a certain capacity.
     #[inline]
     pub fn with_capacity(cap: usize) -> Self {
         assert!(cap > 0, "Capacity must be greater than zero");
@@ -37,32 +65,38 @@ impl<T> RingBuffer<T> {
         }
     }
 
+    /// Creates a RingBuffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Returns the length of the internal buffer.
     #[inline]
     pub fn len(&self) -> usize {
         self.buf.len()
     }
 
+    /// Returns true if the buffer is empty, some value between 0 and capacity.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.buf.is_empty()
     }
 
+    /// Empties the buffer.
     #[inline]
     pub fn clear(&mut self) {
         self.buf.clear();
         self.index = 0;
     }
 
+    /// Returns the capacity of the buffer.
     #[inline]
     pub fn capacity(&self) -> usize {
         self.cap
     }
 
+    /// Pushes a value onto the buffer. Cycles around if capacity is reached.
     pub fn push(&mut self, e: T) {
         if self.buf.len() < self.capacity() {
             self.buf.push(e);
@@ -73,18 +107,27 @@ impl<T> RingBuffer<T> {
         self.index = (self.index + 1) % self.capacity()
     }
 
+    /// Returns the value at the current index.
+    /// This is the value that will be overwritten by the next push.
+    pub fn peek(&self) -> Option<&T> {
+        self.buf.get(self.index)
+    }
+
+    /// Creates an iterator over the buffer starting from the latest push.
     #[inline]
     pub fn iter(&self) -> Iter<T> {
         let (l, r) = self.buf.split_at(self.index);
         r.iter().chain(l.iter())
     }
 
+    ///  Creates a mutable iterator over the buffer starting from the latest push.
     #[inline]
     pub fn iter_mut(&mut self) -> IterMut<T> {
         let (l, r) = self.buf.split_at_mut(self.index);
         r.iter_mut().chain(l.iter_mut())
     }
 
+    /// Converts the buffer to an vector.
     #[inline]
     pub fn to_vec(&self) -> Vec<T>
     where
@@ -95,6 +138,8 @@ impl<T> RingBuffer<T> {
 }
 
 impl<T> Default for RingBuffer<T> {
+
+    /// Creates a buffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
     fn default() -> Self {
         let cap = RINGBUFFER_DEFAULT_CAPACITY;
@@ -103,6 +148,20 @@ impl<T> Default for RingBuffer<T> {
             cap,
             index: 0,
         }
+    }
+}
+
+impl<T> Index<usize> for RingBuffer<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.buf[index]
+    }
+}
+
+impl<T> IndexMut<usize> for RingBuffer<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.buf[index]
     }
 }
 
@@ -262,5 +321,51 @@ mod tests {
         b.push(3);
 
         assert_eq!(vec![2,3], b.to_vec())
+    }
+
+    #[test]
+    fn test_index() {
+        let mut b = RingBuffer::with_capacity(2);
+        b.push(2);
+
+        assert_eq!(b[0], 2)
+    }
+
+    #[test]
+    fn test_index_mut() {
+        let mut b = RingBuffer::with_capacity(2);
+        b.push(2);
+
+        assert_eq!(b[0], 2);
+
+        b[0] = 5;
+
+        assert_eq!(b[0], 5);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_index_bigger_than_length() {
+        let mut b = RingBuffer::with_capacity(2);
+        b.push(2);
+
+        b[2];
+    }
+
+    #[test]
+    fn test_peek_some() {
+        let mut b = RingBuffer::with_capacity(2);
+        b.push(1);
+        b.push(2);
+
+        assert_eq!(b.peek(),Some(&1));
+    }
+
+    #[test]
+    fn test_peek_none() {
+        let mut b = RingBuffer::with_capacity(2);
+        b.push(1);
+
+        assert_eq!(b.peek(),None);
     }
 }
