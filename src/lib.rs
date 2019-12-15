@@ -29,7 +29,7 @@ use alloc::vec::Vec;
 /// buffer.push(1);
 /// assert_eq!(buffer[0], 1);
 /// ```
-#[derive(PartialEq,Debug)]
+#[derive(PartialEq,Eq,Debug)]
 pub struct RingBuffer<T> {
     #[cfg(not(test))]
     buf: Vec<T>,
