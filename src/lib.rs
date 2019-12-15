@@ -1,7 +1,13 @@
-use std::iter::Chain;
-use std::slice::Iter as SliceIter;
-use std::slice::IterMut as SliceIterMut;
-use std::ops::{Index, IndexMut};
+#![no_std]
+
+use core::iter::Chain;
+use core::slice::Iter as SliceIter;
+use core::slice::IterMut as SliceIterMut;
+use core::ops::{Index, IndexMut};
+
+// We need vecs so depend on alloc
+extern crate alloc;
+use alloc::vec::Vec;
 
 /// The RingBuffer struct.
 ///
@@ -133,7 +139,7 @@ impl<T> RingBuffer<T> {
     where
         T: Copy,
     {
-        self.iter().map(|&e| e).collect()
+        self.iter().copied().collect()
     }
 }
 
@@ -168,6 +174,10 @@ impl<T> IndexMut<usize> for RingBuffer<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Enable std in tests
+    extern crate std;
+    use std::vec;
 
     #[test]
     fn test_default() {
