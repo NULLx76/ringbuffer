@@ -195,6 +195,12 @@ mod tests {
     }
 
     #[test]
+    fn test_default_capacity_constant() {
+        // This is to prevent accidentally changing it.
+        assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, 1024)
+    }
+
+    #[test]
     fn test_default_eq_new() {
         assert_eq!(RingBuffer::<u32>::default(), RingBuffer::<u32>::new())
     }
@@ -207,7 +213,7 @@ mod tests {
 
     #[test]
     fn test_len() {
-        let mut b = RingBuffer::<u32>::new();
+        let mut b = RingBuffer::new();
         assert_eq!(0, b.len());
         b.push(1);
         assert_eq!(1, b.len());
@@ -217,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_len_wrap() {
-        let mut b = RingBuffer::<u32>::with_capacity(2);
+        let mut b = RingBuffer::with_capacity(2);
         assert_eq!(0, b.len());
         b.push(1);
         assert_eq!(1, b.len());
@@ -232,7 +238,7 @@ mod tests {
 
     #[test]
     fn test_clear() {
-        let mut b = RingBuffer::<u32>::new();
+        let mut b = RingBuffer::new();
         b.push(1);
         b.push(2);
         b.push(3);
@@ -245,7 +251,7 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let mut b = RingBuffer::<u32>::new();
+        let mut b = RingBuffer::new();
         assert!(b.is_empty());
         b.push(1);
         b.push(2);
@@ -260,33 +266,33 @@ mod tests {
 
     #[test]
     fn test_iter() {
-        let mut b = RingBuffer::<u32>::new();
+        let mut b = RingBuffer::new();
         b.push(1);
         b.push(2);
         b.push(3);
 
         let mut iter = b.iter();
-        assert_eq!(&1u32, iter.next().unwrap());
-        assert_eq!(&2u32, iter.next().unwrap());
-        assert_eq!(&3u32, iter.next().unwrap());
+        assert_eq!(&1, iter.next().unwrap());
+        assert_eq!(&2, iter.next().unwrap());
+        assert_eq!(&3, iter.next().unwrap());
     }
 
     #[test]
     fn test_iter_wrap() {
-        let mut b = RingBuffer::<u32>::with_capacity(2);
+        let mut b = RingBuffer::with_capacity(2);
         b.push(1);
         b.push(2);
         // Wrap
         b.push(3);
 
         let mut iter = b.iter();
-        assert_eq!(&2u32, iter.next().unwrap());
-        assert_eq!(&3u32, iter.next().unwrap());
+        assert_eq!(&2, iter.next().unwrap());
+        assert_eq!(&3, iter.next().unwrap());
     }
 
     #[test]
     fn test_iter_mut() {
-        let mut b = RingBuffer::<u32>::new();
+        let mut b = RingBuffer::new();
         b.push(1);
         b.push(2);
         b.push(3);
@@ -300,7 +306,7 @@ mod tests {
 
     #[test]
     fn test_iter_mut_wrap() {
-        let mut b = RingBuffer::<u32>::with_capacity(2);
+        let mut b = RingBuffer::with_capacity(2);
         b.push(1);
         b.push(2);
         b.push(3);
@@ -314,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_to_vec() {
-        let mut b = RingBuffer::<u32>::with_capacity(3);
+        let mut b = RingBuffer::with_capacity(3);
         b.push(1);
         b.push(2);
         b.push(3);
@@ -324,7 +330,7 @@ mod tests {
 
     #[test]
     fn test_to_vec_wrap() {
-        let mut b = RingBuffer::<u32>::with_capacity(2);
+        let mut b = RingBuffer::with_capacity(2);
         b.push(1);
         b.push(2);
         // Wrap
