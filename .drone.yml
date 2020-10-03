@@ -8,7 +8,14 @@ steps:
     image: harbor.xirion.net/hub/xd009642/tarpaulin
     commands:
       - rustc --version && cargo --version
-      - cargo tarpaulin --out Xml --all-features
+      - cargo tarpaulin --features="generic_uninit"
+
+  - name: test_nightly
+    image: harbor.xirion.net/hub/xd009642/tarpaulin:0.14.3-nightly
+    commands:
+      - rustc --version && cargo --version
+      - cargo +nightly tarpaulin --out Xml --all-features
+
   - name: coverage
     image: harbor.xirion.net/hub/plugins/codecov
     settings:
