@@ -8,7 +8,7 @@ steps:
     image: harbor.xirion.net/hub/xd009642/tarpaulin
     commands:
       - rustc --version && cargo --version
-      - cargo tarpaulin --out Xml
+      - cargo tarpaulin --out Xml --all-features
   - name: coverage
     image: harbor.xirion.net/hub/plugins/codecov
     settings:
