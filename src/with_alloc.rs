@@ -112,8 +112,8 @@ impl<T> RingBuffer<T> {
     /// Converts the buffer to a vector.
     #[inline]
     pub fn to_vec(&self) -> Vec<T>
-        where
-            T: Copy,
+    where
+        T: Copy,
     {
         self.iter().copied().collect()
     }

@@ -1,13 +1,12 @@
 use core::ops::{Index, IndexMut};
 
-use generic_array::{GenericArray, ArrayLength};
-pub use generic_array::typenum;
 use core::marker::PhantomData;
+pub use generic_array::typenum;
+use generic_array::{ArrayLength, GenericArray};
 
-
-#[cfg(feature="alloc")]
+#[cfg(feature = "alloc")]
 extern crate alloc;
-#[cfg(feature="alloc")]
+#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
 /// The RingBuffer struct.
@@ -31,7 +30,7 @@ use alloc::vec::Vec;
 /// buffer.push(1);
 /// assert_eq!(buffer[0], 1);
 /// ```
-#[derive(PartialEq,Eq,Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct RingBuffer<T, Cap: ArrayLength<T>> {
     buf: GenericArray<T, Cap>,
     index: usize,
@@ -62,7 +61,7 @@ impl<T, Cap: ArrayLength<T>> Default for UninitExactIter<T, Cap> {
         Self {
             count: 0,
             phantom1: Default::default(),
-            phantom2: Default::default()
+            phantom2: Default::default(),
         }
     }
 }
@@ -74,9 +73,7 @@ impl<T, Cap: ArrayLength<T>> Iterator for UninitExactIter<T, Cap> {
         self.count += 1;
 
         if self.count <= Cap::to_usize() {
-            let elem = unsafe{
-                core::mem::MaybeUninit::<T>::uninit().assume_init()
-            };
+            let elem = unsafe { core::mem::MaybeUninit::<T>::uninit().assume_init() };
 
             Some(elem)
         } else {
@@ -85,7 +82,10 @@ impl<T, Cap: ArrayLength<T>> Iterator for UninitExactIter<T, Cap> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (Cap::to_usize() - self.count, Some(Cap::to_usize() - self.count))
+        (
+            Cap::to_usize() - self.count,
+            Some(Cap::to_usize() - self.count),
+        )
     }
 }
 
@@ -95,7 +95,6 @@ impl<T, Cap: ArrayLength<T>> ExactSizeIterator for UninitExactIter<T, Cap> {
     }
 }
 
-
 impl<T, Cap: ArrayLength<T>> RingBuffer<T, Cap> {
     /// Creates a new RingBuffer with uninitialized elements. This is unsafe because this relies on
     /// creating uninitialized memory. However, it is not inherently unsafe. The implementation makes
@@ -104,11 +103,12 @@ impl<T, Cap: ArrayLength<T>> RingBuffer<T, Cap> {
     /// Still it's recommended to use the `new`, `default` or `with_capacity` methods to create a
     /// RingBuffer, whenever the type T implements default.
     #[inline]
-    #[cfg(feature="generic_uninit")]
+    #[cfg(feature = "generic_uninit")]
     pub unsafe fn new_uninit() -> Self {
         Self {
-            buf: GenericArray::from_exact_iter(UninitExactIter::<T, Cap>::default())
-                .expect("UninitExactIter was made with Cap so must be the same size as the generic array."),
+            buf: GenericArray::from_exact_iter(UninitExactIter::<T, Cap>::default()).expect(
+                "UninitExactIter was made with Cap so must be the same size as the generic array.",
+            ),
             index: 0,
             length_counter: 0,
         }
@@ -174,17 +174,16 @@ impl<T, Cap: ArrayLength<T>> RingBuffer<T, Cap> {
 
     /// Converts the buffer to an vector.
     #[inline]
-    #[cfg(feature="alloc")]
-    pub fn to_vec(&self) -> alloc::vec::Vec<T>
-        where
-            T: Copy,
+    #[cfg(feature = "alloc")]
+    pub fn to_vec(&self) -> Vec<T>
+    where
+        T: Copy,
     {
         self.iter().copied().collect()
     }
 }
 
 impl<T: Default, Cap: ArrayLength<T>> Default for RingBuffer<T, Cap> {
-
     /// Creates a buffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
     fn default() -> Self {
@@ -193,7 +192,7 @@ impl<T: Default, Cap: ArrayLength<T>> Default for RingBuffer<T, Cap> {
         Self {
             buf: GenericArray::default(),
             index: 0,
-            length_counter: 0
+            length_counter: 0,
         }
     }
 }
@@ -216,7 +215,6 @@ impl<T, Cap: ArrayLength<T>> IndexMut<usize> for RingBuffer<T, Cap> {
 mod tests {
     use super::*;
 
-
     // Enable std in tests
     extern crate std;
     use std::vec;
@@ -235,10 +233,12 @@ mod tests {
         assert_eq!(b.len(), 0);
     }
 
-
     #[test]
     fn test_default_eq_new() {
-        assert_eq!(RingBuffer::<u32, typenum::U10>::default(), RingBuffer::<u32, typenum::U10>::new())
+        assert_eq!(
+            RingBuffer::<u32, typenum::U10>::default(),
+            RingBuffer::<u32, typenum::U10>::new()
+        )
     }
 
     #[test]
@@ -331,11 +331,11 @@ mod tests {
         b.push(2);
         b.push(3);
 
-        for el in  b.iter_mut() {
+        for el in b.iter_mut() {
             *el += 1;
         }
 
-        assert_eq!(vec![2,3,4], b.to_vec())
+        assert_eq!(vec![2, 3, 4], b.to_vec())
     }
 
     #[test]
@@ -349,7 +349,7 @@ mod tests {
             *el += 1;
         }
 
-        assert_eq!(vec![3,4], b.to_vec())
+        assert_eq!(vec![3, 4], b.to_vec())
     }
 
     #[test]
@@ -359,7 +359,7 @@ mod tests {
         b.push(2);
         b.push(3);
 
-        assert_eq!(vec![1,2,3], b.to_vec())
+        assert_eq!(vec![1, 2, 3], b.to_vec())
     }
 
     #[test]
@@ -370,7 +370,7 @@ mod tests {
         // Wrap
         b.push(3);
 
-        assert_eq!(vec![2,3], b.to_vec())
+        assert_eq!(vec![2, 3], b.to_vec())
     }
 
     #[test]
@@ -408,7 +408,7 @@ mod tests {
         b.push(1);
         b.push(2);
 
-        assert_eq!(b.peek(),Some(&1));
+        assert_eq!(b.peek(), Some(&1));
     }
 
     #[test]
@@ -416,7 +416,7 @@ mod tests {
         let mut b = RingBuffer::<_, typenum::U10>::new();
         b.push(1);
 
-        assert_eq!(b.peek(),None);
+        assert_eq!(b.peek(), None);
     }
 
     #[test]
