@@ -121,7 +121,7 @@ impl<T> RingBuffer<T> {
         r.iter_mut().chain(l.iter_mut())
     }
 
-    /// Converts the buffer to an vector.
+    /// Converts the buffer to a vector.
     #[inline]
     pub fn to_vec(&self) -> Vec<T>
     where
@@ -162,9 +162,8 @@ impl<T> IndexMut<usize> for RingBuffer<T> {
 mod tests {
     use super::*;
 
-    // Enable std in tests
-    extern crate std;
-    use std::vec;
+    // Use alloc in tests
+    use alloc::vec;
 
     #[test]
     fn test_default() {
