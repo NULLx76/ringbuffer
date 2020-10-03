@@ -1,6 +1,6 @@
 [package]
 name = "ringbuffer"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Victor Roest <victor@xirion.net>"]
 edition = "2018"
 description = "A fixed-size circular buffer"
