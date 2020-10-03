@@ -28,8 +28,8 @@ use core::mem::MaybeUninit;
 /// assert_eq!(buffer[0], 1);
 /// ```
 #[derive(PartialEq, Eq, Debug)]
-pub struct RingBuffer<T, const Cap: usize> {
-    buf: [T; Cap],
+pub struct RingBuffer<T, const CAP: usize> {
+    buf: [T; CAP],
     index: usize,
     length_counter: usize,
 }
@@ -37,7 +37,7 @@ pub struct RingBuffer<T, const Cap: usize> {
 /// It is only possible to create a Generic RingBuffer if the type T in it implements Default.
 /// This is because the array needs to be allocated at compile time, and needs to be filled with
 /// some default value to avoid unsafe.
-impl<T: Default, const Cap: usize> RingBuffer<T, Cap> {
+impl<T: Default, const CAP: usize> RingBuffer<T, CAP> {
     /// Creates a new RingBuffer. The method is here for compatibility with the alloc version of
     /// RingBuffer. This method simply creates a default ringbuffer. The capacity is given as a
     /// type parameter.
@@ -47,17 +47,22 @@ impl<T: Default, const Cap: usize> RingBuffer<T, Cap> {
     }
 }
 
-impl<T, const Cap: usize> RingBuffer<T, Cap> {
+impl<T, const CAP: usize> RingBuffer<T, CAP> {
     /// Creates a new RingBuffer with uninitialized elements. This is unsafe because this relies on
-    /// creating uninitialized memory. However, it is not inherently unsafe. The implementation makes
-    /// sure no uninitialized memory can *ever* be accessed through the RingBuffer struct.
+    /// creating uninitialized memory.
     ///
     /// Still it's recommended to use the `new`, `default` or `with_capacity` methods to create a
     /// RingBuffer, whenever the type T implements default.
+    ///
+    /// # Safety
+    ///
+    /// Using this function is not actually that unsafe, because the ringbuffer makes sure you have
+    /// to write to an unitialized element before you can read it by only moving the index forward
+    /// when you write. Therefore you can't ever accidentally read uninitialized memory.
     #[inline]
     #[cfg(feature = "generic_uninit")]
     pub unsafe fn new_uninit() -> Self {
-        let arr: [T; Cap] = MaybeUninit::uninit().assume_init();
+        let arr: [T; CAP] = MaybeUninit::uninit().assume_init();
 
         Self {
             buf: arr,
@@ -89,7 +94,7 @@ impl<T, const Cap: usize> RingBuffer<T, Cap> {
     #[inline]
     #[cfg(not(tarpaulin_include))]
     pub fn capacity(&self) -> usize {
-        Cap
+        CAP
     }
 
     /// Pushes a value onto the buffer. Cycles around if capacity is reached.
@@ -129,27 +134,25 @@ impl<T, const Cap: usize> RingBuffer<T, Cap> {
     #[inline]
     #[cfg(feature = "alloc")]
     pub fn to_vec(&self) -> Vec<T>
-        where
-            T: Copy,
+    where
+        T: Copy,
     {
         self.iter().copied().collect()
     }
 }
 
-impl<T: Default, const Cap: usize> Default for RingBuffer<T, Cap> {
+impl<T: Default, const CAP: usize> Default for RingBuffer<T, CAP> {
     /// Creates a buffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
     fn default() -> Self {
-        assert_ne!(Cap, 0);
+        assert_ne!(CAP, 0);
 
         // Requires unsafe block because currently it is impossible to create a const generic array
         // from Default elements that are not copy. All elements are initialized below and thus
         // it is impossible to actually access unitialized memory. Even if elements weren't initialized
         // (like with the new_uninit constructor), the RingBuffer makes sure it's never possible
         // to access elements that are not initialized.
-        let mut arr: [T; Cap] = unsafe {
-            MaybeUninit::uninit().assume_init()
-        };
+        let mut arr: [T; CAP] = unsafe { MaybeUninit::uninit().assume_init() };
 
         for i in &mut arr {
             *i = T::default()
@@ -163,16 +166,18 @@ impl<T: Default, const Cap: usize> Default for RingBuffer<T, Cap> {
     }
 }
 
-impl<T, const Cap: usize> Index<usize> for RingBuffer<T, Cap> {
+impl<T, const CAP: usize> Index<usize> for RingBuffer<T, CAP> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < self.length_counter);
         &self.buf[index]
     }
 }
 
-impl<T, const Cap: usize> IndexMut<usize> for RingBuffer<T, Cap> {
+impl<T, const CAP: usize> IndexMut<usize> for RingBuffer<T, CAP> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        assert!(index < self.length_counter);
         &mut self.buf[index]
     }
 }
@@ -402,5 +407,12 @@ mod tests {
 
         assert_eq!(b[0], 3);
         assert_eq!(b[1], 2);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_uninit_out_of_bounds() {
+        let mut b = unsafe { RingBuffer::<i32, 2>::new_uninit() };
+        b[0];
     }
 }
