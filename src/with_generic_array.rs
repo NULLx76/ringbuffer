@@ -6,9 +6,9 @@ use generic_array::{ArrayLength, GenericArray};
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
+use crate::RingBuffer;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-use crate::RingBuffer;
 
 /// The RingBuffer struct.
 ///
@@ -122,7 +122,6 @@ impl<T, Cap: ArrayLength<T>> GenericRingBuffer<T, Cap> {
     }
 }
 
-
 impl<T: Default, Cap: ArrayLength<T>> Default for GenericRingBuffer<T, Cap> {
     /// Creates a buffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
@@ -153,7 +152,9 @@ impl<T, Cap: ArrayLength<T>> IndexMut<usize> for GenericRingBuffer<T, Cap> {
     }
 }
 
-impl<'a, 'b,  T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<'a, 'b, T> for GenericRingBuffer<T, Cap> {
+impl<'a, 'b, T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<'a, 'b, T>
+    for GenericRingBuffer<T, Cap>
+{
     type Iter = core::iter::Chain<core::slice::Iter<'a, T>, core::slice::Iter<'a, T>>;
     type IterMut = core::iter::Chain<core::slice::IterMut<'b, T>, core::slice::IterMut<'b, T>>;
 

@@ -1,6 +1,6 @@
+use crate::RingBuffer;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
-use crate::RingBuffer;
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -73,7 +73,9 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     }
 }
 
-impl<'a, 'b,  T: 'static + Default, const CAP: usize> RingBuffer<'a, 'b, T> for ConstGenericRingBuffer<T, CAP> {
+impl<'a, 'b, T: 'static + Default, const CAP: usize> RingBuffer<'a, 'b, T>
+    for ConstGenericRingBuffer<T, CAP>
+{
     type Iter = core::iter::Chain<core::slice::Iter<'a, T>, core::slice::Iter<'a, T>>;
     type IterMut = core::iter::Chain<core::slice::IterMut<'b, T>, core::slice::IterMut<'b, T>>;
 
@@ -128,7 +130,6 @@ impl<'a, 'b,  T: 'static + Default, const CAP: usize> RingBuffer<'a, 'b, T> for 
         self.iter().collect()
     }
 }
-
 
 impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     /// Creates a buffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].

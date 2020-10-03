@@ -21,4 +21,3 @@ pub use with_generic_array::GenericRingBuffer;
 
 pub(crate) mod ringbuffer_trait;
 pub use ringbuffer_trait::RingBuffer;
-

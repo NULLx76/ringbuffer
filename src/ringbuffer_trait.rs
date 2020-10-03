@@ -1,4 +1,3 @@
-
 use core::ops::Index;
 
 #[cfg(feature = "alloc")]
@@ -45,7 +44,10 @@ pub trait RingBuffer<'a, 'b, T: 'static + Default>: Default + Index<usize> {
 
     /// Converts the buffer to an vector.
     #[cfg(feature = "alloc")]
-    fn to_vec(&self) -> Vec<T> where T: Clone {
+    fn to_vec(&self) -> Vec<T>
+    where
+        T: Clone,
+    {
         self.as_vec().into_iter().cloned().collect()
     }
 }
