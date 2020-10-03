@@ -1,9 +1,9 @@
 #![no_std]
 
 use core::iter::Chain;
+use core::ops::{Index, IndexMut};
 use core::slice::Iter as SliceIter;
 use core::slice::IterMut as SliceIterMut;
-use core::ops::{Index, IndexMut};
 
 // We need vecs so depend on alloc
 extern crate alloc;
@@ -29,7 +29,7 @@ use alloc::vec::Vec;
 /// buffer.push(1);
 /// assert_eq!(buffer[0], 1);
 /// ```
-#[derive(PartialEq,Eq,Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct RingBuffer<T> {
     #[cfg(not(test))]
     buf: Vec<T>,
@@ -58,7 +58,6 @@ pub type IterMut<'a, T> = Chain<SliceIterMut<'a, T>, SliceIterMut<'a, T>>;
 pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
 impl<T> RingBuffer<T> {
-
     /// Creates a RingBuffer with a certain capacity.
     #[inline]
     pub fn with_capacity(cap: usize) -> Self {
@@ -144,7 +143,6 @@ impl<T> RingBuffer<T> {
 }
 
 impl<T> Default for RingBuffer<T> {
-
     /// Creates a buffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
     fn default() -> Self {
@@ -190,8 +188,14 @@ mod tests {
         assert!(b.is_empty());
         assert!(b.buf.is_empty());
         assert_eq!(0, b.iter().count());
-        assert_eq!(Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY), b.buf);
-        assert_eq!(Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY), b.to_vec());
+        assert_eq!(
+            Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
+            b.buf
+        );
+        assert_eq!(
+            Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
+            b.to_vec()
+        );
     }
 
     #[test]
@@ -297,11 +301,11 @@ mod tests {
         b.push(2);
         b.push(3);
 
-        for el in  b.iter_mut() {
+        for el in b.iter_mut() {
             *el += 1;
         }
 
-        assert_eq!(vec![2,3,4], b.to_vec())
+        assert_eq!(vec![2, 3, 4], b.to_vec())
     }
 
     #[test]
@@ -315,7 +319,7 @@ mod tests {
             *el += 1;
         }
 
-        assert_eq!(vec![3,4], b.to_vec())
+        assert_eq!(vec![3, 4], b.to_vec())
     }
 
     #[test]
@@ -325,7 +329,7 @@ mod tests {
         b.push(2);
         b.push(3);
 
-        assert_eq!(vec![1,2,3], b.to_vec())
+        assert_eq!(vec![1, 2, 3], b.to_vec())
     }
 
     #[test]
@@ -336,7 +340,7 @@ mod tests {
         // Wrap
         b.push(3);
 
-        assert_eq!(vec![2,3], b.to_vec())
+        assert_eq!(vec![2, 3], b.to_vec())
     }
 
     #[test]
@@ -374,7 +378,7 @@ mod tests {
         b.push(1);
         b.push(2);
 
-        assert_eq!(b.peek(),Some(&1));
+        assert_eq!(b.peek(), Some(&1));
     }
 
     #[test]
@@ -382,6 +386,6 @@ mod tests {
         let mut b = RingBuffer::with_capacity(2);
         b.push(1);
 
-        assert_eq!(b.peek(),None);
+        assert_eq!(b.peek(), None);
     }
 }
