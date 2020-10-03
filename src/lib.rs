@@ -1,8 +1,8 @@
 #![no_std]
 
-#[cfg(not(feature = "alloc"))]
+#[cfg(feature = "alloc")]
 mod with_alloc;
-#[cfg(not(feature = "alloc"))]
+#[cfg(eature = "alloc")]
 pub use with_alloc::RingBuffer;
 
 mod with_generic_array;
