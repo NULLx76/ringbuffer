@@ -1,0 +1,11 @@
+---
+kind: pipeline
+type: kubernetes
+name: default
+
+steps:
+  - name: test
+    image: harbor.xirion.net/hub/library/rust
+    commands:
+      - rustc --version && cargo --version
+      - cargo test --all --verbose

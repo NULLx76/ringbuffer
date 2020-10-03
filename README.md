@@ -1,4 +1,6 @@
 # ringbuffer
+[![Drone (self-hosted)](https://img.shields.io/drone/build/0x76/ringbuffer?logo=drone&server=https%3A%2F%2Fdrone.xirion.net&style=for-the-badge)](https://drone.xirion.net/0x76/counter)
+[![MIT License](https://img.shields.io/badge/license-LGPL3-blue?style=for-the-badge)](./LICENSE)
 A fixed-size circular buffer written in Rust.
 
 # Usage
