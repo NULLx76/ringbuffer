@@ -37,7 +37,7 @@ pub struct AllocRingBuffer<T> {
 /// The capacity of a RingBuffer created by new or default (`1024`).
 pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
-impl<'a, 'b,  T: 'static + Default> RingBuffer<'a, 'b, T> for AllocRingBuffer<T> {
+impl<'a, 'b, T: 'static + Default> RingBuffer<'a, 'b, T> for AllocRingBuffer<T> {
     type Iter = core::iter::Chain<core::slice::Iter<'a, T>, core::slice::Iter<'a, T>>;
     type IterMut = core::iter::Chain<core::slice::IterMut<'b, T>, core::slice::IterMut<'b, T>>;
 
@@ -130,7 +130,6 @@ impl<T> AllocRingBuffer<T> {
 //     }
 // }
 
-
 impl<T> Default for AllocRingBuffer<T> {
     /// Creates a buffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
@@ -194,7 +193,10 @@ mod tests {
 
     #[test]
     fn test_default_eq_new() {
-        assert_eq!(AllocRingBuffer::<u32>::default(), AllocRingBuffer::<u32>::new())
+        assert_eq!(
+            AllocRingBuffer::<u32>::default(),
+            AllocRingBuffer::<u32>::new()
+        )
     }
 
     #[test]
