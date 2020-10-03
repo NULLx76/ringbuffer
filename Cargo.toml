@@ -12,3 +12,21 @@ license = "LGPL-3.0"
 [profile.release]
 opt-level = 3
 lto = true
+
+[dependencies]
+generic-array = {version = "0.14.4", optional = true}
+
+[features]
+default = ["alloc"]
+alloc = []
+generic = ["generic-array"]
+
+[[test]]
+name = "alloc"
+path = "src/alloc.rs"
+required-features = ["alloc"]
+
+[[test]]
+name = "generic"
+path = "src/generic.rs"
+required-features = ["generic"]
