@@ -14,14 +14,17 @@ opt-level = 3
 lto = true
 
 [dependencies]
-generic-array = {version = "0.14.4"}
+generic-array = {version = "0.14.4", optional=true}
 
 [features]
-default = ["alloc"]
+default = ["alloc", "generic-array"]
 # disable the alloc based ringbuffer, to make RingBuffers work in no_alloc environments
 alloc = []
 # enable to allow creating uninitialized RingBuffers when using the generic feature
 generic_uninit = []
+
+# enable the version of RingBuffer which uses the experimental const_generics feature of rust
+const_generics = []
 
 [[test]]
 name = "alloc"
