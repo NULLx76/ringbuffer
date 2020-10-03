@@ -31,20 +31,9 @@ use alloc::vec::Vec;
 /// ```
 #[derive(PartialEq, Eq, Debug)]
 pub struct RingBuffer<T> {
-    #[cfg(not(test))]
     buf: Vec<T>,
-    #[cfg(not(test))]
     cap: usize,
-    #[cfg(not(test))]
     index: usize,
-
-    // Make the fields public for testing purposes
-    #[cfg(test)]
-    pub buf: Vec<T>,
-    #[cfg(test)]
-    pub cap: usize,
-    #[cfg(test)]
-    pub index: usize,
 }
 
 /// The type returned by
