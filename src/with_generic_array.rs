@@ -97,11 +97,16 @@ impl<T, Cap: ArrayLength<T>> ExactSizeIterator for UninitExactIter<T, Cap> {
 
 impl<T, Cap: ArrayLength<T>> RingBuffer<T, Cap> {
     /// Creates a new RingBuffer with uninitialized elements. This is unsafe because this relies on
-    /// creating uninitialized memory. However, it is not inherently unsafe. The implementation makes
-    /// sure no uninitialized memory can *ever* be accessed through the RingBuffer struct.
+    /// creating uninitialized memory.
     ///
     /// Still it's recommended to use the `new`, `default` or `with_capacity` methods to create a
     /// RingBuffer, whenever the type T implements default.
+    ///
+    /// # Safety
+    ///
+    /// Using this function is not actually that unsafe, because the ringbuffer makes sure you have
+    /// to write to an unitialized element before you can read it by only moving the index forward
+    /// when you write. Therefore you can't ever accidentally read uninitialized memory.
     #[inline]
     #[cfg(feature = "generic_uninit")]
     pub unsafe fn new_uninit() -> Self {
@@ -201,12 +206,14 @@ impl<T, Cap: ArrayLength<T>> Index<usize> for RingBuffer<T, Cap> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < self.length_counter);
         &self.buf[index]
     }
 }
 
 impl<T, Cap: ArrayLength<T>> IndexMut<usize> for RingBuffer<T, Cap> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        assert!(index < self.length_counter);
         &mut self.buf[index]
     }
 }
@@ -448,5 +455,12 @@ mod tests {
         assert!(u.next().is_some());
         assert_eq!(u.size_hint(), (0, Some(0)));
         assert!(u.next().is_none());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_uninit_out_of_bounds() {
+        let mut b = unsafe { RingBuffer::<i32, typenum::U2>::new_uninit() };
+        b[0];
     }
 }
