@@ -1,14 +1,12 @@
 #![no_std]
 
-#[cfg(alloc)]
-mod alloc;
-#[cfg(alloc)]
-pub use alloc::RingBuffer;
+
+#[cfg(not(feature="alloc"))]
+mod with_alloc;
+#[cfg(not(feature="alloc"))]
+pub use with_alloc::RingBuffer;
 
 
-#[cfg(generic)]
-mod generic;
-#[cfg(generic)]
-pub use generic::{RingBuffer as GenericRingBuffer, typenum};
-#[cfg(generic)]
-pub use generic_array::ArrayLength;
+mod with_generic_array;
+pub use with_generic_array::RingBuffer as GenericRingBuffer;
+pub use generic_array::{ArrayLength, typenum};

@@ -14,19 +14,21 @@ opt-level = 3
 lto = true
 
 [dependencies]
-generic-array = {version = "0.14.4", optional = true}
+generic-array = {version = "0.14.4"}
 
 [features]
 default = ["alloc"]
+# disable the alloc based ringbuffer, to make RingBuffers work in no_alloc environments
 alloc = []
-generic = ["generic-array"]
+# enable to allow creating uninitialized RingBuffers when using the generic feature
+generic_uninit = []
 
 [[test]]
 name = "alloc"
-path = "src/alloc.rs"
-required-features = ["alloc"]
+path = "src/with_alloc.rs"
 
 [[test]]
-name = "generic"
-path = "src/generic.rs"
-required-features = ["generic"]
+name = "generic_array"
+path = "src/with_generic_array.rs"
+required-features = ["generic_uninit"]
+
