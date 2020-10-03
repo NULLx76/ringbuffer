@@ -1,19 +1,18 @@
+use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-use core::mem::MaybeUninit;
 
 /// The RingBuffer struct.
 ///
 /// # Example
 /// ```
-/// use ringbuffer::GenericRingBuffer;
-/// use ringbuffer::typenum;
+/// use ringbuffer::ConstGenericRingBuffer;
 ///
-/// let mut buffer = GenericRingBuffer::<_, typenum::U2>::new();
+/// let mut buffer = ConstGenericRingBuffer::<_, 2>::new();
 ///
 /// // First entry of the buffer is now 5.
 /// buffer.push(5);
