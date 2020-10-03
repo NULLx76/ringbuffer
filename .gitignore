@@ -10,3 +10,4 @@ Cargo.lock
 
 # Coverage
 cobertura.xml
+tarpaulin-report.html

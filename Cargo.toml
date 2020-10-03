@@ -26,11 +26,3 @@ generic_uninit = []
 # enable the version of RingBuffer which uses the experimental const_generics feature of rust
 const_generics = []
 
-[[test]]
-name = "alloc"
-path = "src/with_alloc.rs"
-
-[[test]]
-name = "generic_array"
-path = "src/with_generic_array.rs"
-required-features = ["generic_uninit"]

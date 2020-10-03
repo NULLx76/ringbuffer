@@ -1,3 +1,4 @@
+use crate::RingBuffer;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
 
@@ -11,6 +12,7 @@ use alloc::vec::Vec;
 /// # Example
 /// ```
 /// use ringbuffer::ConstGenericRingBuffer;
+/// use ringbuffer::RingBuffer;
 ///
 /// let mut buffer = ConstGenericRingBuffer::<_, 2>::new();
 ///
@@ -27,7 +29,7 @@ use alloc::vec::Vec;
 /// assert_eq!(buffer[0], 1);
 /// ```
 #[derive(PartialEq, Eq, Debug)]
-pub struct RingBuffer<T, const CAP: usize> {
+pub struct ConstGenericRingBuffer<T, const CAP: usize> {
     buf: [T; CAP],
     index: usize,
     length_counter: usize,
@@ -36,7 +38,7 @@ pub struct RingBuffer<T, const CAP: usize> {
 /// It is only possible to create a Generic RingBuffer if the type T in it implements Default.
 /// This is because the array needs to be allocated at compile time, and needs to be filled with
 /// some default value to avoid unsafe.
-impl<T: Default, const CAP: usize> RingBuffer<T, CAP> {
+impl<T: Default, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     /// Creates a new RingBuffer. The method is here for compatibility with the alloc version of
     /// RingBuffer. This method simply creates a default ringbuffer. The capacity is given as a
     /// type parameter.
@@ -46,7 +48,7 @@ impl<T: Default, const CAP: usize> RingBuffer<T, CAP> {
     }
 }
 
-impl<T, const CAP: usize> RingBuffer<T, CAP> {
+impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     /// Creates a new RingBuffer with uninitialized elements. This is unsafe because this relies on
     /// creating uninitialized memory.
     ///
@@ -69,35 +71,32 @@ impl<T, const CAP: usize> RingBuffer<T, CAP> {
             length_counter: 0,
         }
     }
+}
 
-    /// Returns the length of the internal buffer.
+impl<'a, 'b, T: 'static + Default, const CAP: usize> RingBuffer<'a, 'b, T>
+    for ConstGenericRingBuffer<T, CAP>
+{
+    type Iter = core::iter::Chain<core::slice::Iter<'a, T>, core::slice::Iter<'a, T>>;
+    type IterMut = core::iter::Chain<core::slice::IterMut<'b, T>, core::slice::IterMut<'b, T>>;
+
     #[inline]
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.length_counter
     }
 
-    /// Returns true if the buffer is empty, some value between 0 and capacity.
     #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.length_counter == 0
-    }
-
-    /// Empties the buffer.
-    #[inline]
-    pub fn clear(&mut self) {
+    fn clear(&mut self) {
         self.index = 0;
         self.length_counter = 0;
     }
 
-    /// Returns the capacity of the buffer.
     #[inline]
     #[cfg(not(tarpaulin_include))]
-    pub fn capacity(&self) -> usize {
+    fn capacity(&self) -> usize {
         CAP
     }
 
-    /// Pushes a value onto the buffer. Cycles around if capacity is reached.
-    pub fn push(&mut self, e: T) {
+    fn push(&mut self, e: T) {
         self.buf[self.index] = e;
         if self.length_counter < self.capacity() {
             self.length_counter += 1
@@ -105,9 +104,8 @@ impl<T, const CAP: usize> RingBuffer<T, CAP> {
         self.index = (self.index + 1) % self.capacity()
     }
 
-    /// Returns the value at the current index.
-    /// This is the value that will be overwritten by the next push.
-    pub fn peek(&self) -> Option<&T> {
+    #[inline]
+    fn peek(&self) -> Option<&T> {
         if self.index >= self.len() {
             None
         } else {
@@ -115,32 +113,25 @@ impl<T, const CAP: usize> RingBuffer<T, CAP> {
         }
     }
 
-    /// Creates an iterator over the buffer starting from the latest push.
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
+    fn iter(&'a self) -> Self::Iter {
         let (l, r) = self.buf[0..self.length_counter].split_at(self.index);
         r.iter().chain(l.iter())
     }
 
-    ///  Creates a mutable iterator over the buffer starting from the latest push.
     #[inline]
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+    fn iter_mut(&'b mut self) -> Self::IterMut {
         let (l, r) = self.buf[0..self.length_counter].split_at_mut(self.index);
         r.iter_mut().chain(l.iter_mut())
     }
 
-    /// Converts the buffer to an vector.
     #[inline]
-    #[cfg(feature = "alloc")]
-    pub fn to_vec(&self) -> Vec<T>
-    where
-        T: Copy,
-    {
-        self.iter().copied().collect()
+    fn as_vec(&self) -> Vec<&T> {
+        self.iter().collect()
     }
 }
 
-impl<T: Default, const CAP: usize> Default for RingBuffer<T, CAP> {
+impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     /// Creates a buffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
     fn default() -> Self {
@@ -165,7 +156,7 @@ impl<T: Default, const CAP: usize> Default for RingBuffer<T, CAP> {
     }
 }
 
-impl<T, const CAP: usize> Index<usize> for RingBuffer<T, CAP> {
+impl<T, const CAP: usize> Index<usize> for ConstGenericRingBuffer<T, CAP> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -174,7 +165,7 @@ impl<T, const CAP: usize> Index<usize> for RingBuffer<T, CAP> {
     }
 }
 
-impl<T, const CAP: usize> IndexMut<usize> for RingBuffer<T, CAP> {
+impl<T, const CAP: usize> IndexMut<usize> for ConstGenericRingBuffer<T, CAP> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         assert!(index < self.length_counter);
         &mut self.buf[index]
@@ -191,14 +182,14 @@ mod tests {
 
     #[test]
     fn test_default() {
-        let b: RingBuffer<i32, 10> = RingBuffer::default();
+        let b: ConstGenericRingBuffer<i32, 10> = ConstGenericRingBuffer::default();
         assert_eq!(b.capacity(), 10);
         assert_eq!(b.len(), 0);
     }
 
     #[test]
     fn test_new() {
-        let b: RingBuffer<i32, 10> = RingBuffer::new();
+        let b: ConstGenericRingBuffer<i32, 10> = ConstGenericRingBuffer::new();
         assert_eq!(b.capacity(), 10);
         assert_eq!(b.len(), 0);
     }
@@ -206,20 +197,20 @@ mod tests {
     #[test]
     fn test_default_eq_new() {
         assert_eq!(
-            RingBuffer::<u32, 10>::default(),
-            RingBuffer::<u32, 10>::new()
+            ConstGenericRingBuffer::<u32, 10>::default(),
+            ConstGenericRingBuffer::<u32, 10>::new()
         )
     }
 
     #[test]
     #[should_panic]
     fn test_no_empty() {
-        RingBuffer::<u32, 0>::new();
+        ConstGenericRingBuffer::<u32, 0>::new();
     }
 
     #[test]
     fn test_len() {
-        let mut b = RingBuffer::<_, 10>::new();
+        let mut b = ConstGenericRingBuffer::<_, 10>::new();
         assert_eq!(0, b.len());
         b.push(1);
         assert_eq!(1, b.len());
@@ -229,7 +220,7 @@ mod tests {
 
     #[test]
     fn test_len_wrap() {
-        let mut b = RingBuffer::<_, 2>::new();
+        let mut b = ConstGenericRingBuffer::<_, 2>::new();
         assert_eq!(0, b.len());
         b.push(1);
         assert_eq!(1, b.len());
@@ -244,7 +235,7 @@ mod tests {
 
     #[test]
     fn test_clear() {
-        let mut b = RingBuffer::<_, 10>::new();
+        let mut b = ConstGenericRingBuffer::<_, 10>::new();
         b.push(1);
         b.push(2);
         b.push(3);
@@ -256,7 +247,7 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let mut b = RingBuffer::<_, 10>::new();
+        let mut b = ConstGenericRingBuffer::<_, 10>::new();
         assert!(b.is_empty());
         b.push(1);
         b.push(2);
@@ -270,7 +261,7 @@ mod tests {
 
     #[test]
     fn test_iter() {
-        let mut b = RingBuffer::<_, 10>::new();
+        let mut b = ConstGenericRingBuffer::<_, 10>::new();
         b.push(1);
         b.push(2);
         b.push(3);
@@ -283,7 +274,7 @@ mod tests {
 
     #[test]
     fn test_iter_wrap() {
-        let mut b = RingBuffer::<_, 2>::new();
+        let mut b = ConstGenericRingBuffer::<_, 2>::new();
         b.push(1);
         b.push(2);
         // Wrap
@@ -296,7 +287,7 @@ mod tests {
 
     #[test]
     fn test_iter_mut() {
-        let mut b = RingBuffer::<_, 10>::new();
+        let mut b = ConstGenericRingBuffer::<_, 10>::new();
         b.push(1);
         b.push(2);
         b.push(3);
@@ -310,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_iter_mut_wrap() {
-        let mut b = RingBuffer::<_, 2>::new();
+        let mut b = ConstGenericRingBuffer::<_, 2>::new();
         b.push(1);
         b.push(2);
         b.push(3);
@@ -324,7 +315,7 @@ mod tests {
 
     #[test]
     fn test_to_vec() {
-        let mut b = RingBuffer::<_, 10>::new();
+        let mut b = ConstGenericRingBuffer::<_, 10>::new();
         b.push(1);
         b.push(2);
         b.push(3);
@@ -334,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_to_vec_wrap() {
-        let mut b = RingBuffer::<_, 2>::new();
+        let mut b = ConstGenericRingBuffer::<_, 2>::new();
         b.push(1);
         b.push(2);
         // Wrap
@@ -345,7 +336,7 @@ mod tests {
 
     #[test]
     fn test_index() {
-        let mut b = RingBuffer::<_, 10>::new();
+        let mut b = ConstGenericRingBuffer::<_, 10>::new();
         b.push(2);
 
         assert_eq!(b[0], 2)
@@ -353,7 +344,7 @@ mod tests {
 
     #[test]
     fn test_index_mut() {
-        let mut b = RingBuffer::<_, 10>::new();
+        let mut b = ConstGenericRingBuffer::<_, 10>::new();
         b.push(2);
 
         assert_eq!(b[0], 2);
@@ -366,7 +357,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_index_bigger_than_length() {
-        let mut b = RingBuffer::<_, 2>::new();
+        let mut b = ConstGenericRingBuffer::<_, 2>::new();
         b.push(2);
 
         b[2];
@@ -374,7 +365,7 @@ mod tests {
 
     #[test]
     fn test_peek_some() {
-        let mut b = RingBuffer::<_, 2>::new();
+        let mut b = ConstGenericRingBuffer::<_, 2>::new();
         b.push(1);
         b.push(2);
 
@@ -383,7 +374,7 @@ mod tests {
 
     #[test]
     fn test_peek_none() {
-        let mut b = RingBuffer::<_, 10>::new();
+        let mut b = ConstGenericRingBuffer::<_, 10>::new();
         b.push(1);
 
         assert_eq!(b.peek(), None);
@@ -391,7 +382,7 @@ mod tests {
 
     #[test]
     fn test_uninit() {
-        let mut b = unsafe { RingBuffer::<_, 2>::new_uninit() };
+        let mut b = unsafe { ConstGenericRingBuffer::<_, 2>::new_uninit() };
         assert_eq!(b.peek(), None);
 
         assert_eq!(b.len(), 0);
@@ -411,7 +402,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_uninit_out_of_bounds() {
-        let mut b = unsafe { RingBuffer::<i32, 2>::new_uninit() };
+        let b = unsafe { ConstGenericRingBuffer::<i32, 2>::new_uninit() };
         b[0];
     }
 }
