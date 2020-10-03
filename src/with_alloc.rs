@@ -1,5 +1,7 @@
 use core::ops::{Index, IndexMut};
 
+use crate::ringbuffer_trait::RingBuffer;
+
 extern crate alloc;
 // We need vecs so depend on alloc
 use alloc::vec::Vec;
@@ -8,9 +10,10 @@ use alloc::vec::Vec;
 ///
 /// # Example
 /// ```
+/// use ringbuffer::AllocRingBuffer;
 /// use ringbuffer::RingBuffer;
 ///
-/// let mut buffer = RingBuffer::with_capacity(2);
+/// let mut buffer = AllocRingBuffer::with_capacity(2);
 ///
 /// // First entry of the buffer is now 5.
 /// buffer.push(5);
@@ -25,7 +28,7 @@ use alloc::vec::Vec;
 /// assert_eq!(buffer[0], 1);
 /// ```
 #[derive(PartialEq, Eq, Debug)]
-pub struct RingBuffer<T> {
+pub struct AllocRingBuffer<T> {
     buf: Vec<T>,
     cap: usize,
     index: usize,
@@ -34,7 +37,60 @@ pub struct RingBuffer<T> {
 /// The capacity of a RingBuffer created by new or default (`1024`).
 pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
-impl<T> RingBuffer<T> {
+impl<'a, 'b,  T: 'static + Default> RingBuffer<'a, 'b, T> for AllocRingBuffer<T> {
+    type Iter = core::iter::Chain<core::slice::Iter<'a, T>, core::slice::Iter<'a, T>>;
+    type IterMut = core::iter::Chain<core::slice::IterMut<'b, T>, core::slice::IterMut<'b, T>>;
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.buf.len()
+    }
+
+    #[inline]
+    fn clear(&mut self) {
+        self.buf.clear();
+        self.index = 0;
+    }
+
+    #[inline]
+    fn capacity(&self) -> usize {
+        self.cap
+    }
+
+    fn push(&mut self, e: T) {
+        if self.buf.len() < self.capacity() {
+            self.buf.push(e);
+        } else {
+            self.buf[self.index] = e;
+        }
+
+        self.index = (self.index + 1) % self.capacity()
+    }
+
+    #[inline]
+    fn peek(&self) -> Option<&T> {
+        self.buf.get(self.index)
+    }
+
+    #[inline]
+    fn iter(&'a self) -> Self::Iter {
+        let (l, r) = self.buf.split_at(self.index);
+        r.iter().chain(l.iter())
+    }
+
+    #[inline]
+    fn iter_mut(&'b mut self) -> Self::IterMut {
+        let (l, r) = self.buf.split_at_mut(self.index);
+        r.iter_mut().chain(l.iter_mut())
+    }
+
+    #[inline]
+    fn as_vec(&self) -> Vec<&T> {
+        self.iter().collect()
+    }
+}
+
+impl<T> AllocRingBuffer<T> {
     /// Creates a RingBuffer with a certain capacity.
     #[inline]
     pub fn with_capacity(cap: usize) -> Self {
@@ -52,74 +108,30 @@ impl<T> RingBuffer<T> {
     pub fn new() -> Self {
         Self::default()
     }
-
-    /// Returns the length of the internal buffer.
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.buf.len()
-    }
-
-    /// Returns true if the buffer is empty, some value between 0 and capacity.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.buf.is_empty()
-    }
-
-    /// Empties the buffer.
-    #[inline]
-    pub fn clear(&mut self) {
-        self.buf.clear();
-        self.index = 0;
-    }
-
-    /// Returns the capacity of the buffer.
-    #[inline]
-    pub fn capacity(&self) -> usize {
-        self.cap
-    }
-
-    /// Pushes a value onto the buffer. Cycles around if capacity is reached.
-    pub fn push(&mut self, e: T) {
-        if self.buf.len() < self.capacity() {
-            self.buf.push(e);
-        } else {
-            self.buf[self.index] = e;
-        }
-
-        self.index = (self.index + 1) % self.capacity()
-    }
-
-    /// Returns the value at the current index.
-    /// This is the value that will be overwritten by the next push.
-    pub fn peek(&self) -> Option<&T> {
-        self.buf.get(self.index)
-    }
-
-    /// Creates an iterator over the buffer starting from the latest push.
-    #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
-        let (l, r) = self.buf.split_at(self.index);
-        r.iter().chain(l.iter())
-    }
-
-    ///  Creates a mutable iterator over the buffer starting from the latest push.
-    #[inline]
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
-        let (l, r) = self.buf.split_at_mut(self.index);
-        r.iter_mut().chain(l.iter_mut())
-    }
-
-    /// Converts the buffer to a vector.
-    #[inline]
-    pub fn to_vec(&self) -> Vec<T>
-    where
-        T: Copy,
-    {
-        self.iter().copied().collect()
-    }
 }
 
-impl<T> Default for RingBuffer<T> {
+// impl<T: Clone> IntoIterator for AllocRingBuffer<T> {
+//     type Item = T;
+//     type IntoIter = core::iter::Chain<core::slice::Iter<'_, T>, core::slice::Iter<'_, T>>;
+//
+//     fn into_iter(mut self) -> Self::IntoIter {
+//         if self.index > self.cap / 2 {
+//             // left owned, copy right
+//             let r = self.buf[self.index..].iter().cloned();
+//             self.buf.truncate(self.index);
+//
+//             self.buf.into_iter().chain(r)
+//         } else {
+//             // right owned, copy left
+//             let l = self.buf[..self.index].iter().cloned();
+//             let r = self.buf.into_iter().skip(self.index);
+//             r.chain(l)
+//         }
+//     }
+// }
+
+
+impl<T> Default for AllocRingBuffer<T> {
     /// Creates a buffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
     fn default() -> Self {
@@ -132,7 +144,7 @@ impl<T> Default for RingBuffer<T> {
     }
 }
 
-impl<T> Index<usize> for RingBuffer<T> {
+impl<T> Index<usize> for AllocRingBuffer<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -140,7 +152,7 @@ impl<T> Index<usize> for RingBuffer<T> {
     }
 }
 
-impl<T> IndexMut<usize> for RingBuffer<T> {
+impl<T> IndexMut<usize> for AllocRingBuffer<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.buf[index]
     }
@@ -155,7 +167,7 @@ mod tests {
 
     #[test]
     fn test_default() {
-        let b: RingBuffer<u32> = RingBuffer::default();
+        let b: AllocRingBuffer<u32> = AllocRingBuffer::default();
         assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.capacity());
         assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.buf.capacity());
         assert_eq!(b.cap, b.capacity());
@@ -182,18 +194,18 @@ mod tests {
 
     #[test]
     fn test_default_eq_new() {
-        assert_eq!(RingBuffer::<u32>::default(), RingBuffer::<u32>::new())
+        assert_eq!(AllocRingBuffer::<u32>::default(), AllocRingBuffer::<u32>::new())
     }
 
     #[test]
     #[should_panic]
     fn test_no_empty() {
-        RingBuffer::<u32>::with_capacity(0);
+        AllocRingBuffer::<u32>::with_capacity(0);
     }
 
     #[test]
     fn test_len() {
-        let mut b = RingBuffer::new();
+        let mut b = AllocRingBuffer::new();
         assert_eq!(0, b.len());
         b.push(1);
         assert_eq!(1, b.len());
@@ -203,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_len_wrap() {
-        let mut b = RingBuffer::with_capacity(2);
+        let mut b = AllocRingBuffer::with_capacity(2);
         assert_eq!(0, b.len());
         b.push(1);
         assert_eq!(1, b.len());
@@ -218,7 +230,7 @@ mod tests {
 
     #[test]
     fn test_clear() {
-        let mut b = RingBuffer::new();
+        let mut b = AllocRingBuffer::new();
         b.push(1);
         b.push(2);
         b.push(3);
@@ -231,7 +243,7 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let mut b = RingBuffer::new();
+        let mut b = AllocRingBuffer::new();
         assert!(b.is_empty());
         b.push(1);
         b.push(2);
@@ -246,7 +258,7 @@ mod tests {
 
     #[test]
     fn test_iter() {
-        let mut b = RingBuffer::new();
+        let mut b = AllocRingBuffer::new();
         b.push(1);
         b.push(2);
         b.push(3);
@@ -258,8 +270,26 @@ mod tests {
     }
 
     #[test]
+    fn test_double_iter() {
+        let mut b = AllocRingBuffer::new();
+        b.push(1);
+        b.push(2);
+        b.push(3);
+
+        let mut iter1 = b.iter();
+        let mut iter2 = b.iter();
+
+        assert_eq!(&1, iter1.next().unwrap());
+        assert_eq!(&2, iter1.next().unwrap());
+        assert_eq!(&3, iter1.next().unwrap());
+        assert_eq!(&1, iter2.next().unwrap());
+        assert_eq!(&2, iter2.next().unwrap());
+        assert_eq!(&3, iter2.next().unwrap());
+    }
+
+    #[test]
     fn test_iter_wrap() {
-        let mut b = RingBuffer::with_capacity(2);
+        let mut b = AllocRingBuffer::with_capacity(2);
         b.push(1);
         b.push(2);
         // Wrap
@@ -272,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_iter_mut() {
-        let mut b = RingBuffer::new();
+        let mut b = AllocRingBuffer::new();
         b.push(1);
         b.push(2);
         b.push(3);
@@ -286,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_iter_mut_wrap() {
-        let mut b = RingBuffer::with_capacity(2);
+        let mut b = AllocRingBuffer::with_capacity(2);
         b.push(1);
         b.push(2);
         b.push(3);
@@ -300,7 +330,7 @@ mod tests {
 
     #[test]
     fn test_to_vec() {
-        let mut b = RingBuffer::with_capacity(3);
+        let mut b = AllocRingBuffer::with_capacity(3);
         b.push(1);
         b.push(2);
         b.push(3);
@@ -310,7 +340,7 @@ mod tests {
 
     #[test]
     fn test_to_vec_wrap() {
-        let mut b = RingBuffer::with_capacity(2);
+        let mut b = AllocRingBuffer::with_capacity(2);
         b.push(1);
         b.push(2);
         // Wrap
@@ -321,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_index() {
-        let mut b = RingBuffer::with_capacity(2);
+        let mut b = AllocRingBuffer::with_capacity(2);
         b.push(2);
 
         assert_eq!(b[0], 2)
@@ -329,7 +359,7 @@ mod tests {
 
     #[test]
     fn test_index_mut() {
-        let mut b = RingBuffer::with_capacity(2);
+        let mut b = AllocRingBuffer::with_capacity(2);
         b.push(2);
 
         assert_eq!(b[0], 2);
@@ -342,7 +372,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_index_bigger_than_length() {
-        let mut b = RingBuffer::with_capacity(2);
+        let mut b = AllocRingBuffer::with_capacity(2);
         b.push(2);
 
         b[2];
@@ -350,7 +380,7 @@ mod tests {
 
     #[test]
     fn test_peek_some() {
-        let mut b = RingBuffer::with_capacity(2);
+        let mut b = AllocRingBuffer::with_capacity(2);
         b.push(1);
         b.push(2);
 
@@ -359,7 +389,7 @@ mod tests {
 
     #[test]
     fn test_peek_none() {
-        let mut b = RingBuffer::with_capacity(2);
+        let mut b = AllocRingBuffer::with_capacity(2);
         b.push(1);
 
         assert_eq!(b.peek(), None);
