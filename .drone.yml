@@ -1,0 +1,17 @@
+---
+kind: pipeline
+type: kubernetes
+name: default
+
+steps:
+  - name: test
+    image: harbor.xirion.net/hub/xd009642/tarpaulin
+    commands:
+      - rustc --version && cargo --version
+      - cargo tarpaulin --out Xml
+  - name: coverage
+    image: harbor.xirion.net/hub/plugins/codecov
+    settings:
+      token:
+        from_secret: codecov_token
+      files: [ cobertura.xml ]

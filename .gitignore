@@ -6,3 +6,7 @@ Cargo.lock
 # Editors
 .idea
 *.iml
+*.swp
+
+# Coverage
+cobertura.xml
