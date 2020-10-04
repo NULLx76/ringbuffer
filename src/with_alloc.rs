@@ -184,6 +184,6 @@ mod tests {
     #[should_panic]
     fn test_index_zero_length() {
         let b = AllocRingBuffer::<i32>::with_capacity(2);
-        b[2];
+        let _ = b[2];
     }
 }
