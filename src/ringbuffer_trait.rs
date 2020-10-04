@@ -50,7 +50,8 @@ pub trait RingBuffer<T: 'static + Default>:
     /// Gets a value relative to the current index mutably. 0 is the next index to be written to with push.
     /// -1 and down are the last elements pushed and 0 and up are the items that were pushed the longest ago.
     ///
-    /// get_mut is used to implement [`iter_mut`](Self::iter_mut). It requires that for indices in the range
+    /// # Safety
+    /// get_mut_impl is used to implement [`iter_mut`](Self::iter_mut). It requires that for indices in the range
     /// 0..self.len(), every reference ***MUST ONLY BE RETURNED ONCE***. Any sane implementation of
     /// get_mut does this anyway, but failing to do so results in the possibility to have multiple multiple
     /// references to data inside the ringbuffer. (as per issue #25) This function is unsafe precisely because
