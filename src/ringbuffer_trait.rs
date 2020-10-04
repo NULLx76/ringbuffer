@@ -5,7 +5,6 @@ extern crate alloc;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use core::iter::FromIterator;
-use core::marker::PhantomData;
 
 // TODO: Remove Default <Issue #13>
 pub trait RingBuffer<T: 'static + Default>:
@@ -85,25 +84,15 @@ pub trait RingBuffer<T: 'static + Default>:
     }
 
     /// Creates an iterator over the buffer starting from the latest push.
-    #[cfg(not(tarpaulin_include))]
     #[inline]
     fn iter(&self) -> RingBufferIterator<T, Self> {
-        RingBufferIterator {
-            obj: &self,
-            index: 0,
-            phantom: Default::default(),
-        }
+        RingBufferIterator::new(self)
     }
 
     ///  Creates a mutable iterator over the buffer starting from the latest push.
-    #[cfg(not(tarpaulin_include))]
     #[inline]
     fn iter_mut(&mut self) -> RingBufferMutIterator<T, Self> {
-        RingBufferMutIterator {
-            obj: self,
-            index: 0,
-            phantom: Default::default(),
-        }
+        RingBufferMutIterator::new(self)
     }
 
     /// Converts the buffer to an vector.
@@ -124,55 +113,84 @@ pub trait RingBuffer<T: 'static + Default>:
     }
 }
 
-pub struct RingBufferIterator<'rb, T: 'static + Default, RB: RingBuffer<T>> {
-    obj: &'rb RB,
-    index: usize,
-    phantom: PhantomData<T>,
-}
+mod iter {
+    use crate::RingBuffer;
+    use core::marker::PhantomData;
 
-impl<'rb, T: 'static + Default, RB: RingBuffer<T>> Iterator for RingBufferIterator<'rb, T, RB> {
-    type Item = &'rb T;
+    pub struct RingBufferIterator<'rb, T: 'static + Default, RB: RingBuffer<T>> {
+        obj: &'rb RB,
+        index: usize,
+        phantom: PhantomData<T>,
+    }
 
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.obj.len() {
-            let res = self.obj.get(self.index as isize);
-            self.index += 1;
-            res
-        } else {
-            None
+    impl<'rb, T: 'static + Default, RB: RingBuffer<T>> RingBufferIterator<'rb, T, RB> {
+        #[inline]
+        pub fn new(obj: &'rb RB) -> Self {
+            Self {
+                obj,
+                index: 0,
+                phantom: Default::default(),
+            }
+        }
+    }
+
+    impl<'rb, T: 'static + Default, RB: RingBuffer<T>> Iterator for RingBufferIterator<'rb, T, RB> {
+        type Item = &'rb T;
+
+        #[inline]
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.index < self.obj.len() {
+                let res = self.obj.get(self.index as isize);
+                self.index += 1;
+                res
+            } else {
+                None
+            }
+        }
+    }
+
+    pub struct RingBufferMutIterator<'rb, T: 'static + Default, RB: RingBuffer<T>> {
+        obj: &'rb mut RB,
+        index: usize,
+        phantom: PhantomData<T>,
+    }
+
+    impl<'rb, T: 'static + Default, RB: RingBuffer<T>> RingBufferMutIterator<'rb, T, RB> {
+        #[inline]
+        pub fn new(obj: &'rb mut RB) -> Self {
+            Self {
+                obj,
+                index: 0,
+                phantom: Default::default(),
+            }
+        }
+    }
+
+    impl<'rb, T: 'static + Default, RB: RingBuffer<T>> Iterator for RingBufferMutIterator<'rb, T, RB> {
+        type Item = &'rb mut T;
+
+        #[inline]
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.index < self.obj.len() {
+                let res: Option<&'_ mut T> = self.obj.get_mut(self.index as isize);
+                self.index += 1;
+
+                // Safety:
+                // This mem transmute is extending the lifetime of the returned value.
+                // This is necessary because the rust borrow checker is too restrictive in giving out mutable references.
+                // It thinks the iterator can give out a mutable reference, while it's also possible to mutably borrow
+                // `obj` in the RingBufferMutIterator struct. This is however *never* possible because it's a private field
+                // Unfortunately this is a limitation of the rust compiler. It's well explained here:
+                // http://smallcultfollowing.com/babysteps/blog/2013/10/24/iterators-yielding-mutable-references/
+                unsafe { core::mem::transmute::<Option<&'_ mut T>, Option<&'rb mut T>>(res) }
+            } else {
+                None
+            }
         }
     }
 }
 
-pub struct RingBufferMutIterator<'rb, T: 'static + Default, RB: RingBuffer<T>> {
-    obj: &'rb mut RB,
-    index: usize,
-    phantom: PhantomData<T>,
-}
-
-impl<'rb, T: 'static + Default, RB: RingBuffer<T>> Iterator for RingBufferMutIterator<'rb, T, RB> {
-    type Item = &'rb mut T;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.obj.len() {
-            let res: Option<&'_ mut T> = self.obj.get_mut(self.index as isize);
-            self.index += 1;
-
-            // Safety:
-            // This mem transmute is extending the lifetime of the returned value.
-            // This is necessary because the rust borrow checker is too restrictive in giving out mutable references.
-            // It thinks the iterator can give out a mutable reference, while it's also possible to mutably borrow
-            // `obj` in the RingBufferMutIterator struct. This is however *never* possible because it's a private field
-            // Unfortunately this is a limitation of the rust compiler. It's well explained here:
-            // http://smallcultfollowing.com/babysteps/blog/2013/10/24/iterators-yielding-mutable-references/
-            unsafe { core::mem::transmute::<Option<&'_ mut T>, Option<&'rb mut T>>(res) }
-        } else {
-            None
-        }
-    }
-}
+pub use iter::{RingBufferIterator, RingBufferMutIterator};
 
 macro_rules! impl_ringbuffer {
     ($buf: ident, $index: ident) => {
