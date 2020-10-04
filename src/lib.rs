@@ -96,8 +96,9 @@ mod tests {
         }
 
         test_default(with_alloc::AllocRingBuffer::with_capacity(10));
-        test_default(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_default(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
+        #[cfg(feature = "const_generics")]
+        test_default(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
     }
 
     #[test]
@@ -108,8 +109,9 @@ mod tests {
         }
 
         test_new(with_alloc::AllocRingBuffer::with_capacity(10));
-        test_new(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_new(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
+        #[cfg(feature = "const_generics")]
+        test_new(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
     }
 
     #[test]
@@ -119,12 +121,13 @@ mod tests {
             with_alloc::AllocRingBuffer::<i32>::new()
         );
         assert_eq!(
-            with_const_generics::ConstGenericRingBuffer::<i32, 10>::default(),
-            with_const_generics::ConstGenericRingBuffer::<i32, 10>::new()
-        );
-        assert_eq!(
             with_generic_array::GenericRingBuffer::<i32, typenum::U10>::default(),
             with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new()
+        );
+        #[cfg(feature = "const_generics")]
+        assert_eq!(
+            with_const_generics::ConstGenericRingBuffer::<i32, 10>::default(),
+            with_const_generics::ConstGenericRingBuffer::<i32, 10>::new()
         );
     }
 
@@ -139,8 +142,9 @@ mod tests {
         }
 
         test_len(with_alloc::AllocRingBuffer::with_capacity(10));
-        test_len(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_len(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
+        #[cfg(feature = "const_generics")]
+        test_len(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
     }
 
     #[test]
@@ -159,6 +163,7 @@ mod tests {
         }
 
         test_len_wrap(with_alloc::AllocRingBuffer::with_capacity(2));
+        #[cfg(feature = "const_generics")]
         test_len_wrap(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
         test_len_wrap(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
     }
@@ -176,6 +181,7 @@ mod tests {
         }
 
         test_clear(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_clear(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_clear(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -195,6 +201,7 @@ mod tests {
         }
 
         test_empty(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_empty(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_empty(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -213,6 +220,7 @@ mod tests {
         }
 
         test_iter(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_iter(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_iter(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -236,6 +244,7 @@ mod tests {
         }
 
         test_double_iter(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_double_iter(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_double_iter(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -254,6 +263,7 @@ mod tests {
         }
 
         test_iter_wrap(with_alloc::AllocRingBuffer::with_capacity(2));
+        #[cfg(feature = "const_generics")]
         test_iter_wrap(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
         test_iter_wrap(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
     }
@@ -273,6 +283,7 @@ mod tests {
         }
 
         test_iter_mut(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_iter_mut(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_iter_mut(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -292,6 +303,7 @@ mod tests {
         }
 
         test_iter_mut_wrap(with_alloc::AllocRingBuffer::with_capacity(2));
+        #[cfg(feature = "const_generics")]
         test_iter_mut_wrap(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
         test_iter_mut_wrap(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
     }
@@ -307,6 +319,7 @@ mod tests {
         }
 
         test_to_vec(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_to_vec(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_to_vec(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -323,6 +336,7 @@ mod tests {
         }
 
         test_to_vec_wrap(with_alloc::AllocRingBuffer::with_capacity(2));
+        #[cfg(feature = "const_generics")]
         test_to_vec_wrap(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
         test_to_vec_wrap(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
     }
@@ -335,6 +349,7 @@ mod tests {
         }
 
         test_index(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_index(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_index(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -352,6 +367,7 @@ mod tests {
         }
 
         test_index_mut(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_index_mut(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_index_mut(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -366,6 +382,7 @@ mod tests {
         }
 
         test_peek_some(with_alloc::AllocRingBuffer::with_capacity(2));
+        #[cfg(feature = "const_generics")]
         test_peek_some(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
         test_peek_some(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
     }
@@ -377,6 +394,7 @@ mod tests {
         }
 
         test_peek_none(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_peek_none(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_peek_none(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -396,12 +414,13 @@ mod tests {
             assert_eq!(b.get(0).unwrap(), &0);
             assert_eq!(b.get(1).unwrap(), &1);
 
-            // TODO: Is this intended behaviour?
+            // Wraps around
             assert_eq!(b.get(2).unwrap(), &0);
             assert_eq!(b.get(3).unwrap(), &1);
         }
 
         test_get_relative(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_get_relative(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_get_relative(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -426,6 +445,7 @@ mod tests {
         }
 
         test_wrapping_get_relative(with_alloc::AllocRingBuffer::with_capacity(2));
+        #[cfg(feature = "const_generics")]
         test_wrapping_get_relative(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
         test_wrapping_get_relative(
             with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new(),
@@ -439,6 +459,7 @@ mod tests {
         }
 
         test_get_relative_zero_length(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_get_relative_zero_length(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_get_relative_zero_length(
             with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new(),
@@ -465,6 +486,7 @@ mod tests {
         }
 
         test_get_relative_mut(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_get_relative_mut(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_get_relative_mut(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -491,6 +513,7 @@ mod tests {
         }
 
         test_wrapping_get_relative_mut(with_alloc::AllocRingBuffer::with_capacity(2));
+        #[cfg(feature = "const_generics")]
         test_wrapping_get_relative_mut(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
         test_wrapping_get_relative_mut(
             with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new(),
@@ -504,6 +527,7 @@ mod tests {
         }
 
         test_get_relative_mut_zero_length(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_get_relative_mut_zero_length(
             with_const_generics::ConstGenericRingBuffer::<i32, 10>::new(),
         );
@@ -530,6 +554,7 @@ mod tests {
         }
 
         test_get_absolute(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_get_absolute(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_get_absolute(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -543,6 +568,7 @@ mod tests {
         }
 
         test_from_iterator::<AllocRingBuffer<i32>>();
+        #[cfg(feature = "const_generics")]
         test_from_iterator::<ConstGenericRingBuffer<i32, 1024>>();
         test_from_iterator::<GenericRingBuffer<i32, typenum::U1024>>();
     }
@@ -550,18 +576,13 @@ mod tests {
     #[test]
     fn run_test_from_iterator_wrap() {
         fn test_from_iterator_wrap<T: RingBuffer<i32>>() {
-            fn test_from_iterator<T: RingBuffer<i32>>() {
-                let b: T = std::iter::repeat(1).take(10000).collect();
-                assert_eq!(b.len(), b.capacity());
-                assert_eq!(b.to_vec(), vec![1; b.capacity()])
-            }
-
-            test_from_iterator::<AllocRingBuffer<i32>>();
-            test_from_iterator::<ConstGenericRingBuffer<i32, 1024>>();
-            test_from_iterator::<GenericRingBuffer<i32, typenum::U1024>>();
+            let b: T = std::iter::repeat(1).take(10000).collect();
+            assert_eq!(b.len(), b.capacity());
+            assert_eq!(b.to_vec(), vec![1; b.capacity()])
         }
 
         test_from_iterator_wrap::<AllocRingBuffer<i32>>();
+        #[cfg(feature = "const_generics")]
         test_from_iterator_wrap::<ConstGenericRingBuffer<i32, 1024>>();
         test_from_iterator_wrap::<GenericRingBuffer<i32, typenum::U1024>>();
     }
@@ -581,12 +602,13 @@ mod tests {
             assert_eq!(b.get(-1).unwrap(), &1);
             assert_eq!(b.get(-2).unwrap(), &0);
 
-            // TODO: Is this intended behaviour?
+            // Wraps around
             assert_eq!(b.get(-3).unwrap(), &1);
             assert_eq!(b.get(-4).unwrap(), &0);
         }
 
         test_get_relative_negative(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_get_relative_negative(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_get_relative_negative(
             with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new(),
@@ -604,6 +626,7 @@ mod tests {
         }
 
         test_contains(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_contains(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_contains(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -619,6 +642,7 @@ mod tests {
         }
 
         test_is_full(with_alloc::AllocRingBuffer::with_capacity(2));
+        #[cfg(feature = "const_generics")]
         test_is_full(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
         test_is_full(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
     }
@@ -633,6 +657,7 @@ mod tests {
         }
 
         test_front_some(with_alloc::AllocRingBuffer::with_capacity(2));
+        #[cfg(feature = "const_generics")]
         test_front_some(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
         test_front_some(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
     }
@@ -644,6 +669,7 @@ mod tests {
         }
 
         test_front_none(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_front_none(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_front_none(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -658,6 +684,7 @@ mod tests {
         }
 
         test_back_some(with_alloc::AllocRingBuffer::with_capacity(2));
+        #[cfg(feature = "const_generics")]
         test_back_some(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
         test_back_some(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
     }
@@ -669,6 +696,7 @@ mod tests {
         }
 
         test_back_none(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_back_none(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_back_none(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -683,6 +711,7 @@ mod tests {
         }
 
         test_front_some_mut(with_alloc::AllocRingBuffer::with_capacity(2));
+        #[cfg(feature = "const_generics")]
         test_front_some_mut(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
         test_front_some_mut(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
     }
@@ -694,6 +723,7 @@ mod tests {
         }
 
         test_front_none_mut(with_alloc::AllocRingBuffer::with_capacity(10));
+        #[cfg(feature = "const_generics")]
         test_front_none_mut(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_front_none_mut(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
@@ -708,6 +738,7 @@ mod tests {
         }
 
         test_back_some_mut(with_alloc::AllocRingBuffer::with_capacity(2));
+        #[cfg(feature = "const_generics")]
         test_back_some_mut(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
         test_back_some_mut(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
     }
@@ -719,7 +750,8 @@ mod tests {
         }
 
         test_back_none_mut(with_alloc::AllocRingBuffer::with_capacity(10));
-        test_back_none_mut(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_back_none_mut(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
+        #[cfg(feature = "const_generics")]
+        test_back_none_mut(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
     }
 }

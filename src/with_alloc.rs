@@ -91,7 +91,6 @@ impl<T> AllocRingBuffer<T> {
 }
 
 impl<RB: 'static + Default> FromIterator<RB> for AllocRingBuffer<RB> {
-    #[cfg(not(tarpaulin_include))]
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
