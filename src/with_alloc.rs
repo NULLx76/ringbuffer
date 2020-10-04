@@ -7,26 +7,31 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::iter::FromIterator;
 
-/// The RingBuffer struct.
+/// The AllocRingBuffer is a RingBuffer which is based on a Vec. This means it allocates at runtime
+/// on the heap, and therefore needs the [`alloc`] crate. This struct and therefore the dependency on
+/// alloc can be disabled by disabling the `alloc` (default) feature.
 ///
 /// # Example
 /// ```
-/// use ringbuffer::AllocRingBuffer;
-/// use ringbuffer::RingBuffer;
+/// use ringbuffer::{AllocRingBuffer, RingBuffer};
 ///
 /// let mut buffer = AllocRingBuffer::with_capacity(2);
 ///
 /// // First entry of the buffer is now 5.
 /// buffer.push(5);
 ///
-/// assert_eq!(buffer[-1], 5);
+/// // The last item we pushed is 5
+/// assert_eq!(buffer.get(-1), Some(&5));
 ///
 /// // Second entry is now 42.
 /// buffer.push(42);
 ///
+/// assert_eq!(buffer.peek(), Some(&5));
+/// assert!(buffer.is_full());
+///
 /// // Because capacity is reached the next push will be the first item of the buffer.
 /// buffer.push(1);
-/// assert_eq!(buffer[-1], 1);
+/// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
 #[derive(PartialEq, Eq, Debug)]
 pub struct AllocRingBuffer<T> {
@@ -69,7 +74,7 @@ impl<T: 'static + Default> RingBuffer<T> for AllocRingBuffer<T> {
 }
 
 impl<T> AllocRingBuffer<T> {
-    /// Creates a RingBuffer with a certain capacity.
+    /// Creates a RingBuffer with a certain capacity. This capacity is fixed.
     #[inline]
     pub fn with_capacity(cap: usize) -> Self {
         assert!(cap > 0, "Capacity must be greater than zero");
@@ -99,28 +104,8 @@ impl<RB: 'static + Default> FromIterator<RB> for AllocRingBuffer<RB> {
     }
 }
 
-// impl<T: Clone> IntoIterator for AllocRingBuffer<T> {
-//     type Item = T;
-//     type IntoIter = core::iter::Chain<core::slice::Iter<'_, T>, core::slice::Iter<'_, T>>;
-//
-//     fn into_iter(mut self) -> Self::IntoIter {
-//         if self.index > self.cap / 2 {
-//             // left owned, copy right
-//             let r = self.buf[self.index..].iter().cloned();
-//             self.buf.truncate(self.index);
-//
-//             self.buf.into_iter().chain(r)
-//         } else {
-//             // right owned, copy left
-//             let l = self.buf[..self.index].iter().cloned();
-//             let r = self.buf.into_iter().skip(self.index);
-//             r.chain(l)
-//         }
-//     }
-// }
-
 impl<T> Default for AllocRingBuffer<T> {
-    /// Creates a buffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
+    /// Creates a buffer with a capacity of [crate::RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
     fn default() -> Self {
         let cap = RINGBUFFER_DEFAULT_CAPACITY;
@@ -181,6 +166,6 @@ mod tests {
     #[should_panic]
     fn test_index_zero_length() {
         let b = AllocRingBuffer::<i32>::with_capacity(2);
-        b[2];
+        let _ = b[2];
     }
 }

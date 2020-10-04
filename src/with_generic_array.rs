@@ -5,27 +5,37 @@ use core::iter::FromIterator;
 use core::marker::PhantomData;
 use generic_array::{ArrayLength, GenericArray};
 
-/// The RingBuffer struct.
+/// The GenericRingBuffer struct is a RingBuffer implementation which does not require `alloc`.
+/// However it does depend on the typenum crate, to provide compile time integers without needing
+/// nightly rust. Unfortunately this is the only way to provide a compile time ringbuffer which
+/// does not require nightly rust like `ConstGenericRingBuffer`. Once const-generics are stable
+/// this struct will be depricated.
+///
+/// GenericRingBuffer allocates the ringbuffer on the stack, and the size must be known at
+/// compile time through typenum.
 ///
 /// # Example
 /// ```
-/// use ringbuffer::RingBuffer;
-/// use ringbuffer::GenericRingBuffer;
-/// use ringbuffer::typenum;
+/// use ringbuffer::{RingBuffer, GenericRingBuffer};
+/// use ringbuffer::typenum; // for numbers as types in stable rust
 ///
 /// let mut buffer = GenericRingBuffer::<_, typenum::U2>::new();
 ///
 /// // First entry of the buffer is now 5.
 /// buffer.push(5);
 ///
-/// assert_eq!(buffer[-1], 5);
+/// // The last item we pushed is 5
+/// assert_eq!(buffer.get(-1), Some(&5));
 ///
 /// // Second entry is now 42.
 /// buffer.push(42);
 ///
+/// assert_eq!(buffer.peek(), Some(&5));
+/// assert!(buffer.is_full());
+///
 /// // Because capacity is reached the next push will be the first item of the buffer.
 /// buffer.push(1);
-/// assert_eq!(buffer[-1], 1);
+/// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
 #[derive(PartialEq, Eq, Debug)]
 pub struct GenericRingBuffer<T, Cap: ArrayLength<T>> {
@@ -96,7 +106,7 @@ impl<T, Cap: ArrayLength<T>> GenericRingBuffer<T, Cap> {
     /// Creates a new RingBuffer with uninitialized elements. This is unsafe because this relies on
     /// creating uninitialized memory.
     ///
-    /// Still it's recommended to use the `new`, `default` or `with_capacity` methods to create a
+    /// Still it's recommended to use the [`Self::new`] or [`Default::default`] methods to create a
     /// RingBuffer, whenever the type T implements default.
     ///
     /// # Safety
@@ -118,7 +128,7 @@ impl<T, Cap: ArrayLength<T>> GenericRingBuffer<T, Cap> {
 }
 
 impl<T: Default, Cap: ArrayLength<T>> Default for GenericRingBuffer<T, Cap> {
-    /// Creates a buffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
+    /// Creates a buffer with a capacity specified through the `Cap` type parameter.
     #[inline]
     fn default() -> Self {
         assert_ne!(Cap::to_usize(), 0);
@@ -193,14 +203,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_no_empty() {
-        GenericRingBuffer::<u32, typenum::U0>::new();
+        let _ = GenericRingBuffer::<u32, typenum::U0>::new();
     }
 
     #[test]
     #[should_panic]
     fn test_index_zero_length() {
         let b = GenericRingBuffer::<i32, typenum::U2>::new();
-        b[2];
+        let _ = b[2];
     }
 
     #[test]
@@ -238,6 +248,6 @@ mod tests {
     #[should_panic]
     fn test_uninit_out_of_bounds() {
         let b = unsafe { GenericRingBuffer::<i32, typenum::U2>::new_uninit() };
-        b[0];
+        let _ = b[0];
     }
 }
