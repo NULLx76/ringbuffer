@@ -49,7 +49,21 @@ pub trait RingBuffer<T: 'static + Default>:
 
     /// Gets a value relative to the current index mutably. 0 is the next index to be written to with push.
     /// -1 and down are the last elements pushed and 0 and up are the items that were pushed the longest ago.
-    fn get_mut(&mut self, index: isize) -> Option<&mut T>;
+    ///
+    /// get_mut is used to implement [`iter_mut`](Self::iter_mut). It requires that for indices in the range
+    /// 0..self.len(), every reference ***MUST ONLY BE RETURNED ONCE***. Any sane implementation of
+    /// get_mut does this anyway, but failing to do so results in the possibility to have multiple multiple
+    /// references to data inside the ringbuffer. (as per issue #25) This function is unsafe precisely because
+    /// of this issue.
+    unsafe fn get_mut_impl(&mut self, index: isize) -> Option<&mut T>;
+
+    /// Gets a value relative to the current index mutably. 0 is the next index to be written to with push.
+    /// -1 and down are the last elements pushed and 0 and up are the items that were pushed the longest ago.
+    fn get_mut(&mut self, index: isize) -> Option<&mut T> {
+        unsafe {
+            self.get_mut_impl(index)
+        }
+    }
 
     /// Gets a value relative to the start of the array (rarely useful, usually you want [`Self::get`])
     fn get_absolute(&self, index: usize) -> Option<&T>;
@@ -199,7 +213,7 @@ mod iter {
         #[inline]
         fn next(&mut self) -> Option<Self::Item> {
             if self.index < self.obj.len() {
-                let res: Option<&'_ mut T> = self.obj.get_mut(self.index as isize);
+                let res: Option<&'_ mut T> = unsafe { self.obj.get_mut_impl(self.index as isize) };
                 self.index += 1;
 
                 // Safety:
@@ -234,7 +248,7 @@ macro_rules! impl_ringbuffer {
         }
 
         #[inline]
-        fn get_mut(&mut self, index: isize) -> Option<&mut T> {
+        unsafe fn get_mut_impl(&mut self, index: isize) -> Option<&mut T> {
             if self.len() > 0 {
                 let index = (index + self.$index as isize).rem_euclid(self.len() as isize) as usize;
                 self.$buf.get_mut(index)
