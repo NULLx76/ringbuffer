@@ -5,13 +5,20 @@ use core::iter::FromIterator;
 use core::marker::PhantomData;
 use generic_array::{ArrayLength, GenericArray};
 
-/// The RingBuffer struct.
+/// The GenericRingBuffer struct is a RingBuffer implementation which does not require `alloc`.
+/// However it does depend on the typenum crate, to provide compile time integers without needing
+/// nightly rust. Unfortunately this is the only way to provide a compile time ringbuffer which
+/// does not require nightly rust like `ConstGenericRingBuffer`. Once const-generics are stable
+/// this struct will be depricated.
+///
+/// GenericRingBuffer allocates the ringbuffer on the stack, and the size must be known at
+/// compile time through typenum.
 ///
 /// # Example
 /// ```
-/// use ringbuffer::RingBuffer;
-/// use ringbuffer::GenericRingBuffer;
-/// use ringbuffer::typenum;
+/// # use ringbuffer::RingBuffer;
+/// # use ringbuffer::GenericRingBuffer;
+/// # use ringbuffer::typenum;
 ///
 /// let mut buffer = GenericRingBuffer::<_, typenum::U2>::new();
 ///
