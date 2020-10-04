@@ -2,11 +2,6 @@ use crate::RingBuffer;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-
 /// The RingBuffer struct.
 ///
 /// # Example
@@ -73,12 +68,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     }
 }
 
-impl<'a, 'b, T: 'static + Default, const CAP: usize> RingBuffer<'a, 'b, T>
-    for ConstGenericRingBuffer<T, CAP>
-{
-    type Iter = core::iter::Chain<core::slice::Iter<'a, T>, core::slice::Iter<'a, T>>;
-    type IterMut = core::iter::Chain<core::slice::IterMut<'b, T>, core::slice::IterMut<'b, T>>;
-
+impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
     fn len(&self) -> usize {
         self.length_counter
@@ -104,31 +94,7 @@ impl<'a, 'b, T: 'static + Default, const CAP: usize> RingBuffer<'a, 'b, T>
         self.index = (self.index + 1) % self.capacity()
     }
 
-    #[inline]
-    fn peek(&self) -> Option<&T> {
-        if self.index >= self.len() {
-            None
-        } else {
-            self.buf.get(self.index)
-        }
-    }
-
-    #[inline]
-    fn iter(&'a self) -> Self::Iter {
-        let (l, r) = self.buf[0..self.length_counter].split_at(self.index);
-        r.iter().chain(l.iter())
-    }
-
-    #[inline]
-    fn iter_mut(&'b mut self) -> Self::IterMut {
-        let (l, r) = self.buf[0..self.length_counter].split_at_mut(self.index);
-        r.iter_mut().chain(l.iter_mut())
-    }
-
-    #[inline]
-    fn as_vec(&self) -> Vec<&T> {
-        self.iter().collect()
-    }
+    impl_ringbuffer!(buf, index);
 }
 
 impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
@@ -176,182 +142,10 @@ impl<T, const CAP: usize> IndexMut<usize> for ConstGenericRingBuffer<T, CAP> {
 mod tests {
     use super::*;
 
-    // Enable std in tests
-    extern crate std;
-    use std::vec;
-
-    #[test]
-    fn test_default() {
-        let b: ConstGenericRingBuffer<i32, 10> = ConstGenericRingBuffer::default();
-        assert_eq!(b.capacity(), 10);
-        assert_eq!(b.len(), 0);
-    }
-
-    #[test]
-    fn test_new() {
-        let b: ConstGenericRingBuffer<i32, 10> = ConstGenericRingBuffer::new();
-        assert_eq!(b.capacity(), 10);
-        assert_eq!(b.len(), 0);
-    }
-
-    #[test]
-    fn test_default_eq_new() {
-        assert_eq!(
-            ConstGenericRingBuffer::<u32, 10>::default(),
-            ConstGenericRingBuffer::<u32, 10>::new()
-        )
-    }
-
     #[test]
     #[should_panic]
     fn test_no_empty() {
         ConstGenericRingBuffer::<u32, 0>::new();
-    }
-
-    #[test]
-    fn test_len() {
-        let mut b = ConstGenericRingBuffer::<_, 10>::new();
-        assert_eq!(0, b.len());
-        b.push(1);
-        assert_eq!(1, b.len());
-        b.push(2);
-        assert_eq!(2, b.len())
-    }
-
-    #[test]
-    fn test_len_wrap() {
-        let mut b = ConstGenericRingBuffer::<_, 2>::new();
-        assert_eq!(0, b.len());
-        b.push(1);
-        assert_eq!(1, b.len());
-        b.push(2);
-        assert_eq!(2, b.len());
-        // Now we are wrapping
-        b.push(3);
-        assert_eq!(2, b.len());
-        b.push(4);
-        assert_eq!(2, b.len());
-    }
-
-    #[test]
-    fn test_clear() {
-        let mut b = ConstGenericRingBuffer::<_, 10>::new();
-        b.push(1);
-        b.push(2);
-        b.push(3);
-
-        b.clear();
-        assert!(b.is_empty());
-        assert_eq!(0, b.len());
-    }
-
-    #[test]
-    fn test_empty() {
-        let mut b = ConstGenericRingBuffer::<_, 10>::new();
-        assert!(b.is_empty());
-        b.push(1);
-        b.push(2);
-        b.push(3);
-        assert_ne!(b.is_empty(), true);
-
-        b.clear();
-        assert!(b.is_empty());
-        assert_eq!(0, b.len());
-    }
-
-    #[test]
-    fn test_iter() {
-        let mut b = ConstGenericRingBuffer::<_, 10>::new();
-        b.push(1);
-        b.push(2);
-        b.push(3);
-
-        let mut iter = b.iter();
-        assert_eq!(&1, iter.next().unwrap());
-        assert_eq!(&2, iter.next().unwrap());
-        assert_eq!(&3, iter.next().unwrap());
-    }
-
-    #[test]
-    fn test_iter_wrap() {
-        let mut b = ConstGenericRingBuffer::<_, 2>::new();
-        b.push(1);
-        b.push(2);
-        // Wrap
-        b.push(3);
-
-        let mut iter = b.iter();
-        assert_eq!(&2, iter.next().unwrap());
-        assert_eq!(&3, iter.next().unwrap());
-    }
-
-    #[test]
-    fn test_iter_mut() {
-        let mut b = ConstGenericRingBuffer::<_, 10>::new();
-        b.push(1);
-        b.push(2);
-        b.push(3);
-
-        for el in b.iter_mut() {
-            *el += 1;
-        }
-
-        assert_eq!(vec![2, 3, 4], b.to_vec())
-    }
-
-    #[test]
-    fn test_iter_mut_wrap() {
-        let mut b = ConstGenericRingBuffer::<_, 2>::new();
-        b.push(1);
-        b.push(2);
-        b.push(3);
-
-        for el in b.iter_mut() {
-            *el += 1;
-        }
-
-        assert_eq!(vec![3, 4], b.to_vec())
-    }
-
-    #[test]
-    fn test_to_vec() {
-        let mut b = ConstGenericRingBuffer::<_, 10>::new();
-        b.push(1);
-        b.push(2);
-        b.push(3);
-
-        assert_eq!(vec![1, 2, 3], b.to_vec())
-    }
-
-    #[test]
-    fn test_to_vec_wrap() {
-        let mut b = ConstGenericRingBuffer::<_, 2>::new();
-        b.push(1);
-        b.push(2);
-        // Wrap
-        b.push(3);
-
-        assert_eq!(vec![2, 3], b.to_vec())
-    }
-
-    #[test]
-    fn test_index() {
-        let mut b = ConstGenericRingBuffer::<_, 10>::new();
-        b.push(2);
-
-        assert_eq!(b[0], 2)
-    }
-
-    #[test]
-    fn test_index_mut() {
-        let mut b = ConstGenericRingBuffer::<_, 10>::new();
-        b.push(2);
-
-        assert_eq!(b[0], 2);
-
-        b[0] = 5;
-
-        assert_eq!(b[0], 5);
     }
 
     #[test]
@@ -361,23 +155,6 @@ mod tests {
         b.push(2);
 
         b[2];
-    }
-
-    #[test]
-    fn test_peek_some() {
-        let mut b = ConstGenericRingBuffer::<_, 2>::new();
-        b.push(1);
-        b.push(2);
-
-        assert_eq!(b.peek(), Some(&1));
-    }
-
-    #[test]
-    fn test_peek_none() {
-        let mut b = ConstGenericRingBuffer::<_, 10>::new();
-        b.push(1);
-
-        assert_eq!(b.peek(), None);
     }
 
     #[test]
