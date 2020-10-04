@@ -14,14 +14,14 @@ use core::ops::{Index, IndexMut};
 /// // First entry of the buffer is now 5.
 /// buffer.push(5);
 ///
-/// assert_eq!(buffer[0], 5);
+/// assert_eq!(buffer[-1], 5);
 ///
 /// // Second entry is now 42.
 /// buffer.push(42);
 ///
 /// // Because capacity is reached the next push will be the first item of the buffer.
 /// buffer.push(1);
-/// assert_eq!(buffer[0], 1);
+/// assert_eq!(buffer[-1], 1);
 /// ```
 #[derive(PartialEq, Eq, Debug)]
 pub struct ConstGenericRingBuffer<T, const CAP: usize> {
@@ -122,19 +122,17 @@ impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     }
 }
 
-impl<T, const CAP: usize> Index<usize> for ConstGenericRingBuffer<T, CAP> {
+impl<T: 'static + Default, const CAP: usize> Index<isize> for ConstGenericRingBuffer<T, CAP> {
     type Output = T;
 
-    fn index(&self, index: usize) -> &Self::Output {
-        assert!(index < self.length_counter);
-        &self.buf[index]
+    fn index(&self, index: isize) -> &Self::Output {
+        self.get(index).expect("index out of bounds")
     }
 }
 
-impl<T, const CAP: usize> IndexMut<usize> for ConstGenericRingBuffer<T, CAP> {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        assert!(index < self.length_counter);
-        &mut self.buf[index]
+impl<T: 'static + Default, const CAP: usize> IndexMut<isize> for ConstGenericRingBuffer<T, CAP> {
+    fn index_mut(&mut self, index: isize) -> &mut Self::Output {
+        self.get_mut(index).expect("index out of bounds")
     }
 }
 
@@ -150,10 +148,8 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_index_bigger_than_length() {
-        let mut b = ConstGenericRingBuffer::<_, 2>::new();
-        b.push(2);
-
+    fn test_index_zero_length() {
+        let b = ConstGenericRingBuffer::<i32, 2>::new();
         b[2];
     }
 
@@ -172,8 +168,8 @@ mod tests {
         assert_eq!(b.len(), 2);
         assert_eq!(b.capacity(), 2);
 
-        assert_eq!(b[0], 3);
-        assert_eq!(b[1], 2);
+        assert_eq!(b.get_absolute(0).unwrap(), &3);
+        assert_eq!(b.get_absolute(1).unwrap(), &2);
     }
 
     #[test]
