@@ -550,4 +550,119 @@ mod tests {
         test_contains(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_contains(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
+
+    #[test]
+    fn run_test_is_full() {
+        fn test_is_full(mut b: impl RingBuffer<i32>) {
+            assert!(!b.is_full());
+            b.push(1);
+            assert!(!b.is_full());
+            b.push(2);
+            assert!(b.is_full());
+        }
+
+        test_is_full(with_alloc::AllocRingBuffer::with_capacity(2));
+        test_is_full(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
+        test_is_full(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
+    }
+
+    #[test]
+    fn run_test_front_some() {
+        fn test_front_some(mut b: impl RingBuffer<i32>) {
+            b.push(1);
+            b.push(2);
+
+            assert_eq!(b.front(), Some(&1));
+        }
+
+        test_front_some(with_alloc::AllocRingBuffer::with_capacity(2));
+        test_front_some(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
+        test_front_some(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
+    }
+
+    #[test]
+    fn run_test_front_none() {
+        fn test_front_none(b: impl RingBuffer<i32>) {
+            assert_eq!(b.front(), None);
+        }
+
+        test_front_none(with_alloc::AllocRingBuffer::with_capacity(10));
+        test_front_none(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
+        test_front_none(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
+    }
+
+    #[test]
+    fn run_test_back_some() {
+        fn test_back_some(mut b: impl RingBuffer<i32>) {
+            b.push(1);
+            b.push(2);
+
+            assert_eq!(b.back(), Some(&2));
+        }
+
+        test_back_some(with_alloc::AllocRingBuffer::with_capacity(2));
+        test_back_some(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
+        test_back_some(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
+    }
+
+    #[test]
+    fn run_test_back_none() {
+        fn test_back_none(b: impl RingBuffer<i32>) {
+            assert_eq!(b.back(), None);
+        }
+
+        test_back_none(with_alloc::AllocRingBuffer::with_capacity(10));
+        test_back_none(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
+        test_back_none(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
+    }
+
+    #[test]
+    fn run_test_front_some_mut() {
+        fn test_front_some_mut(mut b: impl RingBuffer<i32>) {
+            b.push(1);
+            b.push(2);
+
+            assert_eq!(b.front_mut(), Some(&mut 1));
+        }
+
+        test_front_some_mut(with_alloc::AllocRingBuffer::with_capacity(2));
+        test_front_some_mut(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
+        test_front_some_mut(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
+    }
+
+    #[test]
+    fn run_test_front_none_mut() {
+        fn test_front_none_mut(mut b: impl RingBuffer<i32>) {
+            assert_eq!(b.front_mut(), None);
+        }
+
+        test_front_none_mut(with_alloc::AllocRingBuffer::with_capacity(10));
+        test_front_none_mut(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
+        test_front_none_mut(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
+    }
+
+    #[test]
+    fn run_test_back_some_mut() {
+        fn test_back_some_mut(mut b: impl RingBuffer<i32>) {
+            b.push(1);
+            b.push(2);
+
+            assert_eq!(b.back_mut(), Some(&mut 2));
+        }
+
+        test_back_some_mut(with_alloc::AllocRingBuffer::with_capacity(2));
+        test_back_some_mut(with_const_generics::ConstGenericRingBuffer::<i32, 2>::new());
+        test_back_some_mut(with_generic_array::GenericRingBuffer::<i32, typenum::U2>::new());
+    }
+
+    #[test]
+    fn run_test_back_none_mut() {
+        fn test_back_none_mut(mut b: impl RingBuffer<i32>) {
+            assert_eq!(b.back_mut(), None);
+        }
+
+        test_back_none_mut(with_alloc::AllocRingBuffer::with_capacity(10));
+        test_back_none_mut(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
+        test_back_none_mut(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
+    }
 }
