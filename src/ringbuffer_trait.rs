@@ -6,7 +6,6 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::iter::FromIterator;
 
-
 // TODO: Remove Default <Issue #13>
 /// RingBuffer is a trait defining the standard interface for all RingBuffer
 /// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`GenericRingBuffer`](crate::GenericRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
@@ -61,9 +60,9 @@ pub trait RingBuffer<T: 'static + Default>:
     /// Gets a value relative to the current index mutably. 0 is the next index to be written to with push.
     /// -1 and down are the last elements pushed and 0 and up are the items that were pushed the longest ago.
     fn get_mut(&mut self, index: isize) -> Option<&mut T> {
-        unsafe {
-            self.get_mut_impl(index)
-        }
+        // Safety: calling get_mut_impl is not unsafe, implementing it might be unsafe because of
+        // the behaviour of iter_mut (see [`Self::get_mut_impl`])
+        unsafe { self.get_mut_impl(index) }
     }
 
     /// Gets a value relative to the start of the array (rarely useful, usually you want [`Self::get`])
