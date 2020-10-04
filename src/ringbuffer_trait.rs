@@ -1,22 +1,28 @@
-use core::ops::Index;
+use core::ops::{Index, IndexMut};
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
+use core::iter::FromIterator;
 
 // TODO: Remove Default <Issue #13>
-pub trait RingBuffer<'a, 'b, T: 'static + Default>: Default + Index<usize> {
-    type Iter: Iterator<Item = &'a T>;
-    type IterMut: Iterator<Item = &'b mut T>;
-
+pub trait RingBuffer<T: 'static + Default>:
+    Default + Index<isize, Output = T> + IndexMut<isize> + FromIterator<T>
+{
     /// Returns the length of the internal buffer. This length grows up to the capacity and then
     /// stops growing.
     fn len(&self) -> usize;
 
     /// Returns true if the buffer is empty, some value between 0 and capacity.
+    #[inline]
     fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    #[inline]
+    fn is_full(&self) -> bool {
+        self.len() == self.capacity()
     }
 
     /// Empties the buffer.
@@ -25,22 +31,69 @@ pub trait RingBuffer<'a, 'b, T: 'static + Default>: Default + Index<usize> {
     /// Returns the capacity of the buffer.
     fn capacity(&self) -> usize;
 
+    /// Gets a value relative to the current index
+    fn get(&self, index: isize) -> Option<&T>;
+
+    /// Gets a value relative to the current index mutably
+    fn get_mut(&mut self, index: isize) -> Option<&mut T>;
+
+    /// Gets a value relative to the start of the array (rarely useful, usually you want [`get`])
+    fn get_absolute(&self, index: usize) -> Option<&T>;
+
+    /// Gets a value mutably relative to the start of the array (rarely useful, usually you want [`get_mut`])
+    fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T>;
+
     /// Pushes a value onto the buffer. Cycles around if capacity is reached.
     fn push(&mut self, e: T);
 
     /// Returns the value at the current index.
     /// This is the value that will be overwritten by the next push.
-    fn peek(&self) -> Option<&T>;
+    #[inline]
+    fn peek(&self) -> Option<&T> {
+        self.front()
+    }
+
+    /// Returns the value at the back of the queue.
+    /// This is the item that was pushed most recently.
+    #[inline]
+    fn back(&self) -> Option<&T> {
+        self.get(-1)
+    }
+
+    /// Returns the value at the back of the queue.
+    /// This is the value that will be overwritten by the next push.
+    /// (alias of peek)
+    #[inline]
+    fn front(&self) -> Option<&T> {
+        self.get(0)
+    }
+
+    /// Returns a mutable reference to the value at the back of the queue.
+    /// This is the item that was pushed most recently.
+    #[inline]
+    fn back_mut(&mut self) -> Option<&mut T> {
+        self.get_mut(-1)
+    }
+
+    /// Returns a mutable reference to the value at the back of the queue.
+    /// This is the value that will be overwritten by the next push.
+    /// (alias of peek)
+    #[inline]
+    fn front_mut(&mut self) -> Option<&mut T> {
+        self.get_mut(0)
+    }
 
     /// Creates an iterator over the buffer starting from the latest push.
-    fn iter(&'a self) -> Self::Iter;
+    #[inline]
+    fn iter(&self) -> RingBufferIterator<T, Self> {
+        RingBufferIterator::new(self)
+    }
 
     ///  Creates a mutable iterator over the buffer starting from the latest push.
-    fn iter_mut(&'b mut self) -> Self::IterMut;
-
-    /// Converts the buffer to an vector.
-    #[cfg(feature = "alloc")]
-    fn as_vec(&self) -> Vec<&T>;
+    #[inline]
+    fn iter_mut(&mut self) -> RingBufferMutIterator<T, Self> {
+        RingBufferMutIterator::new(self)
+    }
 
     /// Converts the buffer to an vector.
     #[cfg(feature = "alloc")]
@@ -48,6 +101,135 @@ pub trait RingBuffer<'a, 'b, T: 'static + Default>: Default + Index<usize> {
     where
         T: Clone,
     {
-        self.as_vec().into_iter().cloned().collect()
+        self.iter().cloned().collect()
     }
+
+    /// Returns true if elem is in the ringbuffer
+    fn contains(&self, elem: &T) -> bool
+    where
+        T: PartialEq,
+    {
+        self.iter().any(|i| i == elem)
+    }
+}
+
+mod iter {
+    use crate::RingBuffer;
+    use core::marker::PhantomData;
+
+    pub struct RingBufferIterator<'rb, T: 'static + Default, RB: RingBuffer<T>> {
+        obj: &'rb RB,
+        index: usize,
+        phantom: PhantomData<T>,
+    }
+
+    impl<'rb, T: 'static + Default, RB: RingBuffer<T>> RingBufferIterator<'rb, T, RB> {
+        #[inline]
+        pub fn new(obj: &'rb RB) -> Self {
+            Self {
+                obj,
+                index: 0,
+                phantom: Default::default(),
+            }
+        }
+    }
+
+    impl<'rb, T: 'static + Default, RB: RingBuffer<T>> Iterator for RingBufferIterator<'rb, T, RB> {
+        type Item = &'rb T;
+
+        #[inline]
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.index < self.obj.len() {
+                let res = self.obj.get(self.index as isize);
+                self.index += 1;
+                res
+            } else {
+                None
+            }
+        }
+    }
+
+    pub struct RingBufferMutIterator<'rb, T: 'static + Default, RB: RingBuffer<T>> {
+        obj: &'rb mut RB,
+        index: usize,
+        phantom: PhantomData<T>,
+    }
+
+    impl<'rb, T: 'static + Default, RB: RingBuffer<T>> RingBufferMutIterator<'rb, T, RB> {
+        #[inline]
+        pub fn new(obj: &'rb mut RB) -> Self {
+            Self {
+                obj,
+                index: 0,
+                phantom: Default::default(),
+            }
+        }
+    }
+
+    impl<'rb, T: 'static + Default, RB: RingBuffer<T>> Iterator for RingBufferMutIterator<'rb, T, RB> {
+        type Item = &'rb mut T;
+
+        #[inline]
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.index < self.obj.len() {
+                let res: Option<&'_ mut T> = self.obj.get_mut(self.index as isize);
+                self.index += 1;
+
+                // Safety:
+                // This mem transmute is extending the lifetime of the returned value.
+                // This is necessary because the rust borrow checker is too restrictive in giving out mutable references.
+                // It thinks the iterator can give out a mutable reference, while it's also possible to mutably borrow
+                // `obj` in the RingBufferMutIterator struct. This is however *never* possible because it's a private field
+                // Unfortunately this is a limitation of the rust compiler. It's well explained here:
+                // http://smallcultfollowing.com/babysteps/blog/2013/10/24/iterators-yielding-mutable-references/
+                unsafe { core::mem::transmute::<Option<&'_ mut T>, Option<&'rb mut T>>(res) }
+            } else {
+                None
+            }
+        }
+    }
+}
+
+pub use iter::{RingBufferIterator, RingBufferMutIterator};
+
+macro_rules! impl_ringbuffer {
+    ($buf: ident, $index: ident) => {
+        #[inline]
+        fn get(&self, index: isize) -> Option<&T> {
+            if self.len() > 0 {
+                let index = (index + self.$index as isize).rem_euclid(self.len() as isize) as usize;
+                self.$buf.get(index)
+            } else {
+                None
+            }
+        }
+
+        #[inline]
+        fn get_mut(&mut self, index: isize) -> Option<&mut T> {
+            if self.len() > 0 {
+                let index = (index + self.$index as isize).rem_euclid(self.len() as isize) as usize;
+                self.$buf.get_mut(index)
+            } else {
+                None
+            }
+        }
+
+        #[inline]
+        fn get_absolute(&self, index: usize) -> Option<&T> {
+            if index < self.len() {
+                self.$buf.get(index)
+            } else {
+                None
+            }
+        }
+
+        #[inline]
+        fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T> {
+            if index < self.len() {
+                self.$buf.get_mut(index)
+            } else {
+                None
+            }
+        }
+    };
 }
