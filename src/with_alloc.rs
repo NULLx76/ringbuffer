@@ -5,6 +5,7 @@ use crate::ringbuffer_trait::RingBuffer;
 extern crate alloc;
 // We need vecs so depend on alloc
 use alloc::vec::Vec;
+use core::iter::FromIterator;
 
 /// The RingBuffer struct.
 ///
@@ -84,6 +85,17 @@ impl<T> AllocRingBuffer<T> {
     #[inline]
     pub fn new() -> Self {
         Self::default()
+    }
+}
+
+impl<RB: 'static + Default> FromIterator<RB> for AllocRingBuffer<RB> {
+    fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
+        let mut res = Self::default();
+        for i in iter {
+            res.push(i)
+        }
+
+        res
     }
 }
 

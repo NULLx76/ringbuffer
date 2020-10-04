@@ -1,4 +1,5 @@
 use crate::RingBuffer;
+use core::iter::FromIterator;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
 
@@ -119,6 +120,17 @@ impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
             index: 0,
             length_counter: 0,
         }
+    }
+}
+
+impl<RB: 'static + Default, const CAP: usize> FromIterator<RB> for ConstGenericRingBuffer<RB, CAP> {
+    fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
+        let mut res = Self::default();
+        for i in iter {
+            res.push(i)
+        }
+
+        res
     }
 }
 

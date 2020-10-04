@@ -476,4 +476,63 @@ mod tests {
         test_get_absolute(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
         test_get_absolute(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
     }
+
+    #[test]
+    fn run_test_from_iterator() {
+        fn test_from_iterator<T: RingBuffer<i32>>() {
+            let b: T = std::iter::repeat(1).take(100).collect();
+            assert_eq!(b.len(), 100);
+            assert_eq!(b.to_vec(), vec![1; 100])
+        }
+
+        test_from_iterator::<AllocRingBuffer<i32>>();
+        test_from_iterator::<ConstGenericRingBuffer<i32, 1024>>();
+        test_from_iterator::<GenericRingBuffer<i32, typenum::U1024>>();
+    }
+
+    #[test]
+    fn run_test_from_iterator_wrap() {
+        fn test_from_iterator_wrap<T: RingBuffer<i32>>() {
+            fn test_from_iterator<T: RingBuffer<i32>>() {
+                let b: T = std::iter::repeat(1).take(10000).collect();
+                assert_eq!(b.len(), b.capacity());
+                assert_eq!(b.to_vec(), vec![1; b.capacity()])
+            }
+
+            test_from_iterator::<AllocRingBuffer<i32>>();
+            test_from_iterator::<ConstGenericRingBuffer<i32, 1024>>();
+            test_from_iterator::<GenericRingBuffer<i32, typenum::U1024>>();
+        }
+
+        test_from_iterator_wrap::<AllocRingBuffer<i32>>();
+        test_from_iterator_wrap::<ConstGenericRingBuffer<i32, 1024>>();
+        test_from_iterator_wrap::<GenericRingBuffer<i32, typenum::U1024>>();
+    }
+
+    #[test]
+    fn run_test_get_relative_negative() {
+        fn test_get_relative_negative(mut b: impl RingBuffer<i32>) {
+            b.push(0);
+            b.push(1);
+
+            // [0, ...]
+            //      ^
+            // [0, 1, ...]
+            //         ^
+            // get[(index + -1) % len] = 1
+            // get[(index + -2) % len] = 0 (wrap to 1 because len == 2)
+            assert_eq!(b.get(-1).unwrap(), &1);
+            assert_eq!(b.get(-2).unwrap(), &0);
+
+            // TODO: Is this intended behaviour?
+            assert_eq!(b.get(-3).unwrap(), &1);
+            assert_eq!(b.get(-4).unwrap(), &0);
+        }
+
+        test_get_relative_negative(with_alloc::AllocRingBuffer::with_capacity(10));
+        test_get_relative_negative(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
+        test_get_relative_negative(
+            with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new(),
+        );
+    }
 }

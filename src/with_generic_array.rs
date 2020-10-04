@@ -1,6 +1,7 @@
 use core::ops::{Index, IndexMut};
 
 use crate::RingBuffer;
+use core::iter::FromIterator;
 use core::marker::PhantomData;
 use generic_array::{ArrayLength, GenericArray};
 
@@ -127,6 +128,17 @@ impl<T: Default, Cap: ArrayLength<T>> Default for GenericRingBuffer<T, Cap> {
             index: 0,
             length_counter: 0,
         }
+    }
+}
+
+impl<RB: 'static + Default, Cap: ArrayLength<RB>> FromIterator<RB> for GenericRingBuffer<RB, Cap> {
+    fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
+        let mut res = Self::default();
+        for i in iter {
+            res.push(i)
+        }
+
+        res
     }
 }
 
