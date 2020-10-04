@@ -16,33 +16,38 @@
 //!
 //! The ringbuffer crate provides safe fixed size circular buffers (ringbuffers) in rust.
 //!
-//! Implementations for three kinds of ringbuffers, with a very similar API are provided:
+//! Implementations for three kinds of ringbuffers, with a mostly similar API are provided:
 //!
 //! | type | description |
 //! | --- | --- |
 //! | [`AllocRingBuffer`] | Ringbuffer allocated on the heap at runtime. This ringbuffer is still fixed size and requires alloc. |
-//! | [`GenericRingBuffer`] | Ringbuffer allocated on the stack. This is done using the `typenum` crate to provide a const-generic like interface without needing nightly |
+//! | [`GenericRingBuffer`] | Ringbuffer allocated on the stack. This is done using the [`typenum`] crate to provide a const-generic like interface without needing nightly |
 //! | [`ConstGenericRingBuffer`] | Ringbuffer which uses const generics to allocate on the stack. This type is feature-gated behind `const_generics` and only works in nightly rust.|
+//!
+//! All of these ringbuffers also implement the [`RingBuffer`] trait for their shared API surface.
 //!
 //! # Usage
 //!
-//! ```rust
-//! # use ringbuffer::AllocRingBuffer;
-//! # use ringbuffer::RingBuffer;
+//! ```
+//! use ringbuffer::{AllocRingBuffer, RingBuffer};
 //!
 //! let mut buffer = AllocRingBuffer::with_capacity(2);
 //!
 //! // First entry of the buffer is now 5.
 //! buffer.push(5);
 //!
-//! assert_eq!(buffer.get_absolute(0), Some(&5));
+//! // The last item we pushed is 5
+//! assert_eq!(buffer.get(-1), Some(&5));
 //!
 //! // Second entry is now 42.
 //! buffer.push(42);
 //!
+//! assert_eq!(buffer.peek(), Some(&5));
+//! assert!(buffer.is_full());
+//!
 //! // Because capacity is reached the next push will be the first item of the buffer.
 //! buffer.push(1);
-//! assert_eq!(buffer.get_absolute(0), Some(&1));
+//! assert_eq!(buffer.to_vec(), vec![42, 1]);
 //!
 //! ```
 //!
@@ -52,8 +57,8 @@
 //! | --- | --- | --- |
 //! | alloc | ✓ | Disable this feature to remove the dependency on alloc. Useful for kernels. |
 //! | const_generics | ✗ | Enables the ConstGenericRingBuffer. This requires nightly. |
-//! | generic_uninit | ✗  | Enables the unsafe `new_uninit` function on [`GenericRingBuffer`] and [`ConstGenericRingBuffer`] used for faster initialization |
-//! | generic_array | ✓ | Disable this feature to remove the `generic_array` and `typenum` dependencies (also disables GenericRingBuffer). |
+//! | generic_uninit | ✗  | Enables the unsafe [`new_uninit`](GenericRingBuffer::new_uninit) function on [`GenericRingBuffer`] and [`ConstGenericRingBuffer`] used for faster initialization |
+//! | generic_array | ✓ | Disable this feature to remove the [`generic_array`] and [`typenum`] dependencies (and disables [`GenericRingBuffer`]). |
 //!
 //! # License
 //!
@@ -67,6 +72,8 @@ pub use ringbuffer_trait::RingBuffer;
 mod with_alloc;
 #[cfg(feature = "alloc")]
 pub use with_alloc::AllocRingBuffer;
+#[cfg(feature = "alloc")]
+pub use with_alloc::RINGBUFFER_DEFAULT_CAPACITY;
 
 #[cfg(feature = "const_generics")]
 mod with_const_generics;
