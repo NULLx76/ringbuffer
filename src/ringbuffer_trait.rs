@@ -6,6 +6,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::iter::FromIterator;
 
+
 // TODO: Remove Default <Issue #13>
 /// RingBuffer is a trait defining the standard interface for all RingBuffer
 /// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`GenericRingBuffer`](crate::GenericRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
@@ -13,7 +14,7 @@ use core::iter::FromIterator;
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing RingBuffer.
 pub trait RingBuffer<T: 'static + Default>:
-    Default + Index<isize, Output = T> + IndexMut<isize> + FromIterator<T>
+    Default + Index<isize, Output = T> + IndexMut<isize> + FromIterator<T> + crate::private::Sealed
 {
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.
