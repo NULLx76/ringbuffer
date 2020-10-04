@@ -7,7 +7,9 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::iter::FromIterator;
 
-/// The RingBuffer struct.
+/// The AllocRingBuffer is a RingBuffer which is based on a Vec. This means it allocates at runtime
+/// on the heap, and therefore needs the `alloc` crate. This struct and therefore the dependency on
+/// alloc can be disabled by disabling the `alloc` (default) feature.
 ///
 /// # Example
 /// ```
@@ -69,7 +71,7 @@ impl<T: 'static + Default> RingBuffer<T> for AllocRingBuffer<T> {
 }
 
 impl<T> AllocRingBuffer<T> {
-    /// Creates a RingBuffer with a certain capacity.
+    /// Creates a RingBuffer with a certain capacity. This capacity is fixed.
     #[inline]
     pub fn with_capacity(cap: usize) -> Self {
         assert!(cap > 0, "Capacity must be greater than zero");
