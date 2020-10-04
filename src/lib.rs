@@ -2,6 +2,12 @@
 #![cfg_attr(feature = "const_generics", feature(const_generics))]
 #![cfg_attr(feature = "const_generics", allow(incomplete_features))]
 #![deny(missing_docs)]
+#![deny(warnings)]
+#![deny(unused_import_braces)]
+#![deny(unused_results)]
+#![deny(trivial_casts)]
+#![deny(trivial_numeric_casts)]
+#![deny(unused_qualifications)]
 //! # Ringbuffer
 //! [![Drone (self-hosted)](https://img.shields.io/drone/build/0x76/ringbuffer?logo=drone&server=https%3A%2F%2Fdrone.xirion.net&style=for-the-badge)](https://drone.xirion.net/0x76/ringbuffer)
 //! [![Codecov](https://img.shields.io/codecov/c/github/NULLx76/ringbuffer?logo=codecov&style=for-the-badge)](https://codecov.io/gh/NULLx76/ringbuffer)
@@ -44,10 +50,10 @@
 //!
 //! | name | default | description |
 //! | --- | --- | --- |
-//! | alloc | ✓ | |
+//! | alloc | ✓ | Disable this feature to remove the dependency on alloc. Useful for kernels. |
 //! | const_generics | ✗ | Enables the ConstGenericRingBuffer. This requires nightly. |
 //! | generic_uninit | ✗  | Enables the unsafe `new_uninit` function on [`GenericRingBuffer`] and [`ConstGenericRingBuffer`] used for faster initialization |
-//! | generic_array | ✓ | Enabled by default. Disable this feature to remove the `generic_array` and `typenum` dependencies (also disables GenericRingBuffer). |
+//! | generic_array | ✓ | Disable this feature to remove the `generic_array` and `typenum` dependencies (also disables GenericRingBuffer). |
 //!
 //! # License
 //!

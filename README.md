@@ -42,10 +42,10 @@ fn main() {
 
 | name | default | description |
 | --- | --- | --- |
-| alloc | ✓ | |
+| alloc | ✓ | Disable this feature to remove the dependency on alloc. Useful for kernels. |
 | const_generics | ✗ | Enables the ConstGenericRingBuffer. This requires nightly. |
 | generic_uninit | ✗  | Enables the unsafe `new_uninit` function on [`GenericRingBuffer`] and [`ConstGenericRingBuffer`] used for faster initialization |
-| generic_array | ✓ | Enabled by default. Disable this feature to remove the `generic_array` and `typenum` dependencies (also disables GenericRingBuffer). |
+| generic_array | ✓ | Disable this feature to remove the `generic_array` and `typenum` dependencies (also disables GenericRingBuffer). |
 
 # License
 

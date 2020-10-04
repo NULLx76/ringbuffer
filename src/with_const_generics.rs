@@ -161,14 +161,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_no_empty() {
-        ConstGenericRingBuffer::<u32, 0>::new();
+        let _ = ConstGenericRingBuffer::<u32, 0>::new();
     }
 
     #[test]
     #[should_panic]
     fn test_index_zero_length() {
         let b = ConstGenericRingBuffer::<i32, 2>::new();
-        b[2];
+        let _ = b[2];
     }
 
     #[test]
@@ -194,6 +194,6 @@ mod tests {
     #[should_panic]
     fn test_uninit_out_of_bounds() {
         let b = unsafe { ConstGenericRingBuffer::<i32, 2>::new_uninit() };
-        b[0];
+        let _ = b[0];
     }
 }

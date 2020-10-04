@@ -7,7 +7,6 @@ use alloc::vec::Vec;
 use core::iter::FromIterator;
 use core::marker::PhantomData;
 
-
 // TODO: Remove Default <Issue #13>
 /// RingBuffer is a trait defining the standard interface for all RingBuffer
 /// implementations ([`AllocRingBuffer`], [`GenericRingBuffer`], [`ConstGenericRingBuffer`])
