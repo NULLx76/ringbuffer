@@ -73,6 +73,14 @@ pub trait RingBuffer<T: 'static + Default>:
     {
         self.iter().cloned().collect()
     }
+
+    /// Returns true if elem is in the ringbuffer
+    fn contains(&self, elem: &T) -> bool
+    where
+        T: PartialEq,
+    {
+        self.iter().any(|i| i == elem)
+    }
 }
 
 pub struct RingBufferIterator<'rb, T: 'static + Default, RB: RingBuffer<T>> {
