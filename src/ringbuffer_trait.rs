@@ -16,8 +16,14 @@ pub trait RingBuffer<T: 'static + Default>:
     fn len(&self) -> usize;
 
     /// Returns true if the buffer is empty, some value between 0 and capacity.
+    #[inline]
     fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    #[inline]
+    fn is_full(&self) -> bool {
+        self.len() == self.capacity()
     }
 
     /// Empties the buffer.
@@ -43,10 +49,44 @@ pub trait RingBuffer<T: 'static + Default>:
 
     /// Returns the value at the current index.
     /// This is the value that will be overwritten by the next push.
-    fn peek(&self) -> Option<&T>;
+    #[inline]
+    fn peek(&self) -> Option<&T> {
+        self.front()
+    }
+
+    /// Returns the value at the back of the queue.
+    /// This is the item that was pushed most recently.
+    #[inline]
+    fn back(&self) -> Option<&T> {
+        self.get(-1)
+    }
+
+    /// Returns the value at the back of the queue.
+    /// This is the value that will be overwritten by the next push.
+    /// (alias of peek)
+    #[inline]
+    fn front(&self) -> Option<&T> {
+        self.get(0)
+    }
+
+    /// Returns a mutable reference to the value at the back of the queue.
+    /// This is the item that was pushed most recently.
+    #[inline]
+    fn back_mut(&mut self) -> Option<&mut T> {
+        self.get_mut(-1)
+    }
+
+    /// Returns a mutable reference to the value at the back of the queue.
+    /// This is the value that will be overwritten by the next push.
+    /// (alias of peek)
+    #[inline]
+    fn front_mut(&mut self) -> Option<&mut T> {
+        self.get_mut(0)
+    }
 
     /// Creates an iterator over the buffer starting from the latest push.
     #[cfg(not(tarpaulin_include))]
+    #[inline]
     fn iter(&self) -> RingBufferIterator<T, Self> {
         RingBufferIterator {
             obj: &self,
@@ -57,6 +97,7 @@ pub trait RingBuffer<T: 'static + Default>:
 
     ///  Creates a mutable iterator over the buffer starting from the latest push.
     #[cfg(not(tarpaulin_include))]
+    #[inline]
     fn iter_mut(&mut self) -> RingBufferMutIterator<T, Self> {
         RingBufferMutIterator {
             obj: self,
@@ -170,15 +211,6 @@ macro_rules! impl_ringbuffer {
                 self.$buf.get_mut(index)
             } else {
                 None
-            }
-        }
-
-        #[inline]
-        fn peek(&self) -> Option<&T> {
-            if self.$index >= self.len() {
-                None
-            } else {
-                self.$buf.get(self.$index)
             }
         }
     };
