@@ -18,14 +18,14 @@ use alloc::vec::Vec;
 /// // First entry of the buffer is now 5.
 /// buffer.push(5);
 ///
-/// assert_eq!(buffer[0], 5);
+/// assert_eq!(buffer[-1], 5);
 ///
 /// // Second entry is now 42.
 /// buffer.push(42);
 ///
 /// // Because capacity is reached the next push will be the first item of the buffer.
 /// buffer.push(1);
-/// assert_eq!(buffer[0], 1);
+/// assert_eq!(buffer[-1], 1);
 /// ```
 #[derive(PartialEq, Eq, Debug)]
 pub struct AllocRingBuffer<T> {
@@ -120,17 +120,17 @@ impl<T> Default for AllocRingBuffer<T> {
     }
 }
 
-impl<T> Index<usize> for AllocRingBuffer<T> {
+impl<T: 'static + Default> Index<isize> for AllocRingBuffer<T> {
     type Output = T;
 
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.buf[index]
+    fn index(&self, index: isize) -> &Self::Output {
+        self.get(index).expect("index out of bounds")
     }
 }
 
-impl<T> IndexMut<usize> for AllocRingBuffer<T> {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.buf[index]
+impl<T: 'static + Default> IndexMut<isize> for AllocRingBuffer<T> {
+    fn index_mut(&mut self, index: isize) -> &mut Self::Output {
+        self.get_mut(index).expect("index out of bounds")
     }
 }
 
@@ -167,10 +167,8 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_index_bigger_than_length() {
-        let mut b = AllocRingBuffer::with_capacity(2);
-        b.push(2);
-
+    fn test_index_zero_length() {
+        let b = AllocRingBuffer::<i32>::with_capacity(2);
         b[2];
     }
 }

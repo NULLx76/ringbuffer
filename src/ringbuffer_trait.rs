@@ -7,9 +7,7 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 // TODO: Remove Default <Issue #13>
-pub trait RingBuffer<T: 'static + Default>:
-    Default + Index<usize, Output = T> + IndexMut<usize>
-{
+pub trait RingBuffer<T: 'static + Default>: Default + Index<isize, Output=T> + IndexMut<isize>{
     /// Returns the length of the internal buffer. This length grows up to the capacity and then
     /// stops growing.
     fn len(&self) -> usize;
@@ -26,10 +24,10 @@ pub trait RingBuffer<T: 'static + Default>:
     fn capacity(&self) -> usize;
 
     /// Gets a value relative to the current index
-    fn get(&self, index: usize) -> Option<&T>;
+    fn get(&self, index: isize) -> Option<&T>;
 
     /// Gets a value relative to the current index mutably
-    fn get_mut(&mut self, index: usize) -> Option<&mut T>;
+    fn get_mut(&mut self, index: isize) -> Option<&mut T>;
 
     /// Gets a value relative to the start of the array (rarely useful, usually you want [`get`])
     fn get_absolute(&self, index: usize) -> Option<&T>;
@@ -86,7 +84,7 @@ impl<'rb, T: 'static + Default, RB: RingBuffer<T>> Iterator for RingBufferIterat
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.obj.len() {
-            let res = self.obj.get(self.index);
+            let res = self.obj.get(self.index as isize);
             self.index += 1;
             res
         } else {
@@ -107,7 +105,7 @@ impl<'rb, T: 'static + Default, RB: RingBuffer<T>> Iterator for RingBufferMutIte
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.obj.len() {
-            let res: Option<&'_ mut T> = self.obj.get_mut(self.index);
+            let res: Option<&'_ mut T> = self.obj.get_mut(self.index as isize);
             self.index += 1;
 
             // Safety:
@@ -127,9 +125,9 @@ impl<'rb, T: 'static + Default, RB: RingBuffer<T>> Iterator for RingBufferMutIte
 macro_rules! impl_ringbuffer {
     ($buf: ident, $index: ident) => {
         #[inline]
-        fn get(&self, index: usize) -> Option<&T> {
+        fn get(&self, index: isize) -> Option<&T> {
             if self.len() > 0 {
-                let index = (index + self.$index) % self.len();
+                let index = (index + self.$index as isize).rem_euclid(self.len() as isize) as usize;
                 self.$buf.get(index)
             } else {
                 None
@@ -137,9 +135,9 @@ macro_rules! impl_ringbuffer {
         }
 
         #[inline]
-        fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        fn get_mut(&mut self, index: isize) -> Option<&mut T> {
             if self.len() > 0 {
-                let index = (index + self.$index) % self.len();
+                let index = (index + self.$index as isize).rem_euclid(self.len() as isize) as usize;
                 self.$buf.get_mut(index)
             } else {
                 None
