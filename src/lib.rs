@@ -87,6 +87,27 @@ pub use generic_array::{typenum, ArrayLength};
 #[cfg(feature = "generic-array")]
 pub use with_generic_array::GenericRingBuffer;
 
+
+mod private {
+    #[cfg(feature = "alloc")]
+    use crate::AllocRingBuffer;
+    #[cfg(feature = "generic-array")]
+    use crate::GenericRingBuffer;
+    #[cfg(feature = "generic-array")]
+    use generic_array::ArrayLength;
+    #[cfg(feature = "const_generics")]
+    use crate::ConstGenericRingBuffer;
+
+    pub trait Sealed {}
+
+    #[cfg(feature = "alloc")]
+    impl<T> Sealed for AllocRingBuffer<T> {}
+    #[cfg(feature = "generic-array")]
+    impl<T, A: ArrayLength<T>> Sealed for GenericRingBuffer<T, A> {}
+    #[cfg(feature = "const_generics")]
+    impl<T, const CAP: usize> Sealed for ConstGenericRingBuffer<T, CAP> {}
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
