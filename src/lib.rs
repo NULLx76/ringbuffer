@@ -535,4 +535,19 @@ mod tests {
             with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new(),
         );
     }
+
+    #[test]
+    fn run_test_contains() {
+        fn test_contains(mut b: impl RingBuffer<i32>) {
+            b.push(1);
+            b.push(2);
+
+            assert!(b.contains(&1));
+            assert!(b.contains(&2));
+        }
+
+        test_contains(with_alloc::AllocRingBuffer::with_capacity(10));
+        test_contains(with_const_generics::ConstGenericRingBuffer::<i32, 10>::new());
+        test_contains(with_generic_array::GenericRingBuffer::<i32, typenum::U10>::new());
+    }
 }
