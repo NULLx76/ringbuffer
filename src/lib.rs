@@ -339,7 +339,7 @@ mod tests {
             assert_eq!(b.get(0).unwrap(), &0);
             assert_eq!(b.get(1).unwrap(), &1);
 
-            // TODO: Is this intended behaviour?
+            // Wraps around
             assert_eq!(b.get(2).unwrap(), &0);
             assert_eq!(b.get(3).unwrap(), &1);
         }
@@ -524,7 +524,7 @@ mod tests {
             assert_eq!(b.get(-1).unwrap(), &1);
             assert_eq!(b.get(-2).unwrap(), &0);
 
-            // TODO: Is this intended behaviour?
+            // Wraps around
             assert_eq!(b.get(-3).unwrap(), &1);
             assert_eq!(b.get(-4).unwrap(), &0);
         }
