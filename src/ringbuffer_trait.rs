@@ -8,7 +8,7 @@ use core::iter::FromIterator;
 
 // TODO: Remove Default <Issue #13>
 /// RingBuffer is a trait defining the standard interface for all RingBuffer
-/// implementations ([`AllocRingBuffer`], [`GenericRingBuffer`], [`ConstGenericRingBuffer`])
+/// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`GenericRingBuffer`](crate::GenericRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
 ///
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing RingBuffer.
@@ -22,7 +22,7 @@ pub trait RingBuffer<T: 'static + Default>:
 
     // TODO: issue #21: pop feature
     /// Returns true if the buffer is entirely empty.
-    /// This is currently only true when nothing has ever been pushed, or when the [`clear`]
+    /// This is currently only true when nothing has ever been pushed, or when the [`Self::clear`]
     /// function is called. This might change when the `pop` function is added with issue #21
     #[inline]
     fn is_empty(&self) -> bool {
@@ -50,10 +50,10 @@ pub trait RingBuffer<T: 'static + Default>:
     /// -1 and down are the last elements pushed and 0 and up are the items that were pushed the longest ago.
     fn get_mut(&mut self, index: isize) -> Option<&mut T>;
 
-    /// Gets a value relative to the start of the array (rarely useful, usually you want [`get`])
+    /// Gets a value relative to the start of the array (rarely useful, usually you want [`Self::get`])
     fn get_absolute(&self, index: usize) -> Option<&T>;
 
-    /// Gets a value mutably relative to the start of the array (rarely useful, usually you want [`get_mut`])
+    /// Gets a value mutably relative to the start of the array (rarely useful, usually you want [`Self::get_mut`])
     fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T>;
 
     /// Pushes a value onto the buffer. Cycles around if capacity is reached.
@@ -61,7 +61,7 @@ pub trait RingBuffer<T: 'static + Default>:
 
     /// Returns the value at the current index.
     /// This is the value that will be overwritten by the next push and also the value pushed
-    /// the longest ago.
+    /// the longest ago. (alias of [`Self::front`])
     #[inline]
     fn peek(&self) -> Option<&T> {
         self.front()
@@ -101,7 +101,6 @@ pub trait RingBuffer<T: 'static + Default>:
     /// Creates an iterator over the buffer starting from the latest push.
     /// Creates an iterator over the buffer starting from the item pushed the longest ago,
     /// and ending at the element most recently pushed.
-    #[cfg(not(tarpaulin_include))]
     #[inline]
     fn iter(&self) -> RingBufferIterator<T, Self> {
         RingBufferIterator::new(self)
@@ -110,7 +109,6 @@ pub trait RingBuffer<T: 'static + Default>:
     ///  Creates a mutable iterator over the buffer starting from the latest push.
     /// Creates a mutable iterator over the buffer starting from the item pushed the longest ago,
     /// and ending at the element most recently pushed.
-    #[cfg(not(tarpaulin_include))]
     #[inline]
     fn iter_mut(&mut self) -> RingBufferMutIterator<T, Self> {
         RingBufferMutIterator::new(self)
