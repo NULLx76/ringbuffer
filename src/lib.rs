@@ -87,16 +87,15 @@ pub use generic_array::{typenum, ArrayLength};
 #[cfg(feature = "generic-array")]
 pub use with_generic_array::GenericRingBuffer;
 
-
 mod private {
     #[cfg(feature = "alloc")]
     use crate::AllocRingBuffer;
+    #[cfg(feature = "const_generics")]
+    use crate::ConstGenericRingBuffer;
     #[cfg(feature = "generic-array")]
     use crate::GenericRingBuffer;
     #[cfg(feature = "generic-array")]
     use generic_array::ArrayLength;
-    #[cfg(feature = "const_generics")]
-    use crate::ConstGenericRingBuffer;
 
     pub trait Sealed {}
 
