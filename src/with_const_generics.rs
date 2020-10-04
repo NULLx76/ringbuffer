@@ -129,7 +129,6 @@ impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
 }
 
 impl<RB: 'static + Default, const CAP: usize> FromIterator<RB> for ConstGenericRingBuffer<RB, CAP> {
-    #[cfg(not(tarpaulin_include))]
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
