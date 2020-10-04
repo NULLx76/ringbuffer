@@ -4,10 +4,13 @@ use core::ops::{Index, IndexMut};
 extern crate alloc;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
+use core::iter::FromIterator;
 use core::marker::PhantomData;
 
 // TODO: Remove Default <Issue #13>
-pub trait RingBuffer<T: 'static + Default>: Default + Index<isize, Output=T> + IndexMut<isize>{
+pub trait RingBuffer<T: 'static + Default>:
+    Default + Index<isize, Output = T> + IndexMut<isize> + FromIterator<T>
+{
     /// Returns the length of the internal buffer. This length grows up to the capacity and then
     /// stops growing.
     fn len(&self) -> usize;
