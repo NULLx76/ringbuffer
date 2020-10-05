@@ -126,8 +126,8 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuf
 
 #[cfg(test)]
 mod tests {
-    use generic_array::typenum;
     use crate::GenericRingBuffer;
+    use generic_array::typenum;
 
     #[test]
     #[should_panic]
