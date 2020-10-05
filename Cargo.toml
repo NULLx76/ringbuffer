@@ -15,6 +15,10 @@ lto = true
 
 [dependencies]
 generic-array = {version = "0.14.4", optional=true}
+# TODO: wait for this to be merged and switch to the official repository instead of the fork
+#       or possibly switch to the new version on crates.io
+#       https://github.com/Manishearth/array-init/pull/18/files
+array-init = {git = "https://github.com/jonay2000/array-init", branch="const-generics", version = "0.1.1", optional=true}
 
 [features]
 default = ["alloc", "generic-array"]
@@ -22,5 +26,5 @@ default = ["alloc", "generic-array"]
 alloc = []
 
 # enable the version of RingBuffer which uses the experimental const_generics feature of rust
-const_generics = []
+const_generics = ["array-init", "array-init/const-generics"]
 

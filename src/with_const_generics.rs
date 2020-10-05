@@ -1,6 +1,5 @@
 use crate::RingBuffer;
 use core::iter::FromIterator;
-use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
 
 /// The ConstGenericRingBuffer struct is a RingBuffer implementation which does not require `alloc`.
@@ -87,16 +86,7 @@ impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     fn default() -> Self {
         assert_ne!(CAP, 0);
 
-        // Requires unsafe block because currently it is impossible to create a const generic array
-        // from Default elements that are not copy. All elements are initialized below and thus
-        // it is impossible to actually access unitialized memory. Even if elements weren't initialized
-        // (like with the new_uninit constructor), the RingBuffer makes sure it's never possible
-        // to access elements that are not initialized.
-        let mut arr: [T; CAP] = unsafe { MaybeUninit::uninit().assume_init() };
-
-        for i in &mut arr {
-            *i = T::default()
-        }
+        let arr = array_init::array_init(|_| T::default());
 
         Self {
             buf: arr,

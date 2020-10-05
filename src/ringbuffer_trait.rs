@@ -13,7 +13,7 @@ use core::iter::FromIterator;
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing RingBuffer.
 pub trait RingBuffer<T: 'static + Default>:
-    Default + Index<isize, Output = T> + IndexMut<isize> + FromIterator<T> + crate::private::Sealed
+    Default + Index<isize, Output = T> + IndexMut<isize> + FromIterator<T>
 {
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.

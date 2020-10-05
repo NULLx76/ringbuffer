@@ -2,7 +2,6 @@ use core::ops::{Index, IndexMut};
 
 use crate::RingBuffer;
 use core::iter::FromIterator;
-use core::marker::PhantomData;
 use generic_array::{ArrayLength, GenericArray};
 
 /// The GenericRingBuffer struct is a RingBuffer implementation which does not require `alloc`.
@@ -54,51 +53,6 @@ impl<T: Default, Cap: ArrayLength<T>> GenericRingBuffer<T, Cap> {
     #[inline]
     pub fn new() -> Self {
         Self::default()
-    }
-}
-
-pub struct UninitExactIter<T, Cap> {
-    count: usize,
-    phantom1: PhantomData<T>,
-    phantom2: PhantomData<Cap>,
-}
-
-impl<T, Cap: ArrayLength<T>> Default for UninitExactIter<T, Cap> {
-    fn default() -> Self {
-        Self {
-            count: 0,
-            phantom1: Default::default(),
-            phantom2: Default::default(),
-        }
-    }
-}
-
-impl<T, Cap: ArrayLength<T>> Iterator for UninitExactIter<T, Cap> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<T> {
-        self.count += 1;
-
-        if self.count <= Cap::to_usize() {
-            let elem = unsafe { core::mem::MaybeUninit::<T>::uninit().assume_init() };
-
-            Some(elem)
-        } else {
-            None
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (
-            Cap::to_usize() - self.count,
-            Some(Cap::to_usize() - self.count),
-        )
-    }
-}
-
-impl<T, Cap: ArrayLength<T>> ExactSizeIterator for UninitExactIter<T, Cap> {
-    fn len(&self) -> usize {
-        Cap::to_usize()
     }
 }
 
@@ -172,8 +126,8 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuf
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use generic_array::typenum;
+    use crate::GenericRingBuffer;
 
     #[test]
     #[should_panic]
