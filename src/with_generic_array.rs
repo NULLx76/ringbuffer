@@ -61,7 +61,10 @@ impl<T: Default, Cap: ArrayLength<T>> Default for GenericRingBuffer<T, Cap> {
     #[inline]
     fn default() -> Self {
         assert_ne!(Cap::to_usize(), 0, "Capacity must be greater than 0");
-        assert!(Cap::to_usize().is_power_of_two(), "Capacity must be a power of two");
+        assert!(
+            Cap::to_usize().is_power_of_two(),
+            "Capacity must be a power of two"
+        );
 
         Self {
             buf: GenericArray::default(),
@@ -97,7 +100,6 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> IndexMut<isize> for GenericRingB
 }
 
 impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuffer<T, Cap> {
-
     #[inline]
     #[cfg(not(tarpaulin_include))]
     fn capacity(&self) -> usize {
