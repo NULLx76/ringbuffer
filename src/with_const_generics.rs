@@ -1,6 +1,5 @@
 use crate::RingBuffer;
 use core::iter::FromIterator;
-use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
 
 /// The ConstGenericRingBuffer struct is a RingBuffer implementation which does not require `alloc`.
@@ -41,7 +40,7 @@ pub struct ConstGenericRingBuffer<T, const CAP: usize> {
 
 /// It is only possible to create a Generic RingBuffer if the type T in it implements Default.
 /// This is because the array needs to be allocated at compile time, and needs to be filled with
-/// some default value to avoid unsafe.
+/// some default value.
 impl<T: Default, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     /// Creates a new RingBuffer. The method is here for compatibility with the alloc version of
     /// RingBuffer. This method simply creates a default ringbuffer. The capacity is given as a
@@ -49,31 +48,6 @@ impl<T: Default, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     #[inline]
     pub fn new() -> Self {
         Self::default()
-    }
-}
-
-impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
-    /// Creates a new RingBuffer with uninitialized elements. This is unsafe because this relies on
-    /// creating uninitialized memory.
-    ///
-    /// Still it's recommended to use the [`Self::new`] or [`Default::default`] methods to create a
-    /// RingBuffer, whenever the type T implements default.
-    ///
-    /// # Safety
-    ///
-    /// Using this function is not actually that unsafe, because the ringbuffer makes sure you have
-    /// to write to an unitialized element before you can read it by only moving the index forward
-    /// when you write. Therefore you can't ever accidentally read uninitialized memory.
-    #[inline]
-    #[cfg(feature = "generic_uninit")]
-    pub unsafe fn new_uninit() -> Self {
-        let arr: [T; CAP] = MaybeUninit::uninit().assume_init();
-
-        Self {
-            buf: arr,
-            index: 0,
-            length_counter: 0,
-        }
     }
 }
 
@@ -112,16 +86,7 @@ impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     fn default() -> Self {
         assert_ne!(CAP, 0);
 
-        // Requires unsafe block because currently it is impossible to create a const generic array
-        // from Default elements that are not copy. All elements are initialized below and thus
-        // it is impossible to actually access unitialized memory. Even if elements weren't initialized
-        // (like with the new_uninit constructor), the RingBuffer makes sure it's never possible
-        // to access elements that are not initialized.
-        let mut arr: [T; CAP] = unsafe { MaybeUninit::uninit().assume_init() };
-
-        for i in &mut arr {
-            *i = T::default()
-        }
+        let arr = array_init::array_init(|_| T::default());
 
         Self {
             buf: arr,
@@ -171,31 +136,5 @@ mod tests {
     fn test_index_zero_length() {
         let b = ConstGenericRingBuffer::<i32, 2>::new();
         let _ = b[2];
-    }
-
-    #[test]
-    fn test_uninit() {
-        let mut b = unsafe { ConstGenericRingBuffer::<_, 2>::new_uninit() };
-        assert_eq!(b.peek(), None);
-
-        assert_eq!(b.len(), 0);
-        assert_eq!(b.capacity(), 2);
-
-        b.push(1);
-        b.push(2);
-        b.push(3);
-
-        assert_eq!(b.len(), 2);
-        assert_eq!(b.capacity(), 2);
-
-        assert_eq!(b.get_absolute(0).unwrap(), &3);
-        assert_eq!(b.get_absolute(1).unwrap(), &2);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_uninit_out_of_bounds() {
-        let b = unsafe { ConstGenericRingBuffer::<i32, 2>::new_uninit() };
-        let _ = b[0];
     }
 }

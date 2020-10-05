@@ -1,6 +1,6 @@
 [package]
 name = "ringbuffer"
-version = "0.2.3"
+version = "1.0.0"
 authors = ["Victor Roest <victor@xirion.net>", "Jonathan Dönszelmann <jonabent@gmail.com>"]
 edition = "2018"
 description = "A fixed-size circular buffer"
@@ -15,6 +15,10 @@ lto = true
 
 [dependencies]
 generic-array = {version = "0.14.4", optional=true}
+# TODO: wait for this to be merged and switch to the official repository instead of the fork
+#       or possibly switch to the new version on crates.io
+#       https://github.com/Manishearth/array-init/pull/18/files
+array-init = {git = "https://github.com/jonay2000/array-init", branch="const-generics", version = "0.1.1", optional=true}
 
 [dev-dependencies]
 criterion = "0.1.2"
@@ -23,11 +27,9 @@ criterion = "0.1.2"
 default = ["alloc", "generic-array"]
 # disable the alloc based ringbuffer, to make RingBuffers work in no_alloc environments
 alloc = []
-# enable to allow creating uninitialized RingBuffers when using the generic feature
-generic_uninit = []
 
 # enable the version of RingBuffer which uses the experimental const_generics feature of rust
-const_generics = []
+const_generics = ["array-init", "array-init/const-generics"]
 
 
 [[bench]]

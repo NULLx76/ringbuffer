@@ -190,25 +190,13 @@ mod iter {
                 phantom: Default::default(),
             }
         }
-    }
 
-    impl<'rb, T: 'static + Default, RB: RingBuffer<T>> Iterator for RingBufferMutIterator<'rb, T, RB> {
-        type Item = &'rb mut T;
-
-        #[inline]
-        fn next(&mut self) -> Option<Self::Item> {
+        pub fn next(&mut self) -> Option<&mut T> {
             if self.index < self.obj.len() {
-                let res: Option<&'_ mut T> = self.obj.get_mut(self.index as isize);
+                let res = self.obj.get_mut(self.index as isize);
                 self.index += 1;
 
-                // Safety:
-                // This mem transmute is extending the lifetime of the returned value.
-                // This is necessary because the rust borrow checker is too restrictive in giving out mutable references.
-                // It thinks the iterator can give out a mutable reference, while it's also possible to mutably borrow
-                // `obj` in the RingBufferMutIterator struct. This is however *never* possible because it's a private field
-                // Unfortunately this is a limitation of the rust compiler. It's well explained here:
-                // http://smallcultfollowing.com/babysteps/blog/2013/10/24/iterators-yielding-mutable-references/
-                unsafe { core::mem::transmute::<Option<&'_ mut T>, Option<&'rb mut T>>(res) }
+                res
             } else {
                 None
             }
