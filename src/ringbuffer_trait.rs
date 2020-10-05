@@ -57,7 +57,7 @@ pub trait RingBuffer<T: 'static + Default>:
     fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T>;
 
     /// Pushes a value onto the buffer. Cycles around if capacity is reached.
-    fn push(&mut self, e: T);
+    fn push(&mut self, value: T);
 
     /// Returns the value at the current index.
     /// This is the value that will be overwritten by the next push and also the value pushed
@@ -129,6 +129,32 @@ pub trait RingBuffer<T: 'static + Default>:
         T: PartialEq,
     {
         self.iter().any(|i| i == elem)
+    }
+
+    /// Dequeues the top item off the ringbuffer. Returns a reference to the item. This means
+    /// that lifetimes will be problematic because as long as this reference exists,
+    /// you can not push to the queue. To solve this, use the pop method. This requires
+    /// the item to be clone. Easily moving out of the ringbuffer is sadly impossible.
+    ///
+    /// Returns None when the ringbuffer is empty.
+    fn dequeue_ref(&mut self) -> Option<&T>;
+
+    /// Dequeues the top item off the ringbuffer and returns an owned version. See the [`pop_ref`](Self::pop_ref) docs
+    fn dequeue(&mut self) -> Option<T> where T: Clone {
+        self.dequeue_ref().cloned()
+    }
+
+    /// Pops the top item off the queue, but does not return it. Instead it is dropped.
+    /// If the ringbuffer is empty, this function is a nop.
+    fn skip(&mut self);
+
+    /// Used internally and provided by the trait. Computes the bitmask used to properly
+    /// wrap the ringbuffer
+    ///
+    /// TODO: make global (private) function? Does not need to sit on the trait, but where to put it?
+    #[inline]
+    fn mask(&self, index: usize) -> usize {
+        index & (self.capacity() - 1)
     }
 }
 
@@ -209,11 +235,11 @@ pub use iter::{RingBufferIterator, RingBufferMutIterator};
 /// Implement the get, get_mut, get_absolute and get_absolute_mut functions on implementors
 /// of RingBuffer. This is to avoid duplicate code.
 macro_rules! impl_ringbuffer {
-    ($buf: ident, $index: ident) => {
+    ($buf: ident, $readptr: ident, $writeptr: ident) => {
         #[inline]
         fn get(&self, index: isize) -> Option<&T> {
-            if self.len() > 0 {
-                let index = (index + self.$index as isize).rem_euclid(self.len() as isize) as usize;
+            if !self.is_empty() {
+                let index = (self.$readptr as isize + index).rem_euclid(self.len() as isize) as usize;
                 self.$buf.get(index)
             } else {
                 None
@@ -222,8 +248,8 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn get_mut(&mut self, index: isize) -> Option<&mut T> {
-            if self.len() > 0 {
-                let index = (index + self.$index as isize).rem_euclid(self.len() as isize) as usize;
+            if !self.is_empty() {
+                let index = (self.$readptr as isize + index).rem_euclid(self.len() as isize) as usize;
                 self.$buf.get_mut(index)
             } else {
                 None
@@ -232,7 +258,9 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn get_absolute(&self, index: usize) -> Option<&T> {
-            if index < self.len() {
+            let read = self.mask(self.$readptr);
+            let write = self.mask(self.$writeptr);
+            if index >= read && index < write{
                 self.$buf.get(index)
             } else {
                 None
@@ -241,11 +269,37 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T> {
-            if index < self.len() {
-                self.$buf.get_mut(index)
+           if index >= self.mask(self.$readptr) && index < self.mask(self.$writeptr) {
+               self.$buf.get_mut(index)
+           } else {
+               None
+           }
+        }
+
+        #[inline]
+        fn len(&self) -> usize {
+            self.$writeptr - self.$readptr
+        }
+
+        #[inline]
+        fn clear(&mut self) {
+            self.$readptr = 0;
+            self.$writeptr = 0;
+        }
+
+        fn dequeue_ref(&mut self) -> Option<&T> {
+            if !self.is_empty() {
+                let res = &self.buf[self.mask(self.readptr)];
+                self.readptr += 1;
+                Some(res)
             } else {
                 None
             }
+        }
+
+        #[inline]
+        fn skip(&mut self) {
+            self.readptr += 1;
         }
     };
 }

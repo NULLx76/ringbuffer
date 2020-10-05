@@ -39,8 +39,8 @@ use generic_array::{ArrayLength, GenericArray};
 #[derive(PartialEq, Eq, Debug)]
 pub struct GenericRingBuffer<T, Cap: ArrayLength<T>> {
     buf: GenericArray<T, Cap>,
-    index: usize,
-    length_counter: usize,
+    readptr: usize,
+    writeptr: usize,
 }
 
 /// It is only possible to create a Generic RingBuffer if the type T in it implements Default.
@@ -60,12 +60,13 @@ impl<T: Default, Cap: ArrayLength<T>> Default for GenericRingBuffer<T, Cap> {
     /// Creates a buffer with a capacity specified through the `Cap` type parameter.
     #[inline]
     fn default() -> Self {
-        assert_ne!(Cap::to_usize(), 0);
+        assert_ne!(Cap::to_usize(), 0, "Capacity must be greater than 0");
+        assert!(Cap::to_usize().is_power_of_two(), "Capacity must be a power of two");
 
         Self {
             buf: GenericArray::default(),
-            index: 0,
-            length_counter: 0,
+            readptr: 0,
+            writeptr: 0,
         }
     }
 }
@@ -96,16 +97,6 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> IndexMut<isize> for GenericRingB
 }
 
 impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuffer<T, Cap> {
-    #[inline]
-    fn len(&self) -> usize {
-        self.length_counter
-    }
-
-    #[inline]
-    fn clear(&mut self) {
-        self.index = 0;
-        self.length_counter = 0;
-    }
 
     #[inline]
     #[cfg(not(tarpaulin_include))]
@@ -113,26 +104,33 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuf
         Cap::to_usize()
     }
 
-    fn push(&mut self, e: T) {
-        self.buf[self.index] = e;
-        if self.length_counter < self.capacity() {
-            self.length_counter += 1
+    fn push(&mut self, value: T) {
+        if self.is_full() {
+            self.readptr += 1;
         }
-        self.index = (self.index + 1) % self.capacity()
+        let index = self.mask(self.writeptr);
+        self.buf[index] = value;
+        self.writeptr += 1;
     }
 
-    impl_ringbuffer!(buf, index);
+    impl_ringbuffer!(buf, readptr, writeptr);
 }
 
 #[cfg(test)]
 mod tests {
-    use generic_array::typenum;
     use crate::GenericRingBuffer;
+    use generic_array::typenum;
 
     #[test]
     #[should_panic]
     fn test_no_empty() {
         let _ = GenericRingBuffer::<u32, typenum::U0>::new();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_with_capacity_no_power_of_two() {
+        let _ = GenericRingBuffer::<i32, typenum::U10>::new();
     }
 
     #[test]
