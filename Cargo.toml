@@ -35,7 +35,6 @@ const_generics = ["array-init", "array-init/const-generics"]
 [[bench]]
 name = "bench"
 harness = false
-required-features = ["generic_uninit"]
 
 [profile.bench]
 opt-level = 3
