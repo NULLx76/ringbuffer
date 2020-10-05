@@ -302,7 +302,8 @@ mod tests {
             b.push(2);
             b.push(3);
 
-            for el in b.iter_mut() {
+            let mut i = b.iter_mut();
+            while let Some(el) = i.next() {
                 *el += 1;
             }
 
@@ -322,7 +323,8 @@ mod tests {
             b.push(2);
             b.push(3);
 
-            for el in b.iter_mut() {
+            let mut i = b.iter_mut();
+            while let Some(el) = i.next() {
                 *el += 1;
             }
 
