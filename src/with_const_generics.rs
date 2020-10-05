@@ -67,7 +67,7 @@ impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingB
         self.writeptr += 1;
     }
 
-    impl_ringbuffer!(buf, readptr, writeptr);
+    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
 impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {

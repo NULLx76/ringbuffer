@@ -81,6 +81,7 @@ pub use with_const_generics::ConstGenericRingBuffer;
 
 #[cfg(feature = "generic-array")]
 mod with_generic_array;
+
 #[cfg(feature = "generic-array")]
 pub use generic_array::{typenum, ArrayLength};
 #[cfg(feature = "generic-array")]

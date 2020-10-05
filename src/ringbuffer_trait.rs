@@ -229,7 +229,7 @@ pub use iter::{RingBufferIterator, RingBufferMutIterator};
 /// Implement the get, get_mut, get_absolute and get_absolute_mut functions on implementors
 /// of RingBuffer. This is to avoid duplicate code.
 macro_rules! impl_ringbuffer {
-    ($buf: ident, $readptr: ident, $writeptr: ident) => {
+    ($buf: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
         #[inline]
         fn get(&self, index: isize) -> Option<&T> {
             if !self.is_empty() {
@@ -254,8 +254,8 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn get_absolute(&self, index: usize) -> Option<&T> {
-            let read = $crate::mask(self, self.$readptr);
-            let write = $crate::mask(self, self.$writeptr);
+            let read = $mask(self, self.$readptr);
+            let write = $mask(self, self.$writeptr);
             if index >= read && index < write {
                 self.$buf.get(index)
             } else {
@@ -265,9 +265,7 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T> {
-            if index >= $crate::mask(self, self.$readptr)
-                && index < $crate::mask(self, self.$writeptr)
-            {
+            if index >= $mask(self, self.$readptr) && index < $mask(self, self.$writeptr) {
                 self.$buf.get_mut(index)
             } else {
                 None
@@ -287,7 +285,7 @@ macro_rules! impl_ringbuffer {
 
         fn dequeue_ref(&mut self) -> Option<&T> {
             if !self.is_empty() {
-                let res = &self.buf[$crate::mask(self, self.readptr)];
+                let res = &self.buf[$mask(self, self.readptr)];
                 self.readptr += 1;
                 Some(res)
             } else {
