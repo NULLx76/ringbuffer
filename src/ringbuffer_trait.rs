@@ -140,7 +140,10 @@ pub trait RingBuffer<T: 'static + Default>:
     fn dequeue_ref(&mut self) -> Option<&T>;
 
     /// Dequeues the top item off the ringbuffer and returns an owned version. See the [`pop_ref`](Self::pop_ref) docs
-    fn dequeue(&mut self) -> Option<T> where T: Clone {
+    fn dequeue(&mut self) -> Option<T>
+    where
+        T: Clone,
+    {
         self.dequeue_ref().cloned()
     }
 
@@ -230,7 +233,8 @@ macro_rules! impl_ringbuffer {
         #[inline]
         fn get(&self, index: isize) -> Option<&T> {
             if !self.is_empty() {
-                let index = (self.$readptr as isize + index).rem_euclid(self.len() as isize) as usize;
+                let index =
+                    (self.$readptr as isize + index).rem_euclid(self.len() as isize) as usize;
                 self.$buf.get(index)
             } else {
                 None
@@ -240,7 +244,8 @@ macro_rules! impl_ringbuffer {
         #[inline]
         fn get_mut(&mut self, index: isize) -> Option<&mut T> {
             if !self.is_empty() {
-                let index = (self.$readptr as isize + index).rem_euclid(self.len() as isize) as usize;
+                let index =
+                    (self.$readptr as isize + index).rem_euclid(self.len() as isize) as usize;
                 self.$buf.get_mut(index)
             } else {
                 None
@@ -251,7 +256,7 @@ macro_rules! impl_ringbuffer {
         fn get_absolute(&self, index: usize) -> Option<&T> {
             let read = $crate::mask(self, self.$readptr);
             let write = $crate::mask(self, self.$writeptr);
-            if index >= read && index < write{
+            if index >= read && index < write {
                 self.$buf.get(index)
             } else {
                 None
@@ -260,11 +265,13 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T> {
-           if index >= $crate::mask(self, self.$readptr) && index < $crate::mask(self, self.$writeptr) {
-               self.$buf.get_mut(index)
-           } else {
-               None
-           }
+            if index >= $crate::mask(self, self.$readptr)
+                && index < $crate::mask(self, self.$writeptr)
+            {
+                self.$buf.get_mut(index)
+            } else {
+                None
+            }
         }
 
         #[inline]

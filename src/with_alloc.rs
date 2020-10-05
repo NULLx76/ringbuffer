@@ -126,7 +126,7 @@ impl<T> Default for AllocRingBuffer<T> {
             buf: Vec::with_capacity(cap),
             capacity: cap,
             readptr: 0,
-            writeptr: 0
+            writeptr: 0,
         }
     }
 }
