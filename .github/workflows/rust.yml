@@ -1,7 +1,7 @@
 name: Rust
 
 on: [push]
- 
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -17,7 +17,7 @@ jobs:
       with:
         toolchain: stable
         override: true
-  
+
     - name: Run cargo test
       uses: actions-rs/cargo@v1
       with:
@@ -55,7 +55,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install nightly toolchain  
+    - name: Install nightly toolchain
       uses: actions-rs/toolchain@v1
       with:
         profile: minimal
@@ -69,6 +69,8 @@ jobs:
 
     - name: Upload to codecov.io
       uses: codecov/codecov-action@v1.0.2
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Archive code coverage results
       uses: actions/upload-artifact@v1
