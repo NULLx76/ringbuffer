@@ -49,7 +49,6 @@ macro_rules! generate_benches {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-
     generate_benches![
         called,
         c,

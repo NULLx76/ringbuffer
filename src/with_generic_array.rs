@@ -115,7 +115,7 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuf
         self.writeptr += 1;
     }
 
-    impl_ringbuffer!(buf, readptr, writeptr);
+    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
 #[cfg(test)]

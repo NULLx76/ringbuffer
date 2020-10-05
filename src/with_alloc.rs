@@ -67,7 +67,7 @@ impl<T: 'static + Default> RingBuffer<T> for AllocRingBuffer<T> {
         self.writeptr += 1;
     }
 
-    impl_ringbuffer!(buf, readptr, writeptr);
+    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
 impl<T> AllocRingBuffer<T> {
