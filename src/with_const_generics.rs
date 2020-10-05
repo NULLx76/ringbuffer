@@ -40,7 +40,7 @@ pub struct ConstGenericRingBuffer<T, const CAP: usize> {
 
 /// It is only possible to create a Generic RingBuffer if the type T in it implements Default.
 /// This is because the array needs to be allocated at compile time, and needs to be filled with
-/// some default value to avoid unsafe.
+/// some default value.
 impl<T: Default, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     /// Creates a new RingBuffer. The method is here for compatibility with the alloc version of
     /// RingBuffer. This method simply creates a default ringbuffer. The capacity is given as a
