@@ -6,7 +6,7 @@
 
 The ringbuffer crate provides safe fixed size circular buffers (ringbuffers) in rust.
 
-Implementations for three kinds of ringbuffers, with a mostly similar API are provided: 
+Implementations for three kinds of ringbuffers, with a mostly similar API are provided:
 
 | type | description |
 | --- | --- |
@@ -47,7 +47,6 @@ fn main() {
 | --- | --- | --- |
 | alloc | ✓ | Disable this feature to remove the dependency on alloc. Useful for kernels. |
 | const_generics | ✗ | Enables the ConstGenericRingBuffer. This requires nightly. |
-| generic_uninit | ✗  | Enables the unsafe new_uninit function on GenericRingBuffer and ConstGenericRingBuffer used for faster initialization |
 | generic_array | ✓ | Disable this feature to remove the generic_array and typenum dependencies (and disables GenericRingBuffer). |
 
 # License
