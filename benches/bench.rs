@@ -59,10 +59,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         with_capacity,
         benchmark_push,
         16,
-        907,
-        1023,
         1024,
-        1025,
         4096,
         8192
     ];
@@ -74,10 +71,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         new,
         benchmark_push,
         16,
-        907,
-        1023,
         1024,
-        1025,
         4096,
         8192
     ];
@@ -89,10 +83,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         new,
         benchmark_push,
         U16,
-        U907,
-        U1023,
         U1024,
-        U1025,
         U4096,
         U8192
     ];
@@ -105,10 +96,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         with_capacity,
         benchmark_various,
         16,
-        907,
-        1023,
         1024,
-        1025,
         4096,
         8192
     ];
@@ -120,10 +108,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         new,
         benchmark_various,
         16,
-        907,
-        1023,
         1024,
-        1025,
         4096,
         8192
     ];
@@ -135,10 +120,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         new,
         benchmark_various,
         U16,
-        U907,
-        U1023,
         U1024,
-        U1025,
         U4096,
         U8192
     ];
