@@ -91,9 +91,9 @@ mod tests {
     extern crate std;
     use std::vec;
 
-    use crate::{typenum, AllocRingBuffer, GenericRingBuffer, RingBuffer};
     #[cfg(feature = "const_generics")]
     use crate::ConstGenericRingBuffer;
+    use crate::{typenum, AllocRingBuffer, GenericRingBuffer, RingBuffer};
 
     #[test]
     fn run_test_default() {
@@ -456,9 +456,7 @@ mod tests {
         test_wrapping_get_relative(AllocRingBuffer::with_capacity(2));
         #[cfg(feature = "const_generics")]
         test_wrapping_get_relative(ConstGenericRingBuffer::<i32, 2>::new());
-        test_wrapping_get_relative(
-            GenericRingBuffer::<i32, typenum::U2>::new(),
-        );
+        test_wrapping_get_relative(GenericRingBuffer::<i32, typenum::U2>::new());
     }
 
     #[test]
@@ -522,9 +520,7 @@ mod tests {
         test_wrapping_get_relative_mut(AllocRingBuffer::with_capacity(2));
         #[cfg(feature = "const_generics")]
         test_wrapping_get_relative_mut(ConstGenericRingBuffer::<i32, 2>::new());
-        test_wrapping_get_relative_mut(
-            GenericRingBuffer::<i32, typenum::U2>::new(),
-        );
+        test_wrapping_get_relative_mut(GenericRingBuffer::<i32, typenum::U2>::new());
     }
 
     #[test]
@@ -613,9 +609,7 @@ mod tests {
         test_get_relative_negative(AllocRingBuffer::with_capacity(10));
         #[cfg(feature = "const_generics")]
         test_get_relative_negative(ConstGenericRingBuffer::<i32, 10>::new());
-        test_get_relative_negative(
-            GenericRingBuffer::<i32, typenum::U10>::new(),
-        );
+        test_get_relative_negative(GenericRingBuffer::<i32, typenum::U10>::new());
     }
 
     #[test]
