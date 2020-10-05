@@ -33,7 +33,7 @@ fn benchmark_various<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) 
 macro_rules! generate_benches {
     (called, $c: tt, $rb: tt, $ty: tt, $fn: tt, $bmfunc: tt, $($i:tt),*) => {
         $(
-            $c.bench_function(&format!("{} push 1M capacity {}", stringify!($rb), stringify!($i)), |b| $bmfunc(b, || {
+            $c.bench_function(&format!("{} {} 1M capacity {}", stringify!($rb), stringify!($bmfunc), stringify!($i)), |b| $bmfunc(b, || {
                 $rb::<$ty>::$fn($i)
             }));
         )*
@@ -41,7 +41,7 @@ macro_rules! generate_benches {
 
     (typed, $c: tt, $rb: tt, $ty: tt, $fn: tt, $bmfunc: tt, $($i:tt),*) => {
         $(
-            $c.bench_function(&format!("{} push 1M capacity {}", stringify!($rb), stringify!($i)), |b| $bmfunc(b, || {
+            $c.bench_function(&format!("{} {} 1M capacity {}", stringify!($rb), stringify!($bmfunc) ,stringify!($i)), |b| $bmfunc(b, || {
                 $rb::<$ty, $i>::$fn()
             }));
         )*
