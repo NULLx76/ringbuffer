@@ -20,6 +20,9 @@ generic-array = {version = "0.14.4", optional=true}
 #       https://github.com/Manishearth/array-init/pull/18/files
 array-init = {git = "https://github.com/jonay2000/array-init", branch="const-generics", version = "0.1.1", optional=true}
 
+[dev-dependencies]
+criterion = "0.1.2"
+
 [features]
 default = ["alloc", "generic-array"]
 # disable the alloc based ringbuffer, to make RingBuffers work in no_alloc environments
@@ -28,3 +31,12 @@ alloc = []
 # enable the version of RingBuffer which uses the experimental const_generics feature of rust
 const_generics = ["array-init", "array-init/const-generics"]
 
+
+[[bench]]
+name = "bench"
+harness = false
+required-features = ["generic_uninit"]
+
+[profile.bench]
+opt-level = 3
+lto = true

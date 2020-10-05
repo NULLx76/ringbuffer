@@ -12,6 +12,9 @@ Cargo.lock
 cobertura.xml
 tarpaulin-report.html
 
+# benchmarks
+.criterion
+
 # floobits
 .floo
 .flooignore
