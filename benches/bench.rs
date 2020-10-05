@@ -9,7 +9,7 @@ fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
-        for i in 0..1_000_000 {
+        for i in 0..100_000 {
             rb.push(i)
         }
 
@@ -21,7 +21,7 @@ fn benchmark_various<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) 
     b.iter(|| {
         let mut rb = new();
 
-        for i in 0..1_000_000 {
+        for i in 0..100_000 {
             rb.push(i);
             black_box(rb.get(-1));
         }
@@ -86,42 +86,42 @@ fn criterion_benchmark(c: &mut Criterion) {
         U8192
     ];
 
-    generate_benches![
-        called,
-        c,
-        AllocRingBuffer,
-        i32,
-        with_capacity,
-        benchmark_various,
-        16,
-        1024,
-        4096,
-        8192
-    ];
-    generate_benches![
-        typed,
-        c,
-        ConstGenericRingBuffer,
-        i32,
-        new,
-        benchmark_various,
-        16,
-        1024,
-        4096,
-        8192
-    ];
-    generate_benches![
-        typed,
-        c,
-        GenericRingBuffer,
-        i32,
-        new,
-        benchmark_various,
-        U16,
-        U1024,
-        U4096,
-        U8192
-    ];
+    // generate_benches![
+    //     called,
+    //     c,
+    //     AllocRingBuffer,
+    //     i32,
+    //     with_capacity,
+    //     benchmark_various,
+    //     16,
+    //     1024,
+    //     4096,
+    //     8192
+    // ];
+    // generate_benches![
+    //     typed,
+    //     c,
+    //     ConstGenericRingBuffer,
+    //     i32,
+    //     new,
+    //     benchmark_various,
+    //     16,
+    //     1024,
+    //     4096,
+    //     8192
+    // ];
+    // generate_benches![
+    //     typed,
+    //     c,
+    //     GenericRingBuffer,
+    //     i32,
+    //     new,
+    //     benchmark_various,
+    //     U16,
+    //     U1024,
+    //     U4096,
+    //     U8192
+    // ];
 }
 
 criterion_group!(benches, criterion_benchmark);
