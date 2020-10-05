@@ -147,15 +147,6 @@ pub trait RingBuffer<T: 'static + Default>:
     /// Pops the top item off the queue, but does not return it. Instead it is dropped.
     /// If the ringbuffer is empty, this function is a nop.
     fn skip(&mut self);
-
-    /// Used internally and provided by the trait. Computes the bitmask used to properly
-    /// wrap the ringbuffer
-    ///
-    /// TODO: make global (private) function? Does not need to sit on the trait, but where to put it?
-    #[inline]
-    fn mask(&self, index: usize) -> usize {
-        index & (self.capacity() - 1)
-    }
 }
 
 mod iter {
@@ -258,8 +249,8 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn get_absolute(&self, index: usize) -> Option<&T> {
-            let read = self.mask(self.$readptr);
-            let write = self.mask(self.$writeptr);
+            let read = $crate::mask(self, self.$readptr);
+            let write = $crate::mask(self, self.$writeptr);
             if index >= read && index < write{
                 self.$buf.get(index)
             } else {
@@ -269,7 +260,7 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T> {
-           if index >= self.mask(self.$readptr) && index < self.mask(self.$writeptr) {
+           if index >= $crate::mask(self, self.$readptr) && index < $crate::mask(self, self.$writeptr) {
                self.$buf.get_mut(index)
            } else {
                None
@@ -289,7 +280,7 @@ macro_rules! impl_ringbuffer {
 
         fn dequeue_ref(&mut self) -> Option<&T> {
             if !self.is_empty() {
-                let res = &self.buf[self.mask(self.readptr)];
+                let res = &self.buf[$crate::mask(self, self.readptr)];
                 self.readptr += 1;
                 Some(res)
             } else {

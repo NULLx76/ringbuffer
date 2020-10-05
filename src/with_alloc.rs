@@ -56,7 +56,7 @@ impl<T: 'static + Default> RingBuffer<T> for AllocRingBuffer<T> {
             self.readptr += 1;
         }
 
-        let index = self.mask(self.writeptr);
+        let index = crate::mask(self, self.writeptr);
 
         if index == self.len() {
             self.buf.push(value);
