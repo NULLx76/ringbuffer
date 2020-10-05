@@ -39,6 +39,7 @@ use generic_array::{ArrayLength, GenericArray};
 #[derive(PartialEq, Eq, Debug)]
 pub struct GenericRingBuffer<T, Cap: ArrayLength<T>> {
     buf: GenericArray<T, Cap>,
+    cap: usize,
     readptr: usize,
     writeptr: usize,
 }
@@ -68,6 +69,7 @@ impl<T: Default, Cap: ArrayLength<T>> Default for GenericRingBuffer<T, Cap> {
 
         Self {
             buf: GenericArray::default(),
+            cap: Cap::to_usize(),
             readptr: 0,
             writeptr: 0,
         }
@@ -100,10 +102,10 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> IndexMut<isize> for GenericRingB
 }
 
 impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuffer<T, Cap> {
-    #[inline]
+    #[inline(always)]
     #[cfg(not(tarpaulin_include))]
     fn capacity(&self) -> usize {
-        Cap::to_usize()
+        self.cap
     }
 
     fn push(&mut self, value: T) {
