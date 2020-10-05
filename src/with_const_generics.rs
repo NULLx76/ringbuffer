@@ -62,7 +62,7 @@ impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingB
         if self.is_full() {
             self.readptr += 1;
         }
-        let index = self.mask(self.writeptr);
+        let index = crate::mask(self, self.writeptr);
         self.buf[index] = value;
         self.writeptr += 1;
     }
