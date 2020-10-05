@@ -48,22 +48,7 @@ pub trait RingBuffer<T: 'static + Default>:
 
     /// Gets a value relative to the current index mutably. 0 is the next index to be written to with push.
     /// -1 and down are the last elements pushed and 0 and up are the items that were pushed the longest ago.
-    ///
-    /// # Safety
-    /// get_mut_impl is used to implement [`iter_mut`](Self::iter_mut). It requires that for indices in the range
-    /// 0..self.len(), every reference ***MUST ONLY BE RETURNED ONCE***. Any sane implementation of
-    /// get_mut does this anyway, but failing to do so results in the possibility to have multiple multiple
-    /// references to data inside the ringbuffer. (as per issue #25) This function is unsafe precisely because
-    /// of this issue.
-    unsafe fn get_mut_impl(&mut self, index: isize) -> Option<&mut T>;
-
-    /// Gets a value relative to the current index mutably. 0 is the next index to be written to with push.
-    /// -1 and down are the last elements pushed and 0 and up are the items that were pushed the longest ago.
-    fn get_mut(&mut self, index: isize) -> Option<&mut T> {
-        // Safety: calling get_mut_impl is not unsafe, implementing it might be unsafe because of
-        // the behaviour of iter_mut (see [`Self::get_mut_impl`])
-        unsafe { self.get_mut_impl(index) }
-    }
+    fn get_mut(&mut self, index: isize) -> Option<&mut T>;
 
     /// Gets a value relative to the start of the array (rarely useful, usually you want [`Self::get`])
     fn get_absolute(&self, index: usize) -> Option<&T>;
@@ -205,25 +190,13 @@ mod iter {
                 phantom: Default::default(),
             }
         }
-    }
 
-    impl<'rb, T: 'static + Default, RB: RingBuffer<T>> Iterator for RingBufferMutIterator<'rb, T, RB> {
-        type Item = &'rb mut T;
-
-        #[inline]
-        fn next(&mut self) -> Option<Self::Item> {
+        pub fn next(&mut self) -> Option<&mut T> {
             if self.index < self.obj.len() {
-                let res: Option<&'_ mut T> = unsafe { self.obj.get_mut_impl(self.index as isize) };
+                let res = self.obj.get_mut(self.index as isize);
                 self.index += 1;
 
-                // Safety:
-                // This mem transmute is extending the lifetime of the returned value.
-                // This is necessary because the rust borrow checker is too restrictive in giving out mutable references.
-                // It thinks the iterator can give out a mutable reference, while it's also possible to mutably borrow
-                // `obj` in the RingBufferMutIterator struct. This is however *never* possible because it's a private field
-                // Unfortunately this is a limitation of the rust compiler. It's well explained here:
-                // http://smallcultfollowing.com/babysteps/blog/2013/10/24/iterators-yielding-mutable-references/
-                unsafe { core::mem::transmute::<Option<&'_ mut T>, Option<&'rb mut T>>(res) }
+                res
             } else {
                 None
             }
@@ -248,7 +221,7 @@ macro_rules! impl_ringbuffer {
         }
 
         #[inline]
-        unsafe fn get_mut_impl(&mut self, index: isize) -> Option<&mut T> {
+        fn get_mut(&mut self, index: isize) -> Option<&mut T> {
             if self.len() > 0 {
                 let index = (index + self.$index as isize).rem_euclid(self.len() as isize) as usize;
                 self.$buf.get_mut(index)
