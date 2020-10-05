@@ -133,7 +133,8 @@ impl<T: 'static + Default> IndexMut<isize> for AllocRingBuffer<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{AllocRingBuffer, RINGBUFFER_DEFAULT_CAPACITY, RingBuffer};
+    use super::alloc::vec::Vec;
 
     #[test]
     fn test_default() {
