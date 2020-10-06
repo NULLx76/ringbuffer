@@ -11,7 +11,7 @@ use core::iter::FromIterator;
 /// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`GenericRingBuffer`](crate::GenericRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
 ///
 /// This trait only defines methods needed for *any* type of ringbuffer. Methods to actually use the ringbuffer
-/// can be found in the [`WritableRingbuffer`], [`ReadableRingBuffer`] and [`MutableRingBuffer`] traits.
+/// can be found in the [`WritableRingbuffer`], [`ReadableRingbuffer`] and [`RingBufferExt`] traits.
 ///
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing RingBuffer.
@@ -19,7 +19,6 @@ pub trait RingBuffer<T: 'static + Default>: Default {
     /// Returns the length of the internal buffer.
     /// ```
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
-    ///
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
     ///
     /// buffer.push(1).unwrap();
@@ -186,8 +185,8 @@ pub trait RingBufferExt<T: 'static + Default>:
     /// ```
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
-    /// buffer.push(1).unwrap();
-    /// buffer.push(2).unwrap();
+    /// buffer.push(1);
+    /// buffer.push(2);
     /// assert_eq!(buffer.get(1), Some(&2))
     /// ```
     fn get(&self, index: usize) -> Option<&T>;
