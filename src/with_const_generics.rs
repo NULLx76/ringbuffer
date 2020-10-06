@@ -63,7 +63,7 @@ impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingB
 
 impl<T: 'static + Default, const CAP: usize> ReadableRingbuffer<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
-    fn dequeue(&mut self) -> Option<T> {
+    fn pop(&mut self) -> Option<T> {
         if !self.is_empty() {
             let index = crate::mask(self, self.readptr);
             let res = core::mem::replace(&mut self.buf[index], Default::default());

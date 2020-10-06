@@ -57,7 +57,7 @@ impl<T: 'static + Default> RingBuffer<T> for AllocRingBuffer<T> {
 
 impl <T: 'static + Default> ReadableRingbuffer<T> for AllocRingBuffer<T> {
     #[inline]
-    fn dequeue(&mut self) -> Option<T> {
+    fn pop(&mut self) -> Option<T> {
         if !self.is_empty() {
             let index = crate::mask(self, self.readptr);
             let res = core::mem::replace(&mut self.buf[index], Default::default());

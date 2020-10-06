@@ -37,7 +37,7 @@ impl<T: 'static + Default> RingBuffer<T> for ThreadAllocRingBuffer<T> {
 
 impl <T: 'static + Default> ReadableRingbuffer<T> for ThreadAllocRingBuffer<T> {
     #[inline]
-    fn dequeue(&mut self) -> Option<T> {
+    fn pop(&mut self) -> Option<T> {
         todo!()
     }
 

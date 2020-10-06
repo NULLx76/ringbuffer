@@ -94,7 +94,22 @@ pub trait WritableRingbuffer<T: 'static + Default>: RingBuffer<T> {
 
     /// Pushes a value onto the buffer. Returns Err(item) when the buffer is full. Returns Ok(())
     /// when it could push the item.
-    // fn try_push(item: T) -> Result<(), T>;
+    /// ```
+    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
+    /// let mut buffer = AllocRingBuffer::with_capacity(2);
+    /// assert!(buffer.try_push(1).is_ok());
+    /// assert!(buffer.try_push(2).is_ok());
+    /// // fails because the queue is full
+    /// assert_eq!(buffer.try_push(3), Err(3));
+    /// ```
+    fn try_push(&mut self, item: T) -> Result<(), T> {
+        if self.is_full() {
+            Err(item)
+        } else {
+            self.push(item);
+            Ok(())
+        }
+    }
 
     /// Alias of [`push`](Self::push)
     fn send(&mut self, value: T) {
@@ -109,7 +124,7 @@ pub trait ReadableRingbuffer<T: 'static + Default>: RingBuffer<T> {
     fn skip(&mut self);
 
     /// Dequeues the top item off the ringbuffer and returns an owned version. See the [`pop_ref`](Self::pop_ref) docs
-    fn dequeue(&mut self) -> Option<T>;
+    fn pop(&mut self) -> Option<T>;
 }
 
 /// Defines Ringbuffer methods necessary to mutate data inside the ringbuffer or query data in the middle
