@@ -233,8 +233,8 @@ macro_rules! impl_ringbuffer {
         #[inline]
         fn get(&self, index: isize) -> Option<&T> {
             if !self.is_empty() {
-                let index =
-                    (self.$readptr as isize + index).rem_euclid(self.len() as isize) as usize;
+                let index = (self.$readptr as isize + index) as usize % self.len();
+
                 self.$buf.get(index)
             } else {
                 None
@@ -244,8 +244,8 @@ macro_rules! impl_ringbuffer {
         #[inline]
         fn get_mut(&mut self, index: isize) -> Option<&mut T> {
             if !self.is_empty() {
-                let index =
-                    (self.$readptr as isize + index).rem_euclid(self.len() as isize) as usize;
+                let index = (self.$readptr as isize + index) as usize % self.len();
+
                 self.$buf.get_mut(index)
             } else {
                 None
@@ -281,16 +281,6 @@ macro_rules! impl_ringbuffer {
         fn clear(&mut self) {
             self.$readptr = 0;
             self.$writeptr = 0;
-        }
-
-        fn dequeue_ref(&mut self) -> Option<&T> {
-            if !self.is_empty() {
-                let res = &self.buf[$mask(self, self.readptr)];
-                self.readptr += 1;
-                Some(res)
-            } else {
-                None
-            }
         }
 
         #[inline]
