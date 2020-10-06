@@ -21,19 +21,19 @@ use generic_array::{ArrayLength, GenericArray};
 /// let mut buffer = GenericRingBuffer::<_, typenum::U2>::new();
 ///
 /// // First entry of the buffer is now 5.
-/// buffer.push(5);
+/// buffer.push(5).unwrap();
 ///
 /// // The last item we pushed is 5
 /// assert_eq!(buffer.front(), Some(&5));
 ///
 /// // Second entry is now 42.
-/// buffer.push(42);
+/// buffer.push(42).unwrap();
 ///
 /// assert_eq!(buffer.back(), Some(&5));
 /// assert!(buffer.is_full());
 ///
 /// // Because capacity is reached the next push will be the first item of the buffer.
-/// buffer.push(1);
+/// buffer.push_force(1);
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
 #[derive(PartialEq, Eq, Debug)]
@@ -80,7 +80,7 @@ impl<RB: 'static + Default, Cap: ArrayLength<RB>> FromIterator<RB> for GenericRi
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
-            res.push(i)
+            res.push_force(i)
         }
 
         res
@@ -132,8 +132,23 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> ReadableRingbuffer<T>
 impl<T: 'static + Default, Cap: ArrayLength<T>> WritableRingbuffer<T>
     for GenericRingBuffer<T, Cap>
 {
+    fn push(&mut self, item: T) -> Result<(), T> {
+        if self.is_full() {
+            Err(item)
+        } else {
+            let index = crate::mask(self, self.writeptr);
+
+            self.buf[index] = item;
+            self.writeptr += 1;
+
+            Ok(())
+        }
+    }
+}
+
+impl<T: 'static + Default, Cap: ArrayLength<T>> RingBufferExt<T> for GenericRingBuffer<T, Cap> {
     #[inline]
-    fn push(&mut self, value: T) {
+    fn push_force(&mut self, value: T) {
         if self.is_full() {
             self.readptr += 1;
         }
@@ -141,9 +156,7 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> WritableRingbuffer<T>
         self.buf[index] = value;
         self.writeptr += 1;
     }
-}
 
-impl<T: 'static + Default, Cap: ArrayLength<T>> RingBufferExt<T> for GenericRingBuffer<T, Cap> {
     impl_ringbuffer_ext!(buf, readptr, writeptr, crate::mask);
 }
 

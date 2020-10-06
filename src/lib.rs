@@ -34,19 +34,19 @@
 //! let mut buffer = AllocRingBuffer::with_capacity(2);
 //!
 //! // First entry of the buffer is now 5.
-//! buffer.push(5);
+//! buffer.push(5).unwrap();
 //!
 //! // The last item we pushed is 5
 //! assert_eq!(buffer.front(), Some(&5));
 //!
 //! // Second entry is now 42.
-//! buffer.push(42);
+//! buffer.push(42).unwrap();
 //!
 //! assert_eq!(buffer.back(), Some(&5));
 //! assert!(buffer.is_full());
 //!
 //! // Because capacity is reached the next push will be the first item of the buffer.
-//! buffer.push(1);
+//! buffer.push_force(1);
 //! assert_eq!(buffer.to_vec(), vec![42, 1]);
 //!
 //! ```
@@ -156,9 +156,9 @@ mod tests {
     fn run_test_len() {
         fn test_len(mut b: impl ReadWriteRingbuffer<i32>) {
             assert_eq!(0, b.len());
-            b.push(1);
+            b.push(1).unwrap();
             assert_eq!(1, b.len());
-            b.push(2);
+            b.push(2).unwrap();
             assert_eq!(2, b.len())
         }
 
@@ -170,16 +170,17 @@ mod tests {
 
     #[test]
     fn run_test_len_wrap() {
-        fn test_len_wrap(mut b: impl ReadWriteRingbuffer<i32>) {
+        fn test_len_wrap(mut b: impl RingBufferExt<i32>) {
             assert_eq!(0, b.len());
-            b.push(1);
+            b.push(1).unwrap();
             assert_eq!(1, b.len());
-            b.push(2);
+            b.push(2).unwrap();
             assert_eq!(2, b.len());
+
             // Now we are wrapping
-            b.push(3);
+            b.push_force(3);
             assert_eq!(2, b.len());
-            b.push(4);
+            b.push_force(4);
             assert_eq!(2, b.len());
         }
 
@@ -192,9 +193,9 @@ mod tests {
     #[test]
     fn run_test_clear() {
         fn test_clear(mut b: impl ReadWriteRingbuffer<i32>) {
-            b.push(1);
-            b.push(2);
-            b.push(3);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
+            b.push(3).unwrap();
 
             b.clear();
             assert!(b.is_empty());
@@ -211,9 +212,9 @@ mod tests {
     fn run_test_empty() {
         fn test_empty(mut b: impl ReadWriteRingbuffer<i32>) {
             assert!(b.is_empty());
-            b.push(1);
-            b.push(2);
-            b.push(3);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
+            b.push(3).unwrap();
             assert_ne!(b.is_empty(), true);
 
             b.clear();
@@ -230,9 +231,9 @@ mod tests {
     #[test]
     fn run_test_iter() {
         fn test_iter(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
-            b.push(3);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
+            b.push(3).unwrap();
 
             let mut iter = b.iter();
             assert_eq!(&1, iter.next().unwrap());
@@ -249,9 +250,9 @@ mod tests {
     #[test]
     fn run_test_double_iter() {
         fn test_double_iter(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
-            b.push(3);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
+            b.push(3).unwrap();
 
             let mut iter1 = b.iter();
             let mut iter2 = b.iter();
@@ -273,10 +274,10 @@ mod tests {
     #[test]
     fn run_test_iter_wrap() {
         fn test_iter_wrap(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
             // Wrap
-            b.push(3);
+            b.push_force(3);
 
             let mut iter = b.iter();
             assert_eq!(&2, iter.next().unwrap());
@@ -292,9 +293,9 @@ mod tests {
     #[test]
     fn run_test_iter_mut() {
         fn test_iter_mut(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
-            b.push(3);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
+            b.push(3).unwrap();
 
             let mut i = b.iter_mut();
             while let Some(el) = i.next() {
@@ -313,9 +314,9 @@ mod tests {
     #[test]
     fn run_test_iter_mut_wrap() {
         fn test_iter_mut_wrap(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
-            b.push(3);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
+            b.push_force(3);
 
             let mut i = b.iter_mut();
             while let Some(el) = i.next() {
@@ -334,9 +335,9 @@ mod tests {
     #[test]
     fn run_test_to_vec() {
         fn test_to_vec(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
-            b.push(3);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
+            b.push(3).unwrap();
 
             assert_eq!(vec![1, 2, 3], b.to_vec())
         }
@@ -350,10 +351,10 @@ mod tests {
     #[test]
     fn run_test_to_vec_wrap() {
         fn test_to_vec_wrap(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
             // Wrap
-            b.push(3);
+            b.push_force(3);
 
             assert_eq!(vec![2, 3], b.to_vec())
         }
@@ -367,7 +368,7 @@ mod tests {
     #[test]
     fn run_test_index() {
         fn test_index(mut b: impl RingBufferExt<i32>) {
-            b.push(2);
+            b.push(2).unwrap();
             assert_eq!(b[0], 2)
         }
 
@@ -380,7 +381,7 @@ mod tests {
     #[test]
     fn run_test_index_mut() {
         fn test_index_mut(mut b: impl RingBufferExt<i32>) {
-            b.push(2);
+            b.push(2).unwrap();
 
             assert_eq!(b[0], 2);
 
@@ -398,8 +399,8 @@ mod tests {
     #[test]
     fn run_test_get_relative() {
         fn test_get_relative(mut b: impl RingBufferExt<i32>) {
-            b.push(0);
-            b.push(1);
+            b.push(0).unwrap();
+            b.push(1).unwrap();
 
             assert_eq!(b.get(0).unwrap(), &0);
             assert_eq!(b.get(1).unwrap(), &1);
@@ -416,9 +417,9 @@ mod tests {
     #[test]
     fn run_test_wrapping_get_relative() {
         fn test_wrapping_get_relative(mut b: impl RingBufferExt<i32>) {
-            b.push(0);
-            b.push(1);
-            b.push(2);
+            b.push(0).unwrap();
+            b.push(1).unwrap();
+            b.push_force(2);
 
             assert_eq!(b.get(0).unwrap(), &1);
             assert_eq!(b.get(1).unwrap(), &2);
@@ -445,15 +446,9 @@ mod tests {
     #[test]
     fn run_test_get_relative_mut() {
         fn test_get_relative_mut(mut b: impl RingBufferExt<i32>) {
-            b.push(0);
-            b.push(1);
+            b.push(0).unwrap();
+            b.push(1).unwrap();
 
-            // [0, ...]
-            //      ^
-            // [0, 1, ...]
-            //         ^
-            // get[(index + 0) % len] = 0 (wrap to 0 because len == 2)
-            // get[(index + 1) % len] = 1
             *b.get_mut(0).unwrap() = 3;
             *b.get_mut(1).unwrap() = 4;
 
@@ -470,20 +465,12 @@ mod tests {
     #[test]
     fn run_test_wrapping_get_relative_mut() {
         fn test_wrapping_get_relative_mut(mut b: impl RingBufferExt<i32>) {
-            b.push(0);
-            b.push(1);
-            b.push(2);
+            b.push(0).unwrap();
+            b.push(1).unwrap();
+            b.push_force(2);
 
             *b.get_mut(0).unwrap() = 3;
 
-            // [0, ...]
-            //      ^
-            // [0, 1]
-            //  ^
-            // [2, 1]
-            //     ^
-            // get(0) == b[index] = 1
-            // get(1) == b[(index+1) % len] = 1
             assert_eq!(b.get(0).unwrap(), &3);
             assert_eq!(b.get(1).unwrap(), &2);
         }
@@ -535,34 +522,10 @@ mod tests {
     }
 
     #[test]
-    fn run_test_get_relative_negative() {
-        fn test_get_relative_negative(mut b: impl RingBufferExt<i32>) {
-            b.push(0);
-            b.push(1);
-
-            // [0, ...]
-            //      ^
-            // [0, 1, ...]
-            //         ^
-            // get[(index + -1) % len] = 1
-            // get[(index + -2) % len] = 0 (wrap to 1 because len == 2)
-            assert_eq!(b.get(0).unwrap(), &0);
-            assert_eq!(b.get(1).unwrap(), &1);
-
-            assert_eq!(b.get(2), None);
-        }
-
-        test_get_relative_negative(AllocRingBuffer::with_capacity(8));
-        #[cfg(feature = "const_generics")]
-        test_get_relative_negative(ConstGenericRingBuffer::<i32, 8>::new());
-        test_get_relative_negative(GenericRingBuffer::<i32, typenum::U8>::new());
-    }
-
-    #[test]
     fn run_test_contains() {
         fn test_contains(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
 
             assert!(b.contains(&1));
             assert!(b.contains(&2));
@@ -578,9 +541,9 @@ mod tests {
     fn run_test_is_full() {
         fn test_is_full(mut b: impl ReadWriteRingbuffer<i32>) {
             assert!(!b.is_full());
-            b.push(1);
+            b.push(1).unwrap();
             assert!(!b.is_full());
-            b.push(2);
+            b.push(2).unwrap();
             assert!(b.is_full());
         }
 
@@ -593,8 +556,8 @@ mod tests {
     #[test]
     fn run_test_front_some() {
         fn test_front_some(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
 
             assert_eq!(b.front(), Some(&2));
         }
@@ -620,8 +583,8 @@ mod tests {
     #[test]
     fn run_test_back_some() {
         fn test_back_some(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
 
             assert_eq!(b.back(), Some(&1));
         }
@@ -647,8 +610,8 @@ mod tests {
     #[test]
     fn run_test_front_some_mut() {
         fn test_front_some_mut(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
 
             assert_eq!(b.front_mut(), Some(&mut 2));
         }
@@ -674,8 +637,8 @@ mod tests {
     #[test]
     fn run_test_back_some_mut() {
         fn test_back_some_mut(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
+            b.push(1).unwrap();
+            b.push(2).unwrap();
 
             assert_eq!(b.back_mut(), Some(&mut 1));
         }
@@ -700,9 +663,9 @@ mod tests {
 
     #[test]
     fn run_test_dequeue() {
-        fn run_test_dequeue(mut b: impl RingBufferExt<i32>) {
-            b.push(0);
-            b.push(1);
+        fn test_pop(mut b: impl RingBufferExt<i32>) {
+            b.push(0).unwrap();
+            b.push(1).unwrap();
 
             assert_eq!(b.len(), 2);
 
@@ -714,17 +677,17 @@ mod tests {
             assert_eq!(b.pop(), None);
         }
 
-        run_test_dequeue(AllocRingBuffer::with_capacity(8));
-        run_test_dequeue(GenericRingBuffer::<i32, typenum::U8>::new());
+        test_pop(AllocRingBuffer::with_capacity(8));
+        test_pop(GenericRingBuffer::<i32, typenum::U8>::new());
         #[cfg(feature = "const_generics")]
-        run_test_dequeue(ConstGenericRingBuffer::<i32, 8>::new());
+            test_pop(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
     #[test]
     fn run_test_skip() {
         fn test_skip(mut b: impl ReadWriteRingbuffer<i32>) {
-            b.push(0);
-            b.push(1);
+            b.push(0).unwrap();
+            b.push(1).unwrap();
 
             assert_eq!(b.len(), 2);
 
@@ -743,15 +706,15 @@ mod tests {
     #[test]
     fn run_test_push_pop_push() {
         fn test_push_pop_push(mut b: impl RingBufferExt<i32>) {
-            b.push(0);
-            b.push(1);
+            b.push(0).unwrap();
+            b.push(1).unwrap();
 
             assert_eq!(b.pop(), Some(0));
             assert_eq!(b.pop(), Some(1));
             assert_eq!(b.pop(), None);
 
-            b.push(0);
-            b.push(1);
+            b.push_force(0);
+            b.push_force(1);
 
             assert_eq!(b.pop(), Some(0));
             assert_eq!(b.pop(), Some(1));
@@ -767,17 +730,17 @@ mod tests {
     #[test]
     fn run_test_push_pop_push_full() {
         fn test_push_pop_push_full(mut b: impl RingBufferExt<i32>) {
-            b.push(0);
-            b.push(1);
-            b.push(2);
+            b.push_force(0);
+            b.push_force(1);
+            b.push_force(2);
 
             assert_eq!(b.pop(), Some(1));
             assert_eq!(b.pop(), Some(2));
             assert_eq!(b.pop(), None);
 
-            b.push(0);
-            b.push(1);
-            b.push(2);
+            b.push_force(0);
+            b.push_force(1);
+            b.push_force(2);
 
             assert_eq!(b.pop(), Some(1));
             assert_eq!(b.pop(), Some(2));
@@ -793,25 +756,25 @@ mod tests {
     #[test]
     fn run_test_push_pop_push_full_get() {
         fn test_push_pop_push_full_get(mut b: impl RingBufferExt<i32>) {
-            b.push(0);
-            b.push(1);
-            b.push(2);
+            b.push_force(0);
+            b.push_force(1);
+            b.push_force(2);
 
             assert_eq!(b.pop(), Some(1));
             assert_eq!(b.pop(), Some(2));
             assert_eq!(b.pop(), None);
 
-            b.push(0);
-            b.push(1);
-            b.push(2);
+            b.push_force(0);
+            b.push_force(1);
+            b.push_force(2);
 
             assert_eq!(b.pop(), Some(1));
             assert_eq!(b.pop(), Some(2));
             assert_eq!(b.pop(), None);
 
-            b.push(0);
-            b.push(1);
-            b.push(2);
+            b.push_force(0);
+            b.push_force(1);
+            b.push_force(2);
 
             assert_eq!(b.get(0), Some(&1));
             assert_eq!(b.get(1), Some(&2));
@@ -827,20 +790,20 @@ mod tests {
     fn run_test_push_pop_push_full_get_rep() {
         fn test_push_pop_push_full_get_rep(mut rb: impl RingBufferExt<i32>) {
             for _ in 0..100_000 {
-                rb.push(1);
-                rb.push(2);
+                rb.push_force(1);
+                rb.push_force(2);
 
                 assert_eq!(rb.pop(), Some(1));
                 assert_eq!(rb.pop(), Some(2));
 
-                rb.push(1);
-                rb.push(2);
+                rb.push_force(1);
+                rb.push_force(2);
 
                 assert_eq!(rb.pop(), Some(1));
                 assert_eq!(rb.pop(), Some(2));
 
-                rb.push(1);
-                rb.push(2);
+                rb.push_force(1);
+                rb.push_force(2);
 
                 assert_eq!(rb.get(0), Some(&1));
                 assert_eq!(rb.get(1), Some(&2));
@@ -856,9 +819,9 @@ mod tests {
     #[test]
     fn run_test_try_push() {
         fn test_try_push(mut b: impl RingBufferExt<i32>) {
-            assert!(b.try_push(1).is_ok());
-            assert!(b.try_push(2).is_ok());
-            assert_eq!(b.try_push(3), Err(3));
+            b.push(1).unwrap();
+            b.push(2).unwrap();
+            assert_eq!(b.push(3), Err(3));
             assert!(b.is_full());
             assert_eq!(b.to_vec(), vec![1, 2]);
         }

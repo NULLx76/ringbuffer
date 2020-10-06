@@ -15,18 +15,18 @@ use core::iter::FromIterator;
 ///
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing RingBuffer.
-pub trait RingBuffer<T: 'static + Default>: Default + FromIterator<T> {
+pub trait RingBuffer<T: 'static + Default>: Default {
     /// Returns the length of the internal buffer.
     /// ```
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
     ///
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
     ///
-    /// buffer.push(1);
-    /// buffer.push(2);
+    /// buffer.push(1).unwrap();
+    /// buffer.push(2).unwrap();
     /// assert_eq!(buffer.len(), 2);
     ///
-    /// buffer.push(3);
+    /// buffer.push_force(3);
     /// assert_eq!(buffer.len(), 2);
     /// ```
     fn len(&self) -> usize;
@@ -36,7 +36,7 @@ pub trait RingBuffer<T: 'static + Default>: Default + FromIterator<T> {
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
     /// assert!(buffer.is_empty());
-    /// buffer.push(1);
+    /// buffer.push(1).unwrap();
     /// assert!(!buffer.is_empty());
     /// ```
     #[inline]
@@ -50,7 +50,7 @@ pub trait RingBuffer<T: 'static + Default>: Default + FromIterator<T> {
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
     /// let mut buffer = AllocRingBuffer::with_capacity(1);
     /// assert!(!buffer.is_full());
-    /// buffer.push(1);
+    /// buffer.push(1).unwrap();
     /// assert!(buffer.is_full());
     /// ```
     #[inline]
@@ -62,7 +62,7 @@ pub trait RingBuffer<T: 'static + Default>: Default + FromIterator<T> {
     /// ```
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
-    /// buffer.push(1);
+    /// buffer.push(1).unwrap();
     /// buffer.clear();
     /// assert!(buffer.is_empty());
     /// ```
@@ -79,40 +79,17 @@ pub trait RingBuffer<T: 'static + Default>: Default + FromIterator<T> {
 
 /// Defines RingBuffer methods necessary to write to the ringbuffer in a
 pub trait WritableRingbuffer<T: 'static + Default>: RingBuffer<T> {
-    /// Pushes a value onto the buffer. Cycles around if capacity is reached.
-    /// ```
-    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
-    /// let mut buffer = AllocRingBuffer::with_capacity(2);
-    /// buffer.push(1);
-    /// buffer.push(2);
-    /// buffer.push(3);
-    /// assert_eq!(vec![2, 3], buffer.to_vec());
-    /// ```
-    fn push(&mut self, value: T);
-
     /// Pushes a value onto the buffer. Returns Err(item) when the buffer is full. Returns Ok(())
     /// when it could push the item.
     /// ```
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
-    /// assert!(buffer.try_push(1).is_ok());
-    /// assert!(buffer.try_push(2).is_ok());
+    /// buffer.push(1).unwrap();
+    /// buffer.push(2).unwrap();
     /// // fails because the queue is full
-    /// assert_eq!(buffer.try_push(3), Err(3));
+    /// assert_eq!(buffer.push(3), Err(3));
     /// ```
-    fn try_push(&mut self, item: T) -> Result<(), T> {
-        if self.is_full() {
-            Err(item)
-        } else {
-            self.push(item);
-            Ok(())
-        }
-    }
-
-    /// Alias of [`push`](Self::push)
-    fn send(&mut self, value: T) {
-        self.push(value)
-    }
+    fn push(&mut self, item: T) -> Result<(), T>;
 }
 
 /// Defines RingBuffer methods necessary to read from the ringbuffer. This includes dequeue.
@@ -120,9 +97,9 @@ pub trait ReadableRingbuffer<T: 'static + Default>: RingBuffer<T> {
     /// Pops an item off the queue, but does not return it. Instead it is dropped.
     /// If the ringbuffer is empty, this function is a nop.
     /// ```
-    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, ReadableRingbuffer};
+    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, ReadableRingbuffer, WritableRingbuffer};
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
-    /// buffer.push(1);
+    /// buffer.push(1).unwrap();
     /// buffer.skip();
     /// assert!(buffer.is_empty());
     /// ```
@@ -130,9 +107,9 @@ pub trait ReadableRingbuffer<T: 'static + Default>: RingBuffer<T> {
 
     /// Dequeues the an item from the ringbuffer and returns an owned version.
     /// ```
-    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, ReadableRingbuffer};
+    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, ReadableRingbuffer, WritableRingbuffer};
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
-    /// buffer.push(1);
+    /// buffer.push(1).unwrap();
     /// assert_eq!(buffer.pop(), Some(1));
     /// ```
     fn pop(&mut self) -> Option<T>;
@@ -149,12 +126,13 @@ pub trait RingBufferExt<T: 'static + Default>:
     + ReadableRingbuffer<T>
     + Index<usize, Output = T>
     + IndexMut<usize>
+    + FromIterator<T>
 {
     /// Returns true if elem is in the ringbuffer.
     /// ```
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
-    /// buffer.push(1);
+    /// buffer.push(1).unwrap();
     /// assert!(buffer.contains(&1))
     /// ```
     fn contains(&self, elem: &T) -> bool
@@ -169,8 +147,8 @@ pub trait RingBufferExt<T: 'static + Default>:
     /// ```
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
-    /// buffer.push(1);
-    /// buffer.push(2);
+    /// buffer.push(1).unwrap();
+    /// buffer.push(2).unwrap();
     /// assert_eq!(buffer.back(), Some(&1))
     /// ```
     #[inline]
@@ -191,8 +169,8 @@ pub trait RingBufferExt<T: 'static + Default>:
     /// ```
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
-    /// buffer.push(1);
-    /// buffer.push(2);
+    /// buffer.push(1).unwrap();
+    /// buffer.push(2).unwrap();
     /// assert_eq!(buffer.front(), Some(&2))
     /// ```
     fn front(&self) -> Option<&T>;
@@ -208,8 +186,8 @@ pub trait RingBufferExt<T: 'static + Default>:
     /// ```
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
-    /// buffer.push(1);
-    /// buffer.push(2);
+    /// buffer.push(1).unwrap();
+    /// buffer.push(2).unwrap();
     /// assert_eq!(buffer.get(1), Some(&2))
     /// ```
     fn get(&self, index: usize) -> Option<&T>;
@@ -223,8 +201,8 @@ pub trait RingBufferExt<T: 'static + Default>:
     /// ```
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
     /// let mut buffer = AllocRingBuffer::with_capacity(2);
-    /// buffer.push(1);
-    /// buffer.push(2);
+    /// buffer.push(1).unwrap();
+    /// buffer.push(2).unwrap();
     ///
     /// let mut it = buffer.iter();
     /// assert_eq!(Some(&1), it.next());
@@ -251,6 +229,24 @@ pub trait RingBufferExt<T: 'static + Default>:
     {
         self.iter().cloned().collect()
     }
+
+    /// Pushes a value onto the buffer. Wraps around if capacity is reached. Because of the wrapping
+    /// it can never fail.
+    ///
+    /// Wrapping push will overwrite data at the back of the ringbuffer. This means that it should not be used
+    /// when using the ringbuffer as a queue, where no items in the queue may be lost. Because with wrapping push
+    /// you *will* lose items.
+    /// ```
+    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
+    /// let mut buffer = AllocRingBuffer::with_capacity(2);
+    /// buffer.push(1).unwrap();
+    /// buffer.push(2).unwrap();
+    ///
+    /// // the buffer is now full, so this push will overwrite the 1 in the buffer!!
+    /// buffer.push_force(3);
+    /// assert_eq!(vec![2, 3], buffer.to_vec());
+    /// ```
+    fn push_force(&mut self, value: T);
 }
 
 /// Trait which combines [`ReadableRingbuffer`] and [`WritableRingbuffer`]

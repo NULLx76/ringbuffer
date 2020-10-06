@@ -4,7 +4,6 @@ extern crate alloc;
 // We need vecs so depend on alloc
 use crate::{ReadableRingbuffer, WritableRingbuffer};
 use alloc::vec::Vec;
-use core::iter::FromIterator;
 
 /// The AllocRingBuffer is a RingBuffer which is based on a Vec. This means it allocates at runtime
 /// on the heap, and therefore needs the [`alloc`] crate. This struct and therefore the dependency on
@@ -45,21 +44,22 @@ impl<T: 'static + Default> ReadableRingbuffer<T> for ThreadAllocRingBuffer<T> {
 }
 
 impl<T: 'static + Default> WritableRingbuffer<T> for ThreadAllocRingBuffer<T> {
-    #[inline]
-    fn push(&mut self, value: T) {
+    fn push(&mut self, item: T) -> Result<(), T> {
         if self.is_full() {
-            self.readptr += 1;
-        }
-
-        let index = crate::mask(self, self.writeptr);
-
-        if index >= self.buf.len() {
-            self.buf.push(value);
+            Err(item)
         } else {
-            self.buf[index] = value;
-        }
+            let index = crate::mask(self, self.writeptr);
 
-        self.writeptr += 1;
+            if index >= self.buf.len() {
+                self.buf.push(item);
+            } else {
+                self.buf[index] = item;
+            }
+
+            self.writeptr += 1;
+
+            Ok(())
+        }
     }
 }
 
@@ -96,17 +96,6 @@ impl<T> ThreadAllocRingBuffer<T> {
     #[inline]
     pub fn new() -> Self {
         Self::default()
-    }
-}
-
-impl<RB: 'static + Default> FromIterator<RB> for ThreadAllocRingBuffer<RB> {
-    fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
-        let mut res = Self::default();
-        for i in iter {
-            res.push(i)
-        }
-
-        res
     }
 }
 
