@@ -118,7 +118,7 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> ReadableRingbuffer<T>
     fn pop(&mut self) -> Option<T> {
         if !self.is_empty() {
             let index = crate::mask(self, self.readptr);
-            let res = core::mem::replace(&mut self.buf[index], Default::default());
+            let res = core::mem::take(&mut self.buf[index]);
             self.readptr += 1;
             Some(res)
         } else {
