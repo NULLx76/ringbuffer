@@ -4,9 +4,9 @@ use crate::ringbuffer_trait::RingBuffer;
 
 extern crate alloc;
 // We need vecs so depend on alloc
+use crate::{ReadableRingbuffer, RingBufferExt, WritableRingbuffer};
 use alloc::vec::Vec;
 use core::iter::FromIterator;
-use crate::{ReadableRingbuffer, WritableRingbuffer, RingBufferExt};
 
 /// The AllocRingBuffer is a RingBuffer which is based on a Vec. This means it allocates at runtime
 /// on the heap, and therefore needs the [`alloc`] crate. This struct and therefore the dependency on
@@ -55,7 +55,7 @@ impl<T: 'static + Default> RingBuffer<T> for AllocRingBuffer<T> {
     impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
-impl <T: 'static + Default> ReadableRingbuffer<T> for AllocRingBuffer<T> {
+impl<T: 'static + Default> ReadableRingbuffer<T> for AllocRingBuffer<T> {
     #[inline]
     fn pop(&mut self) -> Option<T> {
         if !self.is_empty() {
@@ -72,7 +72,7 @@ impl <T: 'static + Default> ReadableRingbuffer<T> for AllocRingBuffer<T> {
     impl_read_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
-impl <T: 'static + Default> WritableRingbuffer<T> for AllocRingBuffer<T> {
+impl<T: 'static + Default> WritableRingbuffer<T> for AllocRingBuffer<T> {
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
@@ -91,7 +91,7 @@ impl <T: 'static + Default> WritableRingbuffer<T> for AllocRingBuffer<T> {
     }
 }
 
-impl <T: 'static + Default> RingBufferExt<T> for AllocRingBuffer<T> {
+impl<T: 'static + Default> RingBufferExt<T> for AllocRingBuffer<T> {
     impl_ringbuffer_ext!(buf, readptr, writeptr, crate::mask);
 }
 
@@ -173,7 +173,7 @@ impl<T: 'static + Default> IndexMut<usize> for AllocRingBuffer<T> {
 #[cfg(test)]
 mod tests {
     use super::alloc::vec::Vec;
-    use crate::{AllocRingBuffer, RingBuffer, RINGBUFFER_DEFAULT_CAPACITY, RingBufferExt};
+    use crate::{AllocRingBuffer, RingBuffer, RingBufferExt, RINGBUFFER_DEFAULT_CAPACITY};
 
     #[test]
     fn test_default() {

@@ -1,4 +1,4 @@
-use crate::{RingBuffer, ReadableRingbuffer, WritableRingbuffer, RingBufferExt};
+use crate::{ReadableRingbuffer, RingBuffer, RingBufferExt, WritableRingbuffer};
 use core::iter::FromIterator;
 use core::ops::{Index, IndexMut};
 
@@ -61,7 +61,9 @@ impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingB
     impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
-impl<T: 'static + Default, const CAP: usize> ReadableRingbuffer<T> for ConstGenericRingBuffer<T, CAP> {
+impl<T: 'static + Default, const CAP: usize> ReadableRingbuffer<T>
+    for ConstGenericRingBuffer<T, CAP>
+{
     #[inline]
     fn pop(&mut self) -> Option<T> {
         if !self.is_empty() {
@@ -78,7 +80,9 @@ impl<T: 'static + Default, const CAP: usize> ReadableRingbuffer<T> for ConstGene
     impl_read_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
-impl<T: 'static + Default, const CAP: usize> WritableRingbuffer<T> for ConstGenericRingBuffer<T, CAP> {
+impl<T: 'static + Default, const CAP: usize> WritableRingbuffer<T>
+    for ConstGenericRingBuffer<T, CAP>
+{
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
@@ -93,7 +97,6 @@ impl<T: 'static + Default, const CAP: usize> WritableRingbuffer<T> for ConstGene
 impl<T: 'static + Default, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
     impl_ringbuffer_ext!(buf, readptr, writeptr, crate::mask);
 }
-
 
 impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     /// Creates a buffer with a capacity specified through the Cap type parameter.

@@ -89,7 +89,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         16,
         1024,
         4096,
-    8192
+        8192
     ];
     generate_benches![
         typed,
@@ -101,7 +101,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         16,
         1024,
         4096,
-    8192
+        8192
     ];
     generate_benches![
         typed,
@@ -112,8 +112,8 @@ fn criterion_benchmark(c: &mut Criterion) {
         benchmark_push,
         U16,
         U1024,
-       U4096,
-     U8192
+        U4096,
+        U8192
     ];
 
     generat_benches![
@@ -126,7 +126,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         16,
         1024,
         4096,
-    8192
+        8192
     ];
     generate_benches![
         typed,
@@ -138,7 +138,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         16,
         1024,
         4096,
-    8192
+        8192
     ];
     generate_benches![
         typed,
@@ -149,8 +149,9 @@ fn criterion_benchmark(c: &mut Criterion) {
         benchmark_various,
         U16,
         U1024,
-       U4096,
-        U8192  ];
+        U4096,
+        U8192
+    ];
 
     generate_benche![
         called,
@@ -162,7 +163,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         16,
         1024,
         4096,
-    8192
+        8192
     ];
     generate_benches![
         typed,
@@ -186,7 +187,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         U16,
         U1024,
         U4096,
-       U8192
+        U8192
     ];
 }
 

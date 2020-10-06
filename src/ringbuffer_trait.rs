@@ -15,9 +15,7 @@ use core::iter::FromIterator;
 ///
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing RingBuffer.
-pub trait RingBuffer<T: 'static + Default>:
-    Default + FromIterator<T>
-{
+pub trait RingBuffer<T: 'static + Default>: Default + FromIterator<T> {
     /// Returns the length of the internal buffer.
     /// ```
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
@@ -119,11 +117,24 @@ pub trait WritableRingbuffer<T: 'static + Default>: RingBuffer<T> {
 
 /// Defines RingBuffer methods necessary to read from the ringbuffer. This includes dequeue.
 pub trait ReadableRingbuffer<T: 'static + Default>: RingBuffer<T> {
-    /// Pops the top item off the queue, but does not return it. Instead it is dropped.
+    /// Pops an item off the queue, but does not return it. Instead it is dropped.
     /// If the ringbuffer is empty, this function is a nop.
+    /// ```
+    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, ReadableRingbuffer};
+    /// let mut buffer = AllocRingBuffer::with_capacity(2);
+    /// buffer.push(1);
+    /// buffer.skip();
+    /// assert!(buffer.is_empty());
+    /// ```
     fn skip(&mut self);
 
-    /// Dequeues the top item off the ringbuffer and returns an owned version. See the [`pop_ref`](Self::pop_ref) docs
+    /// Dequeues the an item from the ringbuffer and returns an owned version.
+    /// ```
+    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, ReadableRingbuffer};
+    /// let mut buffer = AllocRingBuffer::with_capacity(2);
+    /// buffer.push(1);
+    /// assert_eq!(buffer.pop(), Some(1));
+    /// ```
     fn pop(&mut self) -> Option<T>;
 }
 
@@ -132,18 +143,36 @@ pub trait ReadableRingbuffer<T: 'static + Default>: RingBuffer<T> {
 ///
 /// Notably, the thread safe ringbuffer does *not* implement this trait because
 /// to modify or read data in the middle of the buffer would require locking, something we want to avoid.
-pub trait RingBufferExt<T: 'static + Default>: RingBuffer<T> + WritableRingbuffer<T> + ReadableRingbuffer<T> + Index<usize, Output = T> + IndexMut<usize> {
-
+pub trait RingBufferExt<T: 'static + Default>:
+    RingBuffer<T>
+    + WritableRingbuffer<T>
+    + ReadableRingbuffer<T>
+    + Index<usize, Output = T>
+    + IndexMut<usize>
+{
     /// Returns true if elem is in the ringbuffer.
+    /// ```
+    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
+    /// let mut buffer = AllocRingBuffer::with_capacity(2);
+    /// buffer.push(1);
+    /// assert!(buffer.contains(&1))
+    /// ```
     fn contains(&self, elem: &T) -> bool
-        where
-            T: PartialEq,
+    where
+        T: PartialEq,
     {
         self.iter().any(|i| i == elem)
     }
 
     /// Returns a reference to the value at the back of the queue.
     /// This is the item that will be dequeued next, and was pushed longest ago.
+    /// ```
+    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
+    /// let mut buffer = AllocRingBuffer::with_capacity(2);
+    /// buffer.push(1);
+    /// buffer.push(2);
+    /// assert_eq!(buffer.back(), Some(&1))
+    /// ```
     #[inline]
     fn back(&self) -> Option<&T> {
         self.get(0)
@@ -151,6 +180,7 @@ pub trait RingBufferExt<T: 'static + Default>: RingBuffer<T> + WritableRingbuffe
 
     /// Returns a mutable reference to the value at the back of the queue.
     /// This is the item that will be dequeued next, and was pushed longest ago.
+    /// See [`back`](Self::back)
     #[inline]
     fn back_mut(&mut self) -> Option<&mut T> {
         self.get_mut(0)
@@ -158,61 +188,81 @@ pub trait RingBufferExt<T: 'static + Default>: RingBuffer<T> + WritableRingbuffe
 
     /// Returns a reference to the value at the front of the queue.
     /// This is the item that was last pushed.
+    /// ```
+    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
+    /// let mut buffer = AllocRingBuffer::with_capacity(2);
+    /// buffer.push(1);
+    /// buffer.push(2);
+    /// assert_eq!(buffer.front(), Some(&2))
+    /// ```
     fn front(&self) -> Option<&T>;
 
     /// Returns a mutable reference to the value at the front of the queue.
     /// This is the item that was last pushed.
+    /// See [`front`](Self::front)
     fn front_mut(&mut self) -> Option<&mut T>;
 
     /// Returns a reference to a value relative to the read end of the ringbuffer.
     /// `get(0)` is the item that will be dequeued next, and is the same as [`back`](Self::back)
     /// `get(1)` is the item that will be dequeued after `get(0)`
+    /// ```
+    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
+    /// let mut buffer = AllocRingBuffer::with_capacity(2);
+    /// buffer.push(1);
+    /// buffer.push(2);
+    /// assert_eq!(buffer.get(1), Some(&2))
+    /// ```
     fn get(&self, index: usize) -> Option<&T>;
 
     /// Returns a mutable reference to a value relative to the read end of the ringbuffer.
-    /// `get(0)` is the item that will be dequeued next, and is the same as [`back`](Self::back)
-    /// `get(1)` is the item that will be dequeued after `get(0)`
+    /// See [`get`](Self::get)
     fn get_mut(&mut self, index: usize) -> Option<&mut T>;
 
-    /// Gets a value relative to the start of the array (rarely useful, usually you want [`Self::get`])
-    fn get_absolute(&self, index: usize) -> Option<&T>;
-
-    /// Gets a value mutably relative to the start of the array (rarely useful, usually you want [`Self::get_mut`])
-    fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T>;
-
-    /// Creates a mutable iterator over the buffer starting from the latest push.
-    /// Creates a mutable iterator over the buffer starting from the item pushed the longest ago,
+    /// Creates an iterator over the buffer starting from the back (the item pushed longest ago)
     /// and ending at the element most recently pushed.
-    #[inline]
-    fn iter_mut(&mut self) -> RingBufferMutIterator<T, Self> {
-        RingBufferMutIterator::new(self)
-    }
-
-    /// Creates an iterator over the buffer starting from the latest push.
-    /// Creates an iterator over the buffer starting from the item pushed the longest ago,
-    /// and ending at the element most recently pushed.
+    /// ```
+    /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
+    /// let mut buffer = AllocRingBuffer::with_capacity(2);
+    /// buffer.push(1);
+    /// buffer.push(2);
+    ///
+    /// let mut it = buffer.iter();
+    /// assert_eq!(Some(&1), it.next());
+    /// assert_eq!(Some(&2), it.next());
+    /// assert_eq!(None, it.next());
+    /// ```
     #[inline]
     fn iter(&self) -> RingBufferIterator<T, Self> {
         RingBufferIterator::new(self)
     }
 
+    /// Creates a mutable iterator over the ringbuffer
+    /// See [`iter`](Self::iter)
+    #[inline]
+    fn iter_mut(&mut self) -> RingBufferMutIterator<T, Self> {
+        RingBufferMutIterator::new(self)
+    }
+
     /// Converts the buffer to a vector. This Copies all elements in the ringbuffer.
     #[cfg(feature = "alloc")]
     fn to_vec(&self) -> Vec<T>
-        where
-            T: Clone,
+    where
+        T: Clone,
     {
         self.iter().cloned().collect()
     }
 }
 
 /// Trait which combines [`ReadableRingbuffer`] and [`WritableRingbuffer`]
-pub trait ReadWriteRingbuffer<T: 'static + Default>: RingBuffer<T> + WritableRingbuffer<T> + ReadableRingbuffer<T> {}
-
-impl<S, T: 'static + Default> ReadWriteRingbuffer<T> for S where S: RingBuffer<T> + ReadableRingbuffer<T> + WritableRingbuffer<T> {
-
+pub trait ReadWriteRingbuffer<T: 'static + Default>:
+    RingBuffer<T> + WritableRingbuffer<T> + ReadableRingbuffer<T>
+{
 }
 
+impl<S, T: 'static + Default> ReadWriteRingbuffer<T> for S where
+    S: RingBuffer<T> + ReadableRingbuffer<T> + WritableRingbuffer<T>
+{
+}
 
 mod iter {
     use crate::RingBufferExt;
@@ -303,7 +353,7 @@ macro_rules! impl_read_ringbuffer {
         fn skip(&mut self) {
             self.readptr += 1;
         }
-    }
+    };
 }
 
 macro_rules! impl_ringbuffer_ext {
@@ -329,26 +379,6 @@ macro_rules! impl_ringbuffer_ext {
         }
 
         #[inline]
-        fn get_absolute(&self, index: usize) -> Option<&T> {
-            let read = $mask(self, self.$readptr);
-            let write = $mask(self, self.$writeptr);
-            if index >= read && index < write {
-                self.$buf.get(index)
-            } else {
-                None
-            }
-        }
-
-        #[inline]
-        fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T> {
-            if index >= $mask(self, self.$readptr) && index < $mask(self, self.$writeptr) {
-                self.$buf.get_mut(index)
-            } else {
-                None
-            }
-        }
-
-        #[inline]
         fn front(&self) -> Option<&T> {
             if !self.is_empty() {
                 let masked_index = $mask(self, self.$writeptr - 1);
@@ -367,5 +397,5 @@ macro_rules! impl_ringbuffer_ext {
                 None
             }
         }
-    }
+    };
 }

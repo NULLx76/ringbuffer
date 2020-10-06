@@ -65,7 +65,9 @@
 
 #[macro_use]
 pub(crate) mod ringbuffer_trait;
-pub use ringbuffer_trait::{RingBuffer, ReadableRingbuffer, WritableRingbuffer, ReadWriteRingbuffer, RingBufferExt};
+pub use ringbuffer_trait::{
+    ReadWriteRingbuffer, ReadableRingbuffer, RingBuffer, RingBufferExt, WritableRingbuffer,
+};
 
 #[cfg(feature = "alloc")]
 mod with_alloc;
@@ -502,29 +504,6 @@ mod tests {
         #[cfg(feature = "const_generics")]
         test_get_relative_mut_zero_length(ConstGenericRingBuffer::<i32, 8>::new());
         test_get_relative_mut_zero_length(GenericRingBuffer::<i32, typenum::U8>::new());
-    }
-
-    #[test]
-    fn run_test_get_absolute() {
-        fn test_get_absolute(mut b: impl RingBufferExt<i32>) {
-            b.push(0);
-            b.push(1);
-
-            // [0, ...]
-            //      ^
-            // [0, 1, ...]
-            //         ^
-            // get[0] = 0
-            // get[1] = 1
-            assert_eq!(b.get_absolute(0).unwrap(), &0);
-            assert_eq!(b.get_absolute(1).unwrap(), &1);
-            assert!(b.get_absolute(2).is_none());
-        }
-
-        test_get_absolute(AllocRingBuffer::with_capacity(8));
-        #[cfg(feature = "const_generics")]
-        test_get_absolute(ConstGenericRingBuffer::<i32, 8>::new());
-        test_get_absolute(GenericRingBuffer::<i32, typenum::U8>::new());
     }
 
     #[test]

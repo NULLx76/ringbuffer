@@ -1,6 +1,6 @@
 use core::ops::{Index, IndexMut};
 
-use crate::{RingBuffer, ReadableRingbuffer, WritableRingbuffer, RingBufferExt};
+use crate::{ReadableRingbuffer, RingBuffer, RingBufferExt, WritableRingbuffer};
 use core::iter::FromIterator;
 use generic_array::{ArrayLength, GenericArray};
 
@@ -111,7 +111,9 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuf
     impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
-impl<T: 'static + Default, Cap: ArrayLength<T>> ReadableRingbuffer<T> for GenericRingBuffer<T, Cap> {
+impl<T: 'static + Default, Cap: ArrayLength<T>> ReadableRingbuffer<T>
+    for GenericRingBuffer<T, Cap>
+{
     #[inline]
     fn pop(&mut self) -> Option<T> {
         if !self.is_empty() {
@@ -127,7 +129,9 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> ReadableRingbuffer<T> for Generi
     impl_read_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
-impl<T: 'static + Default, Cap: ArrayLength<T>> WritableRingbuffer<T> for GenericRingBuffer<T, Cap> {
+impl<T: 'static + Default, Cap: ArrayLength<T>> WritableRingbuffer<T>
+    for GenericRingBuffer<T, Cap>
+{
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
