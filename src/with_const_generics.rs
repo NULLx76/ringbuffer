@@ -1,4 +1,4 @@
-use crate::RingBuffer;
+use crate::{RingBuffer, ReadableRingbuffer, WritableRingbuffer, RingBufferExt};
 use core::iter::FromIterator;
 use core::ops::{Index, IndexMut};
 
@@ -11,7 +11,7 @@ use core::ops::{Index, IndexMut};
 ///
 /// # Example
 /// ```
-/// use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
+/// use ringbuffer::{ConstGenericRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
 ///
 /// let mut buffer = ConstGenericRingBuffer::<_, 2>::new();
 ///
@@ -58,6 +58,14 @@ impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingB
         CAP
     }
 
+    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
+}
+
+impl<T: 'static + Default, const CAP: usize> ReadableRingbuffer<T> for ConstGenericRingBuffer<T, CAP> {
+    impl_read_ringbuffer!(buf, readptr, writeptr, crate::mask);
+}
+
+impl<T: 'static + Default, const CAP: usize> WritableRingbuffer<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
@@ -67,7 +75,9 @@ impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingB
         self.buf[index] = value;
         self.writeptr += 1;
     }
+}
 
+impl<T: 'static + Default, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
     fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
@@ -81,8 +91,9 @@ impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingB
         }
     }
 
-    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
+    impl_ringbuffer_ext!(buf, readptr, writeptr, crate::mask);
 }
+
 
 impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     /// Creates a buffer with a capacity specified through the Cap type parameter.

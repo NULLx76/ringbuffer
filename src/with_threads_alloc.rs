@@ -6,7 +6,7 @@ extern crate alloc;
 // We need vecs so depend on alloc
 use alloc::vec::Vec;
 use core::iter::FromIterator;
-use crate::{ReadableRingbuffer, WritableRingbuffer, RingBufferExt};
+use core::sync::atomic::AtomicUsize;
 
 /// The AllocRingBuffer is a RingBuffer which is based on a Vec. This means it allocates at runtime
 /// on the heap, and therefore needs the [`alloc`] crate. This struct and therefore the dependency on
@@ -14,7 +14,7 @@ use crate::{ReadableRingbuffer, WritableRingbuffer, RingBufferExt};
 ///
 /// # Example
 /// ```
-/// use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt, ReadableRingbuffer};
+/// use ringbuffer::{AllocRingBuffer, RingBuffer};
 ///
 /// let mut buffer = AllocRingBuffer::with_capacity(2);
 ///
@@ -35,31 +35,23 @@ use crate::{ReadableRingbuffer, WritableRingbuffer, RingBufferExt};
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
 #[derive(PartialEq, Eq, Debug)]
-pub struct AllocRingBuffer<T> {
+pub struct ThreadAllocRingBuffer<T> {
     buf: Vec<T>,
     capacity: usize,
-    readptr: usize,
-    writeptr: usize,
+    readptr: AtomicUsize,
+    writeptr: AtomicUsize,
 }
 
 /// The capacity of a RingBuffer created by new or default (`1024`).
 // must be a power of 2
 pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
-impl<T: 'static + Default> RingBuffer<T> for AllocRingBuffer<T> {
+impl<T: 'static + Default> RingBuffer<T> for ThreadAllocRingBuffer<T> {
     #[inline]
     fn capacity(&self) -> usize {
         self.capacity
     }
 
-    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
-}
-
-impl <T: 'static + Default> ReadableRingbuffer<T> for AllocRingBuffer<T> {
-    impl_read_ringbuffer!(buf, readptr, writeptr, crate::mask);
-}
-
-impl <T: 'static + Default> WritableRingbuffer<T> for AllocRingBuffer<T> {
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
@@ -76,9 +68,7 @@ impl <T: 'static + Default> WritableRingbuffer<T> for AllocRingBuffer<T> {
 
         self.writeptr += 1;
     }
-}
 
-impl <T: 'static + Default> RingBufferExt<T> for AllocRingBuffer<T> {
     #[inline]
     fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
@@ -92,10 +82,10 @@ impl <T: 'static + Default> RingBufferExt<T> for AllocRingBuffer<T> {
         }
     }
 
-    impl_ringbuffer_ext!(buf, readptr, writeptr, crate::mask);
+    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
-impl<T> AllocRingBuffer<T> {
+impl<T> ThreadAllocRingBuffer<T> {
     /// Creates a RingBuffer with a certain capacity. This capacity is fixed.
     /// for this ringbuffer to work, cap must be a power of two and greater than zero.
     #[inline]
@@ -131,7 +121,7 @@ impl<T> AllocRingBuffer<T> {
     }
 }
 
-impl<RB: 'static + Default> FromIterator<RB> for AllocRingBuffer<RB> {
+impl<RB: 'static + Default> FromIterator<RB> for ThreadAllocRingBuffer<RB> {
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
@@ -142,7 +132,7 @@ impl<RB: 'static + Default> FromIterator<RB> for AllocRingBuffer<RB> {
     }
 }
 
-impl<T> Default for AllocRingBuffer<T> {
+impl<T> Default for ThreadAllocRingBuffer<T> {
     /// Creates a buffer with a capacity of [crate::RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
     fn default() -> Self {
@@ -156,7 +146,7 @@ impl<T> Default for AllocRingBuffer<T> {
     }
 }
 
-impl<T: 'static + Default> Index<isize> for AllocRingBuffer<T> {
+impl<T: 'static + Default> Index<isize> for ThreadAllocRingBuffer<T> {
     type Output = T;
 
     fn index(&self, index: isize) -> &Self::Output {
@@ -164,7 +154,7 @@ impl<T: 'static + Default> Index<isize> for AllocRingBuffer<T> {
     }
 }
 
-impl<T: 'static + Default> IndexMut<isize> for AllocRingBuffer<T> {
+impl<T: 'static + Default> IndexMut<isize> for ThreadAllocRingBuffer<T> {
     fn index_mut(&mut self, index: isize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }
@@ -173,7 +163,7 @@ impl<T: 'static + Default> IndexMut<isize> for AllocRingBuffer<T> {
 #[cfg(test)]
 mod tests {
     use super::alloc::vec::Vec;
-    use crate::{AllocRingBuffer, RingBuffer, RINGBUFFER_DEFAULT_CAPACITY, RingBufferExt};
+    use crate::{AllocRingBuffer, RingBuffer, RINGBUFFER_DEFAULT_CAPACITY};
 
     #[test]
     fn test_default() {

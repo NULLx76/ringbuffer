@@ -1,6 +1,6 @@
 use core::ops::{Index, IndexMut};
 
-use crate::RingBuffer;
+use crate::{RingBuffer, ReadableRingbuffer, WritableRingbuffer, RingBufferExt};
 use core::iter::FromIterator;
 use generic_array::{ArrayLength, GenericArray};
 
@@ -15,7 +15,7 @@ use generic_array::{ArrayLength, GenericArray};
 ///
 /// # Example
 /// ```
-/// use ringbuffer::{RingBuffer, GenericRingBuffer};
+/// use ringbuffer::{RingBuffer, GenericRingBuffer, WritableRingbuffer, RingBufferExt};
 /// use ringbuffer::typenum; // for numbers as types in stable rust
 ///
 /// let mut buffer = GenericRingBuffer::<_, typenum::U2>::new();
@@ -108,6 +108,14 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuf
         self.cap
     }
 
+    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
+}
+
+impl<T: 'static + Default, Cap: ArrayLength<T>> ReadableRingbuffer<T> for GenericRingBuffer<T, Cap> {
+    impl_read_ringbuffer!(buf, readptr, writeptr, crate::mask);
+}
+
+impl<T: 'static + Default, Cap: ArrayLength<T>> WritableRingbuffer<T> for GenericRingBuffer<T, Cap> {
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
@@ -117,7 +125,9 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuf
         self.buf[index] = value;
         self.writeptr += 1;
     }
+}
 
+impl<T: 'static + Default, Cap: ArrayLength<T>> RingBufferExt<T> for GenericRingBuffer<T, Cap> {
     #[inline]
     fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
@@ -130,7 +140,7 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuf
         }
     }
 
-    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
+    impl_ringbuffer_ext!(buf, readptr, writeptr, crate::mask);
 }
 
 #[cfg(test)]
