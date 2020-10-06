@@ -19,12 +19,12 @@ use core::ops::{Index, IndexMut};
 /// buffer.push(5);
 ///
 /// // The last item we pushed is 5
-/// assert_eq!(buffer.get(-1), Some(&5));
+/// assert_eq!(buffer.front(), Some(&5));
 ///
 /// // Second entry is now 42.
 /// buffer.push(42);
 ///
-/// assert_eq!(buffer.peek(), Some(&5));
+/// assert_eq!(buffer.back(), Some(&5));
 /// assert!(buffer.is_full());
 ///
 /// // Because capacity is reached the next push will be the first item of the buffer.
@@ -62,6 +62,19 @@ impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingB
 }
 
 impl<T: 'static + Default, const CAP: usize> ReadableRingbuffer<T> for ConstGenericRingBuffer<T, CAP> {
+    #[inline]
+    fn dequeue(&mut self) -> Option<T> {
+        if !self.is_empty() {
+            let index = crate::mask(self, self.readptr);
+            let res = core::mem::replace(&mut self.buf[index], Default::default());
+            self.readptr += 1;
+
+            Some(res)
+        } else {
+            None
+        }
+    }
+
     impl_read_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
@@ -78,19 +91,6 @@ impl<T: 'static + Default, const CAP: usize> WritableRingbuffer<T> for ConstGene
 }
 
 impl<T: 'static + Default, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
-    #[inline]
-    fn dequeue_ref(&mut self) -> Option<&T> {
-        if !self.is_empty() {
-            let index = crate::mask(self, self.readptr);
-            let res = &self.buf[index];
-            self.readptr += 1;
-
-            Some(res)
-        } else {
-            None
-        }
-    }
-
     impl_ringbuffer_ext!(buf, readptr, writeptr, crate::mask);
 }
 
@@ -123,16 +123,16 @@ impl<RB: 'static + Default, const CAP: usize> FromIterator<RB> for ConstGenericR
     }
 }
 
-impl<T: 'static + Default, const CAP: usize> Index<isize> for ConstGenericRingBuffer<T, CAP> {
+impl<T: 'static + Default, const CAP: usize> Index<usize> for ConstGenericRingBuffer<T, CAP> {
     type Output = T;
 
-    fn index(&self, index: isize) -> &Self::Output {
+    fn index(&self, index: usize) -> &Self::Output {
         self.get(index).expect("index out of bounds")
     }
 }
 
-impl<T: 'static + Default, const CAP: usize> IndexMut<isize> for ConstGenericRingBuffer<T, CAP> {
-    fn index_mut(&mut self, index: isize) -> &mut Self::Output {
+impl<T: 'static + Default, const CAP: usize> IndexMut<usize> for ConstGenericRingBuffer<T, CAP> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }
 }

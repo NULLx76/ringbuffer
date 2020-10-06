@@ -37,12 +37,12 @@
 //! buffer.push(5);
 //!
 //! // The last item we pushed is 5
-//! assert_eq!(buffer.get(-1), Some(&5));
+//! assert_eq!(buffer.front(), Some(&5));
 //!
 //! // Second entry is now 42.
 //! buffer.push(42);
 //!
-//! assert_eq!(buffer.peek(), Some(&5));
+//! assert_eq!(buffer.back(), Some(&5));
 //! assert!(buffer.is_full());
 //!
 //! // Because capacity is reached the next push will be the first item of the buffer.
@@ -394,50 +394,15 @@ mod tests {
     }
 
     #[test]
-    fn run_test_peek_some() {
-        fn test_peek_some(mut b: impl RingBufferExt<i32>) {
-            b.push(1);
-            b.push(2);
-
-            assert_eq!(b.peek(), Some(&1));
-        }
-
-        test_peek_some(AllocRingBuffer::with_capacity(2));
-        #[cfg(feature = "const_generics")]
-        test_peek_some(ConstGenericRingBuffer::<i32, 2>::new());
-        test_peek_some(GenericRingBuffer::<i32, typenum::U2>::new());
-    }
-
-    #[test]
-    fn run_test_peek_none() {
-        fn test_peek_none(b: impl RingBufferExt<i32>) {
-            assert_eq!(b.peek(), None);
-        }
-
-        test_peek_none(AllocRingBuffer::with_capacity(8));
-        #[cfg(feature = "const_generics")]
-        test_peek_none(ConstGenericRingBuffer::<i32, 8>::new());
-        test_peek_none(GenericRingBuffer::<i32, typenum::U8>::new());
-    }
-
-    #[test]
     fn run_test_get_relative() {
         fn test_get_relative(mut b: impl RingBufferExt<i32>) {
             b.push(0);
             b.push(1);
 
-            // [0, ...]
-            //      ^
-            // [0, 1, ...]
-            //         ^
-            // get[(index + 0) % len] = 0 (wrap to 0 because len == 2)
-            // get[(index + 1) % len] = 1
             assert_eq!(b.get(0).unwrap(), &0);
             assert_eq!(b.get(1).unwrap(), &1);
 
-            // Wraps around
-            assert_eq!(b.get(2).unwrap(), &0);
-            assert_eq!(b.get(3).unwrap(), &1);
+            assert_eq!(b.get(2), None);
         }
 
         test_get_relative(AllocRingBuffer::with_capacity(8));
@@ -453,14 +418,6 @@ mod tests {
             b.push(1);
             b.push(2);
 
-            // [0, ...]
-            //      ^
-            // [0, 1]
-            //  ^
-            // [2, 1]
-            //     ^
-            // get(0) == b[index] = 1
-            // get(1) == b[(index+1) % len] = 1
             assert_eq!(b.get(0).unwrap(), &1);
             assert_eq!(b.get(1).unwrap(), &2);
         }
@@ -610,12 +567,10 @@ mod tests {
             //         ^
             // get[(index + -1) % len] = 1
             // get[(index + -2) % len] = 0 (wrap to 1 because len == 2)
-            assert_eq!(b.get(-1).unwrap(), &1);
-            assert_eq!(b.get(-2).unwrap(), &0);
+            assert_eq!(b.get(0).unwrap(), &0);
+            assert_eq!(b.get(1).unwrap(), &1);
 
-            // Wraps around
-            assert_eq!(b.get(-3).unwrap(), &1);
-            assert_eq!(b.get(-4).unwrap(), &0);
+            assert_eq!(b.get(2), None);
         }
 
         test_get_relative_negative(AllocRingBuffer::with_capacity(8));
@@ -662,7 +617,7 @@ mod tests {
             b.push(1);
             b.push(2);
 
-            assert_eq!(b.front(), Some(&1));
+            assert_eq!(b.front(), Some(&2));
         }
 
         test_front_some(AllocRingBuffer::with_capacity(2));
@@ -689,7 +644,7 @@ mod tests {
             b.push(1);
             b.push(2);
 
-            assert_eq!(b.back(), Some(&2));
+            assert_eq!(b.back(), Some(&1));
         }
 
         test_back_some(AllocRingBuffer::with_capacity(2));
@@ -716,7 +671,7 @@ mod tests {
             b.push(1);
             b.push(2);
 
-            assert_eq!(b.front_mut(), Some(&mut 1));
+            assert_eq!(b.front_mut(), Some(&mut 2));
         }
 
         test_front_some_mut(AllocRingBuffer::with_capacity(2));
@@ -743,7 +698,7 @@ mod tests {
             b.push(1);
             b.push(2);
 
-            assert_eq!(b.back_mut(), Some(&mut 2));
+            assert_eq!(b.back_mut(), Some(&mut 1));
         }
 
         test_back_some_mut(AllocRingBuffer::with_capacity(2));
@@ -765,28 +720,6 @@ mod tests {
     }
 
     #[test]
-    fn run_test_dequeue_ref() {
-        fn run_test_dequeue_ref(mut b: impl RingBufferExt<i32>) {
-            b.push(0);
-            b.push(1);
-
-            assert_eq!(b.len(), 2);
-
-            assert_eq!(b.dequeue_ref(), Some(&0));
-            assert_eq!(b.dequeue_ref(), Some(&1));
-
-            assert_eq!(b.len(), 0);
-
-            assert_eq!(b.dequeue_ref(), None);
-        }
-
-        run_test_dequeue_ref(AllocRingBuffer::with_capacity(8));
-        run_test_dequeue_ref(GenericRingBuffer::<i32, typenum::U8>::new());
-        #[cfg(feature = "const_generics")]
-        run_test_dequeue_ref(ConstGenericRingBuffer::<i32, 8>::new());
-    }
-
-    #[test]
     fn run_test_dequeue() {
         fn run_test_dequeue(mut b: impl RingBufferExt<i32>) {
             b.push(0);
@@ -799,7 +732,7 @@ mod tests {
 
             assert_eq!(b.len(), 0);
 
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
         }
 
         run_test_dequeue(AllocRingBuffer::with_capacity(8));
@@ -836,14 +769,14 @@ mod tests {
 
             assert_eq!(b.dequeue(), Some(0));
             assert_eq!(b.dequeue(), Some(1));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
 
             b.push(0);
             b.push(1);
 
             assert_eq!(b.dequeue(), Some(0));
             assert_eq!(b.dequeue(), Some(1));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
         }
 
         test_push_pop_push(AllocRingBuffer::with_capacity(8));
@@ -861,7 +794,7 @@ mod tests {
 
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), Some(2));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
 
             b.push(0);
             b.push(1);
@@ -869,7 +802,7 @@ mod tests {
 
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), Some(2));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
         }
 
         test_push_pop_push_full(AllocRingBuffer::with_capacity(2));
@@ -887,7 +820,7 @@ mod tests {
 
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), Some(2));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
 
             b.push(0);
             b.push(1);
@@ -895,15 +828,14 @@ mod tests {
 
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), Some(2));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
 
             b.push(0);
             b.push(1);
             b.push(2);
 
-            assert_eq!(b.get(-1), Some(&2));
-            assert_eq!(b.get(-2), Some(&1));
-            assert_eq!(b.get(-3), Some(&2));
+            assert_eq!(b.get(0), Some(&1));
+            assert_eq!(b.get(1), Some(&2));
         }
 
         test_push_pop_push_full_get(AllocRingBuffer::with_capacity(2));
@@ -931,8 +863,8 @@ mod tests {
                 rb.push(1);
                 rb.push(2);
 
-                assert_eq!(rb.get(-1), Some(&2));
-                assert_eq!(rb.get(-2), Some(&1));
+                assert_eq!(rb.get(0), Some(&1));
+                assert_eq!(rb.get(1), Some(&2));
             }
         }
 

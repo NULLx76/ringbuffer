@@ -1,38 +1,18 @@
-use core::ops::{Index, IndexMut};
-
 use crate::ringbuffer_trait::RingBuffer;
 
 extern crate alloc;
 // We need vecs so depend on alloc
 use alloc::vec::Vec;
 use core::iter::FromIterator;
-use crate::{ReadableRingbuffer, WritableRingbuffer, RingBufferExt};
+use crate::{ReadableRingbuffer, WritableRingbuffer};
 
 /// The AllocRingBuffer is a RingBuffer which is based on a Vec. This means it allocates at runtime
 /// on the heap, and therefore needs the [`alloc`] crate. This struct and therefore the dependency on
 /// alloc can be disabled by disabling the `alloc` (default) feature.
 ///
 /// # Example
-/// ```
-/// use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt, ReadableRingbuffer};
-///
-/// let mut buffer = AllocRingBuffer::with_capacity(2);
-///
-/// // First entry of the buffer is now 5.
-/// buffer.push(5);
-///
-/// // The last item we pushed is 5
-/// assert_eq!(buffer.get(-1), Some(&5));
-///
-/// // Second entry is now 42.
-/// buffer.push(42);
-///
-/// assert_eq!(buffer.peek(), Some(&5));
-/// assert!(buffer.is_full());
-///
-/// // Because capacity is reached the next push will be the first item of the buffer.
-/// buffer.push(1);
-/// assert_eq!(buffer.to_vec(), vec![42, 1]);
+/// ```rust
+/// // TODO: Example
 /// ```
 #[derive(PartialEq, Eq, Debug)]
 pub struct ThreadAllocRingBuffer<T> {
@@ -56,6 +36,11 @@ impl<T: 'static + Default> RingBuffer<T> for ThreadAllocRingBuffer<T> {
 }
 
 impl <T: 'static + Default> ReadableRingbuffer<T> for ThreadAllocRingBuffer<T> {
+    #[inline]
+    fn dequeue(&mut self) -> Option<T> {
+        todo!()
+    }
+
     impl_read_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
@@ -76,23 +61,6 @@ impl <T: 'static + Default> WritableRingbuffer<T> for ThreadAllocRingBuffer<T> {
 
         self.writeptr += 1;
     }
-}
-
-impl <T: 'static + Default> RingBufferExt<T> for ThreadAllocRingBuffer<T> {
-    #[inline]
-    fn dequeue_ref(&mut self) -> Option<&T> {
-        if !self.is_empty() {
-            let index = crate::mask(self, self.readptr);
-            let res = &self.buf[index];
-            self.readptr += 1;
-
-            Some(res)
-        } else {
-            None
-        }
-    }
-
-    impl_ringbuffer_ext!(buf, readptr, writeptr, crate::mask);
 }
 
 impl<T> ThreadAllocRingBuffer<T> {
@@ -156,24 +124,11 @@ impl<T> Default for ThreadAllocRingBuffer<T> {
     }
 }
 
-impl<T: 'static + Default> Index<isize> for ThreadAllocRingBuffer<T> {
-    type Output = T;
-
-    fn index(&self, index: isize) -> &Self::Output {
-        self.get(index).expect("index out of bounds")
-    }
-}
-
-impl<T: 'static + Default> IndexMut<isize> for ThreadAllocRingBuffer<T> {
-    fn index_mut(&mut self, index: isize) -> &mut Self::Output {
-        self.get_mut(index).expect("index out of bounds")
-    }
-}
 
 #[cfg(test)]
 mod tests {
     use super::alloc::vec::Vec;
-    use crate::{ThreadAllocRingBuffer, RingBuffer, RINGBUFFER_DEFAULT_CAPACITY, RingBufferExt};
+    use crate::{ThreadAllocRingBuffer, RingBuffer, RINGBUFFER_DEFAULT_CAPACITY};
 
     #[test]
     fn test_default() {
@@ -186,14 +141,9 @@ mod tests {
         assert_eq!(0, b.readptr);
         assert!(b.is_empty());
         assert!(b.buf.is_empty());
-        assert_eq!(0, b.iter().count());
         assert_eq!(
             Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
             b.buf
-        );
-        assert_eq!(
-            Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
-            b.to_vec()
         );
     }
 
@@ -213,12 +163,5 @@ mod tests {
     #[should_panic]
     fn test_with_capacity_no_power_of_two() {
         let _ = ThreadAllocRingBuffer::<i32>::with_capacity(10);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_index_zero_length() {
-        let b = ThreadAllocRingBuffer::<i32>::with_capacity(2);
-        let _ = b[2];
     }
 }

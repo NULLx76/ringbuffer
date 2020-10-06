@@ -24,12 +24,12 @@ use generic_array::{ArrayLength, GenericArray};
 /// buffer.push(5);
 ///
 /// // The last item we pushed is 5
-/// assert_eq!(buffer.get(-1), Some(&5));
+/// assert_eq!(buffer.front(), Some(&5));
 ///
 /// // Second entry is now 42.
 /// buffer.push(42);
 ///
-/// assert_eq!(buffer.peek(), Some(&5));
+/// assert_eq!(buffer.back(), Some(&5));
 /// assert!(buffer.is_full());
 ///
 /// // Because capacity is reached the next push will be the first item of the buffer.
@@ -87,16 +87,16 @@ impl<RB: 'static + Default, Cap: ArrayLength<RB>> FromIterator<RB> for GenericRi
     }
 }
 
-impl<T: 'static + Default, Cap: ArrayLength<T>> Index<isize> for GenericRingBuffer<T, Cap> {
+impl<T: 'static + Default, Cap: ArrayLength<T>> Index<usize> for GenericRingBuffer<T, Cap> {
     type Output = T;
 
-    fn index(&self, index: isize) -> &Self::Output {
+    fn index(&self, index: usize) -> &Self::Output {
         self.get(index).expect("index out of bounds")
     }
 }
 
-impl<T: 'static + Default, Cap: ArrayLength<T>> IndexMut<isize> for GenericRingBuffer<T, Cap> {
-    fn index_mut(&mut self, index: isize) -> &mut Self::Output {
+impl<T: 'static + Default, Cap: ArrayLength<T>> IndexMut<usize> for GenericRingBuffer<T, Cap> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }
 }
@@ -112,6 +112,18 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuf
 }
 
 impl<T: 'static + Default, Cap: ArrayLength<T>> ReadableRingbuffer<T> for GenericRingBuffer<T, Cap> {
+    #[inline]
+    fn dequeue(&mut self) -> Option<T> {
+        if !self.is_empty() {
+            let index = crate::mask(self, self.readptr);
+            let res = core::mem::replace(&mut self.buf[index], Default::default());
+            self.readptr += 1;
+            Some(res)
+        } else {
+            None
+        }
+    }
+
     impl_read_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
@@ -128,18 +140,6 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> WritableRingbuffer<T> for Generi
 }
 
 impl<T: 'static + Default, Cap: ArrayLength<T>> RingBufferExt<T> for GenericRingBuffer<T, Cap> {
-    #[inline]
-    fn dequeue_ref(&mut self) -> Option<&T> {
-        if !self.is_empty() {
-            let index = crate::mask(self, self.readptr);
-            let res = &self.buf[index];
-            self.readptr += 1;
-            Some(res)
-        } else {
-            None
-        }
-    }
-
     impl_ringbuffer_ext!(buf, readptr, writeptr, crate::mask);
 }
 

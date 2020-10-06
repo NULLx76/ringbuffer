@@ -17,7 +17,7 @@ fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     })
 }
 
-fn benchmark_push_dequeue<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_push_dequeue<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, ew: F) {
     b.iter(|| {
         let mut rb = new();
 
@@ -79,7 +79,7 @@ macro_rules! generate_benches {
 fn criterion_benchmark(c: &mut Criterion) {
     c.with_plots();
 
-    generate_benches![
+    generat_benches![
         called,
         c,
         AllocRingBuffer,
@@ -89,7 +89,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         16,
         1024,
         4096,
-        8192
+    8192
     ];
     generate_benches![
         typed,
@@ -101,7 +101,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         16,
         1024,
         4096,
-        8192
+    8192
     ];
     generate_benches![
         typed,
@@ -112,11 +112,11 @@ fn criterion_benchmark(c: &mut Criterion) {
         benchmark_push,
         U16,
         U1024,
-        U4096,
-        U8192
+       U4096,
+     U8192
     ];
 
-    generate_benches![
+    generat_benches![
         called,
         c,
         AllocRingBuffer,
@@ -126,7 +126,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         16,
         1024,
         4096,
-        8192
+    8192
     ];
     generate_benches![
         typed,
@@ -138,7 +138,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         16,
         1024,
         4096,
-        8192
+    8192
     ];
     generate_benches![
         typed,
@@ -149,11 +149,10 @@ fn criterion_benchmark(c: &mut Criterion) {
         benchmark_various,
         U16,
         U1024,
-        U4096,
-        U8192
-    ];
+       U4096,
+        U8192  ];
 
-    generate_benches![
+    generate_benche![
         called,
         c,
         AllocRingBuffer,
@@ -163,7 +162,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         16,
         1024,
         4096,
-        8192
+    8192
     ];
     generate_benches![
         typed,
@@ -187,7 +186,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         U16,
         U1024,
         U4096,
-        U8192
+       U8192
     ];
 }
 
