@@ -79,92 +79,92 @@ macro_rules! generate_benches {
 fn criterion_benchmark(c: &mut Criterion) {
     c.with_plots();
 
-    // generate_benches![
-    //     called,
-    //     c,
-    //     AllocRingBuffer,
-    //     i32,
-    //     with_capacity,
-    //     benchmark_push,
-    //     16,
-    //     1024,
-    //     4096,
-    //     8192
-    // ];
-    // generate_benches![
-    //     typed,
-    //     c,
-    //     ConstGenericRingBuffer,
-    //     i32,
-    //     new,
-    //     benchmark_push,
-    //     16,
-    //     1024,
-    //     4096,
-    //     8192
-    // ];
-    // generate_benches![
-    //     typed,
-    //     c,
-    //     GenericRingBuffer,
-    //     i32,
-    //     new,
-    //     benchmark_push,
-    //     U16,
-    //     U1024,
-    //     U4096,
-    //     U8192
-    // ];
+    generate_benches![
+        called,
+        c,
+        AllocRingBuffer,
+        i32,
+        with_capacity,
+        benchmark_push,
+        16,
+        1024,
+        4096,
+        8192
+    ];
+    generate_benches![
+        typed,
+        c,
+        ConstGenericRingBuffer,
+        i32,
+        new,
+        benchmark_push,
+        16,
+        1024,
+        4096,
+        8192
+    ];
+    generate_benches![
+        typed,
+        c,
+        GenericRingBuffer,
+        i32,
+        new,
+        benchmark_push,
+        U16,
+        U1024,
+        U4096,
+        U8192
+    ];
 
-    // generate_benches![
-    //     called,
-    //     c,
-    //     AllocRingBuffer,
-    //     i32,
-    //     with_capacity,
-    //     benchmark_various,
-    //     16,
-    //     1024,
-    //     4096,
-    //     8192
-    // ];
-    // generate_benches![
-    //     typed,
-    //     c,
-    //     ConstGenericRingBuffer,
-    //     i32,
-    //     new,
-    //     benchmark_various,
-    //     16,
-    //     1024,
-    //     4096,
-    //     8192
-    // ];
-    // generate_benches![
-    //     typed,
-    //     c,
-    //     GenericRingBuffer,
-    //     i32,
-    //     new,
-    //     benchmark_various,
-    //     U16,
-    //     U1024,
-    //     U4096,
-    //     U8192
-    // ];
+    generate_benches![
+        called,
+        c,
+        AllocRingBuffer,
+        i32,
+        with_capacity,
+        benchmark_various,
+        16,
+        1024,
+        4096,
+        8192
+    ];
+    generate_benches![
+        typed,
+        c,
+        ConstGenericRingBuffer,
+        i32,
+        new,
+        benchmark_various,
+        16,
+        1024,
+        4096,
+        8192
+    ];
+    generate_benches![
+        typed,
+        c,
+        GenericRingBuffer,
+        i32,
+        new,
+        benchmark_various,
+        U16,
+        U1024,
+        U4096,
+        U8192
+    ];
 
-    // generate_benches![
-    //     called,
-    //     c,
-    //     AllocRingBuffer,
-    //     i32,
-    //     with_capacity,
-    //     benchmark_push_dequeue,
-    //     16,
-    //     1024,
-    //     4096,
-    //     8192
-    // ];
+    generate_benches![
+        called,
+        c,
+        AllocRingBuffer,
+        i32,
+        with_capacity,
+        benchmark_push_dequeue,
+        16,
+        1024,
+        4096,
+        8192
+    ];
     generate_benches![
         typed,
         c,
@@ -177,18 +177,18 @@ fn criterion_benchmark(c: &mut Criterion) {
         4096,
         8192
     ];
-    // generate_benches![
-    //     typed,
-    //     c,
-    //     GenericRingBuffer,
-    //     i32,
-    //     new,
-    //     benchmark_push_dequeue,
-    //     U16,
-    //     U1024,
-    //     U4096,
-    //     U8192
-    // ];
+    generate_benches![
+        typed,
+        c,
+        GenericRingBuffer,
+        i32,
+        new,
+        benchmark_push_dequeue,
+        U16,
+        U1024,
+        U4096,
+        U8192
+    ];
 }
 
 criterion_group!(benches, criterion_benchmark);
