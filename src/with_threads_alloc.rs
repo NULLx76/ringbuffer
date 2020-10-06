@@ -92,7 +92,7 @@ impl<T> ThreadAllocRingBuffer<T> {
         Self::with_capacity_unchecked(cap)
     }
 
-    /// Creates a RingBuffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
+    /// Creates a RingBuffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY](crate::RINGBUFFER_DEFAULT_CAPACITY).
     #[inline]
     pub fn new() -> Self {
         Self::default()
