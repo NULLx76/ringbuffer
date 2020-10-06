@@ -16,6 +16,7 @@ lto = true
 [dependencies]
 generic-array = {version = "0.14.4", optional=true}
 array-init = {git = "https://github.com/manishearth/array-init", version = "0.1.1", optional=true}
+criterion = "0.1.2"
 
 [dev-dependencies]
 criterion = "0.1.2"

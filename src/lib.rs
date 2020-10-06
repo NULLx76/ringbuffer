@@ -805,7 +805,7 @@ mod tests {
 
     #[test]
     fn run_test_skip() {
-        fn run_test_skip(mut b: impl RingBuffer<i32>) {
+        fn test_skip(mut b: impl RingBuffer<i32>) {
             b.push(0);
             b.push(1);
 
@@ -817,9 +817,123 @@ mod tests {
             assert_eq!(b.len(), 0)
         }
 
-        run_test_skip(AllocRingBuffer::with_capacity(8));
-        run_test_skip(GenericRingBuffer::<i32, typenum::U8>::new());
+        test_skip(AllocRingBuffer::with_capacity(8));
+        test_skip(GenericRingBuffer::<i32, typenum::U8>::new());
         #[cfg(feature = "const_generics")]
-        run_test_skip(ConstGenericRingBuffer::<i32, 8>::new());
+        test_skip(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
+    #[test]
+    fn run_test_push_pop_push() {
+        fn test_push_pop_push(mut b: impl RingBuffer<i32>) {
+            b.push(0);
+            b.push(1);
+
+            assert_eq!(b.dequeue(), Some(0));
+            assert_eq!(b.dequeue(), Some(1));
+            assert_eq!(b.dequeue_ref(), None);
+
+            b.push(0);
+            b.push(1);
+
+            assert_eq!(b.dequeue(), Some(0));
+            assert_eq!(b.dequeue(), Some(1));
+            assert_eq!(b.dequeue_ref(), None);
+        }
+
+        test_push_pop_push(AllocRingBuffer::with_capacity(8));
+        test_push_pop_push(GenericRingBuffer::<i32, typenum::U8>::new());
+        #[cfg(feature = "const_generics")]
+        test_push_pop_push(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
+    #[test]
+    fn run_test_push_pop_push_full() {
+        fn test_push_pop_push_full(mut b: impl RingBuffer<i32>) {
+            b.push(0);
+            b.push(1);
+            b.push(2);
+
+            assert_eq!(b.dequeue(), Some(1));
+            assert_eq!(b.dequeue(), Some(2));
+            assert_eq!(b.dequeue_ref(), None);
+
+            b.push(0);
+            b.push(1);
+            b.push(2);
+
+            assert_eq!(b.dequeue(), Some(1));
+            assert_eq!(b.dequeue(), Some(2));
+            assert_eq!(b.dequeue_ref(), None);
+        }
+
+        test_push_pop_push_full(AllocRingBuffer::with_capacity(2));
+        test_push_pop_push_full(GenericRingBuffer::<i32, typenum::U2>::new());
+        #[cfg(feature = "const_generics")]
+        test_push_pop_push_full(ConstGenericRingBuffer::<i32, 2>::new());
+    }
+
+    #[test]
+    fn run_test_push_pop_push_full_get() {
+        fn test_push_pop_push_full_get(mut b: impl RingBuffer<i32>) {
+            b.push(0);
+            b.push(1);
+            b.push(2);
+
+            assert_eq!(b.dequeue(), Some(1));
+            assert_eq!(b.dequeue(), Some(2));
+            assert_eq!(b.dequeue_ref(), None);
+
+            b.push(0);
+            b.push(1);
+            b.push(2);
+
+            assert_eq!(b.dequeue(), Some(1));
+            assert_eq!(b.dequeue(), Some(2));
+            assert_eq!(b.dequeue_ref(), None);
+
+            b.push(0);
+            b.push(1);
+            b.push(2);
+
+            assert_eq!(b.get(-1), Some(&2));
+            assert_eq!(b.get(-2), Some(&1));
+            assert_eq!(b.get(-3), Some(&2));
+        }
+
+        test_push_pop_push_full_get(AllocRingBuffer::with_capacity(2));
+        test_push_pop_push_full_get(GenericRingBuffer::<i32, typenum::U2>::new());
+        #[cfg(feature = "const_generics")]
+        test_push_pop_push_full_get(ConstGenericRingBuffer::<i32, 2>::new());
+    }
+
+    #[test]
+    fn run_test_push_pop_push_full_get_rep() {
+        fn test_push_pop_push_full_get_rep(mut rb: impl RingBuffer<i32>) {
+            for _ in 0..100_000 {
+                rb.push(1);
+                rb.push(2);
+
+                assert_eq!(rb.dequeue(), Some(1));
+                assert_eq!(rb.dequeue(), Some(2));
+
+                rb.push(1);
+                rb.push(2);
+
+                assert_eq!(rb.dequeue(), Some(1));
+                assert_eq!(rb.dequeue(), Some(2));
+
+                rb.push(1);
+                rb.push(2);
+
+                assert_eq!(rb.get(-1), Some(&2));
+                assert_eq!(rb.get(-2), Some(&1));
+            }
+        }
+
+        test_push_pop_push_full_get_rep(AllocRingBuffer::with_capacity(8));
+        test_push_pop_push_full_get_rep(GenericRingBuffer::<i32, typenum::U8>::new());
+        #[cfg(feature = "const_generics")]
+        test_push_pop_push_full_get_rep(ConstGenericRingBuffer::<i32, 8>::new());
     }
 }
