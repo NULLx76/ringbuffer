@@ -34,8 +34,8 @@ use core::ops::{Index, IndexMut};
 #[derive(PartialEq, Eq, Debug)]
 pub struct ConstGenericRingBuffer<T, const CAP: usize> {
     buf: [T; CAP],
-    index: usize,
-    length_counter: usize,
+    readptr: usize,
+    writeptr: usize,
 }
 
 /// It is only possible to create a Generic RingBuffer if the type T in it implements Default.
@@ -53,45 +53,50 @@ impl<T: Default, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
 
 impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
-    fn len(&self) -> usize {
-        self.length_counter
-    }
-
-    #[inline]
-    fn clear(&mut self) {
-        self.index = 0;
-        self.length_counter = 0;
-    }
-
-    #[inline]
     #[cfg(not(tarpaulin_include))]
     fn capacity(&self) -> usize {
         CAP
     }
 
-    fn push(&mut self, e: T) {
-        self.buf[self.index] = e;
-        if self.length_counter < self.capacity() {
-            self.length_counter += 1
+    #[inline]
+    fn push(&mut self, value: T) {
+        if self.is_full() {
+            self.readptr += 1;
         }
-        self.index = (self.index + 1) % self.capacity()
+        let index = crate::mask(self, self.writeptr);
+        self.buf[index] = value;
+        self.writeptr += 1;
     }
 
-    impl_ringbuffer!(buf, index);
+    #[inline]
+    fn dequeue_ref(&mut self) -> Option<&T> {
+        if !self.is_empty() {
+            let index = crate::mask(self, self.readptr);
+            let res = &self.buf[index];
+            self.readptr += 1;
+
+            Some(res)
+        } else {
+            None
+        }
+    }
+
+    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
 }
 
 impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     /// Creates a buffer with a capacity specified through the Cap type parameter.
     #[inline]
     fn default() -> Self {
-        assert_ne!(CAP, 0);
+        assert_ne!(CAP, 0, "Capacity must be greater than 0");
+        assert!(CAP.is_power_of_two(), "Capacity must be a power of two");
 
         let arr = array_init::array_init(|_| T::default());
 
         Self {
             buf: arr,
-            index: 0,
-            length_counter: 0,
+            writeptr: 0,
+            readptr: 0,
         }
     }
 }
@@ -129,6 +134,12 @@ mod tests {
     #[should_panic]
     fn test_no_empty() {
         let _ = ConstGenericRingBuffer::<u32, 0>::new();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_with_capacity_no_power_of_two() {
+        let _ = ConstGenericRingBuffer::<i32, 10>::new();
     }
 
     #[test]
