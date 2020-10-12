@@ -2,7 +2,8 @@ use core::ops::{Index, IndexMut};
 
 use crate::RingBuffer;
 use core::iter::FromIterator;
-use generic_array::{ArrayLength, GenericArray};
+use core::mem::MaybeUninit;
+use generic_array::{sequence::GenericSequence, ArrayLength, GenericArray};
 
 /// The GenericRingBuffer struct is a RingBuffer implementation which does not require `alloc`.
 /// However it does depend on the typenum crate, to provide compile time integers without needing
@@ -36,18 +37,35 @@ use generic_array::{ArrayLength, GenericArray};
 /// buffer.push(1);
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
-#[derive(PartialEq, Eq, Debug)]
-pub struct GenericRingBuffer<T, Cap: ArrayLength<T>> {
-    buf: GenericArray<T, Cap>,
+#[derive(Debug)]
+pub struct GenericRingBuffer<T, Cap: ArrayLength<MaybeUninit<T>>> {
+    buf: GenericArray<MaybeUninit<T>, Cap>,
     cap: usize,
     readptr: usize,
     writeptr: usize,
 }
 
-/// It is only possible to create a Generic RingBuffer if the type T in it implements Default.
-/// This is because the array needs to be allocated at compile time, and needs to be filled with
-/// some default value.
-impl<T: Default, Cap: ArrayLength<T>> GenericRingBuffer<T, Cap> {
+// We need to manually implement PartialEq because MaybeUninit isn't PartialEq
+impl<T: 'static + PartialEq, Cap: ArrayLength<MaybeUninit<T>>> PartialEq
+    for GenericRingBuffer<T, Cap>
+{
+    fn eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            false
+        } else {
+            for (a, b) in self.iter().zip(other.iter()) {
+                if a != b {
+                    return false;
+                }
+            }
+            true
+        }
+    }
+}
+
+impl<T: 'static + PartialEq, Cap: ArrayLength<MaybeUninit<T>>> Eq for GenericRingBuffer<T, Cap> {}
+
+impl<T, Cap: ArrayLength<MaybeUninit<T>>> GenericRingBuffer<T, Cap> {
     /// Creates a new RingBuffer. The method is here for compatibility with the alloc version of
     /// RingBuffer. This method simply creates a default ringbuffer. The capacity is given as a
     /// type parameter.
@@ -55,9 +73,27 @@ impl<T: Default, Cap: ArrayLength<T>> GenericRingBuffer<T, Cap> {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Get a reference from the buffer without checking it is initialized
+    /// Caller MUST be sure this index is initialized, or undefined behavior will happen
+    unsafe fn get_unchecked(&self, index: usize) -> &T {
+        self.buf[index]
+            .as_ptr()
+            .as_ref()
+            .expect("generic array pointer shouldn't be null!")
+    }
+
+    /// Get a mutable reference from the buffer without checking it is initialized
+    /// Caller MUST be sure this index is initialized, or undefined behavior will happen
+    unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
+        self.buf[index]
+            .as_mut_ptr()
+            .as_mut()
+            .expect("generic array ptr shouldn't be null!")
+    }
 }
 
-impl<T: Default, Cap: ArrayLength<T>> Default for GenericRingBuffer<T, Cap> {
+impl<T, Cap: ArrayLength<MaybeUninit<T>>> Default for GenericRingBuffer<T, Cap> {
     /// Creates a buffer with a capacity specified through the `Cap` type parameter.
     #[inline]
     fn default() -> Self {
@@ -68,7 +104,7 @@ impl<T: Default, Cap: ArrayLength<T>> Default for GenericRingBuffer<T, Cap> {
         );
 
         Self {
-            buf: GenericArray::default(),
+            buf: GenericArray::generate(|_| MaybeUninit::uninit()),
             cap: Cap::to_usize(),
             readptr: 0,
             writeptr: 0,
@@ -76,7 +112,9 @@ impl<T: Default, Cap: ArrayLength<T>> Default for GenericRingBuffer<T, Cap> {
     }
 }
 
-impl<RB: 'static + Default, Cap: ArrayLength<RB>> FromIterator<RB> for GenericRingBuffer<RB, Cap> {
+impl<RB: 'static, Cap: ArrayLength<MaybeUninit<RB>>> FromIterator<RB>
+    for GenericRingBuffer<RB, Cap>
+{
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
@@ -87,7 +125,7 @@ impl<RB: 'static + Default, Cap: ArrayLength<RB>> FromIterator<RB> for GenericRi
     }
 }
 
-impl<T: 'static + Default, Cap: ArrayLength<T>> Index<isize> for GenericRingBuffer<T, Cap> {
+impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> Index<isize> for GenericRingBuffer<T, Cap> {
     type Output = T;
 
     fn index(&self, index: isize) -> &Self::Output {
@@ -95,13 +133,13 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> Index<isize> for GenericRingBuff
     }
 }
 
-impl<T: 'static + Default, Cap: ArrayLength<T>> IndexMut<isize> for GenericRingBuffer<T, Cap> {
+impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> IndexMut<isize> for GenericRingBuffer<T, Cap> {
     fn index_mut(&mut self, index: isize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }
 }
 
-impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuffer<T, Cap> {
+impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRingBuffer<T, Cap> {
     #[inline(always)]
     #[cfg(not(tarpaulin_include))]
     fn capacity(&self) -> usize {
@@ -111,10 +149,17 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuf
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
+            unsafe {
+                // make sure we drop whatever is being overwritten
+                // SAFETY: the buffer is full, so this must be inited
+                //       : also, index has been masked
+                let index = crate::mask(self, self.readptr);
+                core::ptr::drop_in_place(self.buf[index].as_mut_ptr());
+            }
             self.readptr += 1;
         }
         let index = crate::mask(self, self.writeptr);
-        self.buf[index] = value;
+        self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
     }
 
@@ -122,7 +167,13 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuf
     fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
             let index = crate::mask(self, self.readptr);
-            let res = &self.buf[index];
+            let res = unsafe {
+                // SAFETY: index has been masked
+                self.buf[index]
+                    .as_ptr()
+                    .as_ref()
+                    .expect("generic array ptr shouldn't be null!")
+            };
             self.readptr += 1;
             Some(res)
         } else {
@@ -130,7 +181,7 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> RingBuffer<T> for GenericRingBuf
         }
     }
 
-    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
+    impl_ringbuffer!(readptr, writeptr, crate::mask);
 }
 
 #[cfg(test)]
