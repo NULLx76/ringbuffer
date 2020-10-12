@@ -106,14 +106,11 @@ impl<T: 'static, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, C
     fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
             let index = crate::mask(self, self.readptr);
+            self.readptr += 1;
             let res = unsafe {
                 // SAFETY: index has been masked
-                self.buf[index]
-                    .as_ptr()
-                    .as_ref()
-                    .expect("const array ptr shouldn't be null!")
+                self.get_unchecked(index)
             };
-            self.readptr += 1;
 
             Some(res)
         } else {
