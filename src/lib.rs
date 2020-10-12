@@ -980,11 +980,15 @@ mod tests {
         }
 
         #[test]
+        fn run_test_drops_contents_alloc() {
+            test_dropped!({ AllocRingBuffer::with_capacity(1) });
+        }
+
+        #[test]
         fn run_test_drops_contents_generic() {
             test_dropped!({ GenericRingBuffer::<_, typenum::U1>::new() });
         }
 
-        
         #[cfg(feature = "const_generics")]
         #[test]
         fn run_test_drops_contents_const_generic() {
