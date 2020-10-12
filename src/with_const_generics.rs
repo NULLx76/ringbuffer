@@ -95,6 +95,14 @@ impl<T: 'static, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, C
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
+            unsafe {
+                // make sure we drop whatever is being overwritten
+                // SAFETY: the buffer is full, so this must be inited
+                //       : also, index has been masked
+                let index = crate::mask(self, self.readptr);
+                // make sure we drop because it won't happen automatically
+                core::ptr::drop_in_place(self.buf[index].as_mut_ptr());
+            }
             self.readptr += 1;
         }
         let index = crate::mask(self, self.writeptr);
