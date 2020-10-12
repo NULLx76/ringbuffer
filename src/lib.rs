@@ -89,7 +89,7 @@ pub use with_generic_array::GenericRingBuffer;
 
 /// Used internally. Computes the bitmask used to properly wrap the ringbuffers.
 #[inline]
-fn mask<T: Default + 'static>(this: &impl RingBuffer<T>, index: usize) -> usize {
+fn mask<T: 'static>(this: &impl RingBuffer<T>, index: usize) -> usize {
     index & (this.capacity() - 1)
 }
 
