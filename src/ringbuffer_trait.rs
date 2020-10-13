@@ -229,7 +229,7 @@ pub use iter::{RingBufferIterator, RingBufferMutIterator};
 /// Implement the get, get_mut, get_absolute and get_absolute_mut functions on implementors
 /// of RingBuffer. This is to avoid duplicate code.
 macro_rules! impl_ringbuffer {
-    ($readptr: ident, $writeptr: ident, $mask: expr) => {
+    ($get_unchecked: ident, $get_unchecked_mut: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
         #[inline]
         fn get(&self, index: isize) -> Option<&T> {
             if !self.is_empty() {
@@ -238,7 +238,7 @@ macro_rules! impl_ringbuffer {
                 unsafe {
                     // SAFETY: index has been modulo-ed and offset from readptr
                     // to be within bounds
-                    Some(self.get_unchecked(index))
+                    Some(self.$get_unchecked(index))
                 }
             } else {
                 None
@@ -253,7 +253,7 @@ macro_rules! impl_ringbuffer {
                 unsafe {
                     // SAFETY: index has been modulo-ed and offset from readptr
                     // to be within bounds
-                    Some(self.get_unchecked_mut(index))
+                    Some(self.$get_unchecked_mut(index))
                 }
             } else {
                 None
@@ -267,7 +267,7 @@ macro_rules! impl_ringbuffer {
             if index >= read && index < write {
                 unsafe {
                     // SAFETY: index has been checked against $mask to be within bounds
-                    Some(self.get_unchecked(index))
+                    Some(self.$get_unchecked(index))
                 }
             } else {
                 None
@@ -279,7 +279,7 @@ macro_rules! impl_ringbuffer {
             if index >= $mask(self, self.$readptr) && index < $mask(self, self.$writeptr) {
                 unsafe {
                     // SAFETY: index has been checked against $mask to be within bounds
-                    Some(self.get_unchecked_mut(index))
+                    Some(self.$get_unchecked_mut(index))
                 }
             } else {
                 None

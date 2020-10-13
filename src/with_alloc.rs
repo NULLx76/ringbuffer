@@ -81,7 +81,7 @@ impl<T: 'static> RingBuffer<T> for AllocRingBuffer<T> {
         }
     }
 
-    impl_ringbuffer!(readptr, writeptr, crate::mask);
+    impl_ringbuffer!(get_unchecked, get_unchecked_mut, readptr, writeptr, crate::mask);
 }
 
 impl<T> AllocRingBuffer<T> {

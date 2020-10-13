@@ -179,7 +179,7 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRing
         }
     }
 
-    impl_ringbuffer!(readptr, writeptr, crate::mask);
+    impl_ringbuffer!(get_unchecked, get_unchecked_mut, readptr, writeptr, crate::mask);
 }
 
 #[cfg(test)]
