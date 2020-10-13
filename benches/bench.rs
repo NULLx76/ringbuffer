@@ -3,55 +3,58 @@ extern crate criterion;
 
 use criterion::{black_box, Bencher, Criterion};
 use ringbuffer::typenum::*;
-use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, GenericRingBuffer, RingBuffer};
+use ringbuffer::{
+    AllocRingBuffer, ConstGenericRingBuffer, GenericRingBuffer, ReadableRingbuffer, RingBuffer,
+    RingBufferExt, WritableRingbuffer,
+};
 
-fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_push<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
         for i in 0..1_000_000 {
-            rb.push(i)
+            rb.push_force(i);
         }
 
         rb
     })
 }
 
-fn benchmark_push_dequeue<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, ew: F) {
+fn benchmark_push_dequeue<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
         for i in 0..100_000 {
-            rb.push(1);
-            rb.push(2);
+            rb.push_force(1);
+            rb.push_force(2);
 
-            assert_eq!(rb.dequeue(), Some(1));
-            assert_eq!(rb.dequeue(), Some(2));
+            assert_eq!(rb.pop(), Some(1));
+            assert_eq!(rb.pop(), Some(2));
 
-            rb.push(1);
-            rb.push(2);
+            rb.push_force(1);
+            rb.push_force(2);
 
-            assert_eq!(rb.dequeue(), Some(1));
-            assert_eq!(rb.dequeue(), Some(2));
+            assert_eq!(rb.pop(), Some(1));
+            assert_eq!(rb.pop(), Some(2));
 
-            rb.push(1);
-            rb.push(2);
+            rb.push_force(1);
+            rb.push_force(2);
 
-            assert_eq!(rb.get(-1), Some(&2));
-            assert_eq!(rb.get(-2), Some(&1));
+            assert_eq!(rb.get(0), Some(&1));
+            assert_eq!(rb.get(1), Some(&2));
         }
 
         rb
     })
 }
 
-fn benchmark_various<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_various<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
         for i in 0..100_000 {
-            rb.push(i);
-            black_box(rb.get(-1));
+            rb.push_force(i);
+            black_box(rb.get(0));
         }
 
         rb
@@ -79,7 +82,7 @@ macro_rules! generate_benches {
 fn criterion_benchmark(c: &mut Criterion) {
     c.with_plots();
 
-    generat_benches![
+    generate_benches![
         called,
         c,
         AllocRingBuffer,
@@ -116,7 +119,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         U8192
     ];
 
-    generat_benches![
+    generate_benches![
         called,
         c,
         AllocRingBuffer,

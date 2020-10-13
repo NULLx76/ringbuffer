@@ -75,16 +75,6 @@ pub trait RingBuffer<T: 'static>: Default {
     fn capacity(&self) -> usize;
 }
 
-pub trait PushValue<T> {
-    fn get(self) -> T;
-}
-
-impl<T> PushValue<T> for T {
-    fn get(self) -> T {
-        self
-    }
-}
-
 /// Defines RingBuffer methods necessary to write to the ringbuffer in a
 pub trait WritableRingbuffer<T: 'static>: RingBuffer<T> {
     /// Pushes a value onto the buffer. Returns Err(Self::PushReturn) when the buffer is full. Returns Ok(())

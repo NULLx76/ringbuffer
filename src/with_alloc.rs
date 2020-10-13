@@ -9,6 +9,14 @@ use alloc::vec::Vec;
 use core::iter::FromIterator;
 use core::mem::MaybeUninit;
 
+fn uninit_vec<T>(cap: usize) -> Vec<MaybeUninit<T>> {
+    let mut v = Vec::with_capacity(cap);
+    for _ in 0..cap {
+        v.push(MaybeUninit::uninit());
+    }
+    v
+}
+
 /// The AllocRingBuffer is a RingBuffer which is based on a Vec. This means it allocates at runtime
 /// on the heap, and therefore needs the [`alloc`] crate. This struct and therefore the dependency on
 /// alloc can be disabled by disabling the `alloc` (default) feature.
@@ -100,11 +108,7 @@ impl<T: 'static> WritableRingbuffer<T> for AllocRingBuffer<T> {
         } else {
             let index = crate::mask(self, self.writeptr);
 
-            if index >= self.buf.len() {
-                self.buf.push(MaybeUninit::new(item));
-            } else {
-                self.buf[index] = MaybeUninit::new(item);
-            }
+            self.buf[index] = MaybeUninit::new(item);
 
             self.writeptr += 1;
 
@@ -130,11 +134,7 @@ impl<T: 'static> RingBufferExt<T> for AllocRingBuffer<T> {
 
         let index = crate::mask(self, self.writeptr);
 
-        if index >= self.buf.len() {
-            self.buf.push(MaybeUninit::new(value));
-        } else {
-            self.buf[index] = MaybeUninit::new(value);
-        }
+        self.buf[index] = MaybeUninit::new(value);
 
         self.writeptr += 1;
     }
@@ -154,7 +154,7 @@ impl<T> AllocRingBuffer<T> {
     #[inline]
     pub fn with_capacity_unchecked(cap: usize) -> Self {
         Self {
-            buf: Vec::with_capacity(cap),
+            buf: uninit_vec(cap),
             capacity: cap,
             readptr: 0,
             writeptr: 0,
@@ -221,7 +221,7 @@ impl<T> Default for AllocRingBuffer<T> {
     fn default() -> Self {
         let cap = RINGBUFFER_DEFAULT_CAPACITY;
         Self {
-            buf: Vec::with_capacity(cap),
+            buf: uninit_vec(cap),
             capacity: cap,
             readptr: 0,
             writeptr: 0,
@@ -254,11 +254,9 @@ mod tests {
         assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.capacity());
         assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.buf.capacity());
         assert_eq!(b.capacity, b.capacity());
-        assert_eq!(b.buf.len(), b.len());
         assert_eq!(0, b.writeptr);
         assert_eq!(0, b.readptr);
         assert!(b.is_empty());
-        assert!(b.buf.is_empty());
         assert_eq!(0, b.iter().count());
 
         assert_eq!(

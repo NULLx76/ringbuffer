@@ -840,10 +840,10 @@ mod test_dropping {
     use std::boxed::Box;
     use std::cell::{RefCell, RefMut};
 
-    use crate::{
-        typenum, AllocRingBuffer, ConstGenericRingBuffer, GenericRingBuffer, RingBufferExt,
-        WritableRingbuffer,
-    };
+    use crate::{typenum, AllocRingBuffer, GenericRingBuffer, RingBufferExt, WritableRingbuffer};
+
+    #[cfg(feature = "const_generics")]
+    use crate::ConstGenericRingBuffer;
 
     struct DropTest {
         flag: bool,
