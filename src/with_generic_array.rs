@@ -146,35 +146,31 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRing
         self.cap
     }
 
-    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
+    impl_ringbuffer!(readptr, writeptr);
 }
 
-impl<T: 'static + Default, Cap: ArrayLength<T>> ReadableRingbuffer<T>
+impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> ReadableRingbuffer<T>
     for GenericRingBuffer<T, Cap>
 {
     #[inline]
     fn pop(&mut self) -> Option<T> {
         if !self.is_empty() {
             let index = crate::mask(self, self.readptr);
-            let res = core::mem::take(&mut self.buf[index]);
+            let res = core::mem::replace(&mut self.buf[index], MaybeUninit::uninit());
             self.readptr += 1;
 
-
-            // let res = unsafe {
-            //     // SAFETY: index has been masked
-            //     self.get_unchecked(index)
-            // };
-            //
-            Some(res)
+            // Safety: Because the index must be in bounds for the array, we know this element is
+            //       : already initialized.
+            Some(unsafe { res.assume_init() })
         } else {
             None
         }
     }
 
-    impl_read_ringbuffer!(buf, readptr, writeptr, crate::mask);
+    impl_read_ringbuffer!(readptr);
 }
 
-impl<T: 'static + Default, Cap: ArrayLength<T>> WritableRingbuffer<T>
+impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> WritableRingbuffer<T>
     for GenericRingBuffer<T, Cap>
 {
     fn push(&mut self, item: T) -> Result<(), T> {
@@ -191,33 +187,33 @@ impl<T: 'static + Default, Cap: ArrayLength<T>> WritableRingbuffer<T>
     }
 }
 
-impl<T: 'static + Default, Cap: ArrayLength<T>> RingBufferExt<T> for GenericRingBuffer<T, Cap> {
+impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBufferExt<T> for GenericRingBuffer<T, Cap> {
     #[inline]
     fn push_force(&mut self, value: T) {
         if self.is_full() {
+            let read_index = crate::mask(self, self.readptr);
+            unsafe {
+                // make sure we drop whatever is being overwritten
+                // SAFETY: the buffer is full, so this must be initialized
+                //       : also, index has been masked
+                // make sure we drop because it won't happen automatically
+                core::ptr::drop_in_place(self.buf[read_index].as_mut_ptr());
+            }
             self.readptr += 1;
         }
-        let index = crate::mask(self, self.writeptr);
-        self.buf[index] = value;
-        self.writeptr += 1;
 
-        // if self.is_full() {
-        //     let index = crate::mask(self, self.readptr);
-        //     unsafe {
-        //         // make sure we drop whatever is being overwritten
-        //         // SAFETY: the buffer is full, so this must be inited
-        //         //       : also, index has been masked
-        //         // make sure we drop because it won't happen automatically
-        //         core::ptr::drop_in_place(self.buf[index].as_mut_ptr());
-        //     }
-        //     self.readptr += 1;
-        // }
-        // let index = crate::mask(self, self.writeptr);
-        // self.buf[index] = MaybeUninit::new(value);
-        // self.writeptr += 1;
+        let index = crate::mask(self, self.writeptr);
+        self.buf[index] = MaybeUninit::new(value);
+        self.writeptr += 1;
     }
 
-    impl_ringbuffer_ext!(buf, readptr, writeptr, crate::mask);
+    impl_ringbuffer_ext!(
+        get_unchecked,
+        get_unchecked_mut,
+        readptr,
+        writeptr,
+        crate::mask
+    );
 }
 
 #[cfg(test)]

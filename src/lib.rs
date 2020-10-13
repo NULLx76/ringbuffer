@@ -833,10 +833,17 @@ mod tests {
     }
 }
 
+#[cfg(test)]
 mod test_dropping {
-    use super::*;
+    extern crate std;
+
     use std::boxed::Box;
     use std::cell::{RefCell, RefMut};
+
+    use crate::{
+        typenum, AllocRingBuffer, ConstGenericRingBuffer, GenericRingBuffer, RingBufferExt,
+        WritableRingbuffer,
+    };
 
     struct DropTest {
         flag: bool,
@@ -861,8 +868,8 @@ mod test_dropping {
                     {
                         let d = Dropee { parent: Some(dt.borrow_mut()) };
                         let mut rb = { $constructor };
-                        rb.push(d);
-                        rb.push(Dropee { parent: None });
+                        assert!(rb.push(d).is_ok());
+                        rb.push_force(Dropee { parent: None })
                     }
                     assert!(dt.borrow_mut().flag);
                     unsafe {

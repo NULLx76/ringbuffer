@@ -6,7 +6,6 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::iter::FromIterator;
 
-// TODO: Remove Default <Issue #13>
 /// RingBuffer is a trait defining the standard interface for all RingBuffer
 /// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`GenericRingBuffer`](crate::GenericRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
 ///
@@ -353,7 +352,7 @@ macro_rules! impl_ringbuffer {
 }
 
 macro_rules! impl_read_ringbuffer {
-    ($readptr: ident)  => {
+    ($readptr: ident) => {
         #[inline]
         fn skip(&mut self) {
             self.$readptr += 1;
@@ -361,36 +360,28 @@ macro_rules! impl_read_ringbuffer {
     };
 }
 
+/// get_unchecked and get_unchecked_mut should give access to unsafe functions on the ringbuffer
+/// to directly access the array used by the implementation. If this implementation can not be provided,
+/// DONT use this macro.
 macro_rules! impl_ringbuffer_ext {
     ($get_unchecked: ident, $get_unchecked_mut: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
         #[inline]
         fn get(&self, index: usize) -> Option<&T> {
-            if !self.is_empty() {
-                let index = (self.$readptr as isize + index) as usize % self.len();
-
-                unsafe {
-                    // SAFETY: index has been modulo-ed and offset from readptr
-                    // to be within bounds
-                    Some(self.$get_unchecked(index))
-                }
-            } else {
+            if self.is_empty() || index >= self.len() {
                 None
+            } else {
+                let masked_index = $mask(self, self.$readptr + index);
+                unsafe { Some(self.$get_unchecked(masked_index)) }
             }
-
         }
 
         #[inline]
         fn get_mut(&mut self, index: usize) -> Option<&mut T> {
-            if !self.is_empty() {
-                let index = (self.$readptr as isize + index) as usize % self.len();
-
-                unsafe {
-                    // SAFETY: index has been modulo-ed and offset from readptr
-                    // to be within bounds
-                    Some(self.$get_unchecked_mut(index))
-                }
-            } else {
+            if self.is_empty() || index >= self.len() {
                 None
+            } else {
+                let masked_index = $mask(self, self.$readptr + index);
+                unsafe { Some(self.$get_unchecked_mut(masked_index)) }
             }
         }
 
@@ -400,7 +391,9 @@ macro_rules! impl_ringbuffer_ext {
                 let masked_index = $mask(self, self.$writeptr - 1);
 
                 unsafe {
-                    self.$get_unchecked(masked_index)
+                    // SAFETY: index has been modulo-ed and offset from readptr
+                    // to be within bounds
+                    Some(self.$get_unchecked(masked_index))
                 }
             } else {
                 None
@@ -413,7 +406,9 @@ macro_rules! impl_ringbuffer_ext {
                 let masked_index = $mask(self, self.$writeptr - 1);
 
                 unsafe {
-                    self.$get_unchecked(masked_index)
+                    // SAFETY: index has been modulo-ed and offset from readptr
+                    // to be within bounds
+                    Some(self.$get_unchecked_mut(masked_index))
                 }
             } else {
                 None

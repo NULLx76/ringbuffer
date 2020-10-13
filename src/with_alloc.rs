@@ -7,6 +7,7 @@ extern crate alloc;
 use crate::{ReadableRingbuffer, RingBufferExt, WritableRingbuffer};
 use alloc::vec::Vec;
 use core::iter::FromIterator;
+use core::mem::MaybeUninit;
 
 /// The AllocRingBuffer is a RingBuffer which is based on a Vec. This means it allocates at runtime
 /// on the heap, and therefore needs the [`alloc`] crate. This struct and therefore the dependency on
@@ -34,13 +35,31 @@ use core::iter::FromIterator;
 /// buffer.push_force(1);
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
-#[derive(PartialEq, Eq, Debug)]
+#[derive(Debug)]
 pub struct AllocRingBuffer<T> {
-    buf: Vec<T>,
+    buf: Vec<MaybeUninit<T>>,
     capacity: usize,
     readptr: usize,
     writeptr: usize,
 }
+
+// We need to manually implement PartialEq because MaybeUninit isn't PartialEq
+impl<T: 'static + PartialEq> PartialEq for AllocRingBuffer<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            false
+        } else {
+            for (a, b) in self.iter().zip(other.iter()) {
+                if a != b {
+                    return false;
+                }
+            }
+            true
+        }
+    }
+}
+
+impl<T: 'static + PartialEq> Eq for AllocRingBuffer<T> {}
 
 /// The capacity of a RingBuffer created by new or default (`1024`).
 // must be a power of 2
@@ -52,27 +71,29 @@ impl<T: 'static> RingBuffer<T> for AllocRingBuffer<T> {
         self.capacity
     }
 
-    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
+    impl_ringbuffer!(readptr, writeptr);
 }
 
-impl<T: 'static + Default> ReadableRingbuffer<T> for AllocRingBuffer<T> {
+impl<T: 'static> ReadableRingbuffer<T> for AllocRingBuffer<T> {
     #[inline]
     fn pop(&mut self) -> Option<T> {
         if !self.is_empty() {
             let index = crate::mask(self, self.readptr);
-            let res = core::mem::take(&mut self.buf[index]);
+            let res = core::mem::replace(&mut self.buf[index], MaybeUninit::uninit());
             self.readptr += 1;
 
-            Some(res)
+            // Safety: Because the index must be in bounds for the array, we know this element is
+            //       : already initialized.
+            Some(unsafe { res.assume_init() })
         } else {
             None
         }
     }
 
-    impl_read_ringbuffer!(buf, readptr, writeptr, crate::mask);
+    impl_read_ringbuffer!(readptr);
 }
 
-impl<T: 'static + Default> WritableRingbuffer<T> for AllocRingBuffer<T> {
+impl<T: 'static> WritableRingbuffer<T> for AllocRingBuffer<T> {
     fn push(&mut self, item: T) -> Result<(), T> {
         if self.is_full() {
             Err(item)
@@ -80,9 +101,9 @@ impl<T: 'static + Default> WritableRingbuffer<T> for AllocRingBuffer<T> {
             let index = crate::mask(self, self.writeptr);
 
             if index >= self.buf.len() {
-                self.buf.push(item);
+                self.buf.push(MaybeUninit::new(item));
             } else {
-                self.buf[index] = item;
+                self.buf[index] = MaybeUninit::new(item);
             }
 
             self.writeptr += 1;
@@ -92,19 +113,27 @@ impl<T: 'static + Default> WritableRingbuffer<T> for AllocRingBuffer<T> {
     }
 }
 
-impl<T: 'static + Default> RingBufferExt<T> for AllocRingBuffer<T> {
+impl<T: 'static> RingBufferExt<T> for AllocRingBuffer<T> {
     #[inline]
     fn push_force(&mut self, value: T) {
         if self.is_full() {
+            let index = crate::mask(self, self.readptr);
+            unsafe {
+                // make sure we drop whatever is being overwritten
+                // SAFETY: the buffer is full, so this must be inited
+                //       : also, index has been masked
+                // make sure we drop because it won't happen automatically
+                core::ptr::drop_in_place(self.buf[index].as_mut_ptr());
+            }
             self.readptr += 1;
         }
 
         let index = crate::mask(self, self.writeptr);
 
         if index >= self.buf.len() {
-            self.buf.push(value);
+            self.buf.push(MaybeUninit::new(value));
         } else {
-            self.buf[index] = value;
+            self.buf[index] = MaybeUninit::new(value);
         }
 
         self.writeptr += 1;
@@ -158,14 +187,20 @@ impl<T> AllocRingBuffer<T> {
     /// Caller must be sure the index is in bounds, or this will panic.
     /// However, it's not unsafe -- only unsafe to match signature of other methods.
     unsafe fn get_unchecked(&self, index: usize) -> &T {
-        &self.buf[index]
+        self.buf[index]
+            .as_ptr()
+            .as_ref()
+            .expect("const array ptr shouldn't be null!")
     }
 
     /// Get a mut reference from the buffer without checking it is initialized.
     /// Caller must be sure the index is in bounds, or this will panic.
     /// However, it's not unsafe -- only unsafe to match signature of other methods.
     unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
-        &mut self.buf[index]
+        self.buf[index]
+            .as_mut_ptr()
+            .as_mut()
+            .expect("const array ptr shouldn't be null!")
     }
 }
 
@@ -225,10 +260,7 @@ mod tests {
         assert!(b.is_empty());
         assert!(b.buf.is_empty());
         assert_eq!(0, b.iter().count());
-        assert_eq!(
-            Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
-            b.buf
-        );
+
         assert_eq!(
             Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
             b.to_vec()
