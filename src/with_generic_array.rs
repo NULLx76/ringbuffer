@@ -149,11 +149,11 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRing
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
+            let index = crate::mask(self, self.readptr);
             unsafe {
                 // make sure we drop whatever is being overwritten
                 // SAFETY: the buffer is full, so this must be inited
                 //       : also, index has been masked
-                let index = crate::mask(self, self.readptr);
                 // make sure we drop because it won't happen automatically
                 core::ptr::drop_in_place(self.buf[index].as_mut_ptr());
             }
