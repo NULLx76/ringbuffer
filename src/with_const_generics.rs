@@ -126,7 +126,13 @@ impl<T: 'static, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, C
         }
     }
 
-    impl_ringbuffer!(get_unchecked, get_unchecked_mut, readptr, writeptr, crate::mask);
+    impl_ringbuffer!(
+        get_unchecked,
+        get_unchecked_mut,
+        readptr,
+        writeptr,
+        crate::mask
+    );
 }
 
 impl<T, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
