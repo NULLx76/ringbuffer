@@ -89,7 +89,7 @@ pub use with_generic_array::GenericRingBuffer;
 
 /// Used internally. Computes the bitmask used to properly wrap the ringbuffers.
 #[inline]
-fn mask<T: Default + 'static>(this: &impl RingBuffer<T>, index: usize) -> usize {
+fn mask<T: 'static>(this: &impl RingBuffer<T>, index: usize) -> usize {
     index & (this.capacity() - 1)
 }
 
@@ -935,5 +935,64 @@ mod tests {
         test_push_pop_push_full_get_rep(GenericRingBuffer::<i32, typenum::U8>::new());
         #[cfg(feature = "const_generics")]
         test_push_pop_push_full_get_rep(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
+    mod test_dropping {
+        use super::*;
+        use std::boxed::Box;
+        use std::cell::{RefCell, RefMut};
+
+        struct DropTest {
+            flag: bool,
+        }
+
+        struct Dropee<'a> {
+            parent: Option<RefMut<'a, DropTest>>,
+        }
+
+        impl<'a> Drop for Dropee<'a> {
+            fn drop(&mut self) {
+                if let Some(parent) = &mut self.parent {
+                    parent.flag = true;
+                }
+            }
+        }
+
+        macro_rules! test_dropped {
+            ($constructor: block) => {
+                {
+                    let dt = Box::leak(Box::new(RefCell::new(DropTest { flag: false })));
+                    {
+                        let d = Dropee { parent: Some(dt.borrow_mut()) };
+                        let mut rb = { $constructor };
+                        rb.push(d);
+                        rb.push(Dropee { parent: None });
+                    }
+                    assert!(dt.borrow_mut().flag);
+                    unsafe {
+                        // SAFETY: we know Dropee, which needed the static lifetime, has been dropped (by the assert)
+                        // we could probably skip this, but this makes sure we don't leak any memory
+                        let ptr: *mut RefCell<DropTest> = std::mem::transmute::<&RefCell<DropTest>, _>(dt);
+                        drop(Box::from_raw(ptr));
+                    }
+                }
+            };
+        }
+
+        #[test]
+        fn run_test_drops_contents_alloc() {
+            test_dropped!({ AllocRingBuffer::with_capacity(1) });
+        }
+
+        #[test]
+        fn run_test_drops_contents_generic() {
+            test_dropped!({ GenericRingBuffer::<_, typenum::U1>::new() });
+        }
+
+        #[cfg(feature = "const_generics")]
+        #[test]
+        fn run_test_drops_contents_const_generic() {
+            test_dropped!({ ConstGenericRingBuffer::<_, 1>::new() });
+        }
     }
 }
