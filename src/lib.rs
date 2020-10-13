@@ -76,11 +76,6 @@ pub use with_alloc::AllocRingBuffer;
 #[cfg(feature = "alloc")]
 pub use with_alloc::RINGBUFFER_DEFAULT_CAPACITY;
 
-// #[cfg(all(feature = "alloc", feature = "threads"))]
-// mod with_threads_alloc;
-// #[cfg(all(feature = "alloc", feature = "threads"))]
-// pub use with_threads_alloc::ThreadAllocRingBuffer;
-
 #[cfg(feature = "const_generics")]
 mod with_const_generics;
 #[cfg(feature = "const_generics")]
