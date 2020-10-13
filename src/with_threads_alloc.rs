@@ -17,6 +17,7 @@ use alloc::vec::Vec;
 pub struct ThreadAllocRingBuffer<T> {
     buf: Vec<T>,
     capacity: usize,
+
     readptr: usize,
     writeptr: usize,
 }
@@ -31,7 +32,15 @@ impl<T: 'static + Default> RingBuffer<T> for ThreadAllocRingBuffer<T> {
         self.capacity
     }
 
-    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
+    #[inline]
+    fn len(&self) -> usize {
+        self.writeptr - self.readptr
+    }
+
+    #[inline]
+    fn clear(&mut self) {
+        self.readptr = 0;
+    }
 }
 
 impl<T: 'static + Default> ReadableRingbuffer<T> for ThreadAllocRingBuffer<T> {
@@ -44,22 +53,27 @@ impl<T: 'static + Default> ReadableRingbuffer<T> for ThreadAllocRingBuffer<T> {
 }
 
 impl<T: 'static + Default> WritableRingbuffer<T> for ThreadAllocRingBuffer<T> {
-    fn push(&mut self, item: T) -> Result<(), T> {
-        if self.is_full() {
-            Err(item)
-        } else {
-            let index = crate::mask(self, self.writeptr);
+    type PushError = T;
 
-            if index >= self.buf.len() {
-                self.buf.push(item);
-            } else {
-                self.buf[index] = item;
-            }
+    fn push(&mut self, _item: T) -> Result<(), Self::PushError> {
+        todo!()
 
-            self.writeptr += 1;
-
-            Ok(())
-        }
+        // if self.is_full() {
+        //     Err(item)
+        // } else {
+        //
+        //     let index = crate::mask(self, writeptr);
+        //
+        //     if index >= self.buf.len() {
+        //         self.buf.push(item);
+        //     } else {
+        //         self.buf[index] = item;
+        //     }
+        //
+        //     let _ = self.writeptr.fetch_add(1, Ordering::SeqCst);
+        //
+        //     Ok(())
+        // }
     }
 }
 
@@ -71,6 +85,7 @@ impl<T> ThreadAllocRingBuffer<T> {
         Self {
             buf: Vec::with_capacity(cap),
             capacity: cap,
+
             readptr: 0,
             writeptr: 0,
         }
@@ -107,8 +122,9 @@ impl<T> Default for ThreadAllocRingBuffer<T> {
         Self {
             buf: Vec::with_capacity(cap),
             capacity: cap,
-            readptr: 0,
+
             writeptr: 0,
+            readptr: 0,
         }
     }
 }
