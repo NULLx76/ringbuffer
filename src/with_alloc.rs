@@ -46,7 +46,7 @@ pub struct AllocRingBuffer<T> {
 // must be a power of 2
 pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
-impl<T: 'static + Default> RingBuffer<T> for AllocRingBuffer<T> {
+impl<T: 'static> RingBuffer<T> for AllocRingBuffer<T> {
     #[inline]
     fn capacity(&self) -> usize {
         self.capacity
@@ -110,7 +110,13 @@ impl<T: 'static + Default> RingBufferExt<T> for AllocRingBuffer<T> {
         self.writeptr += 1;
     }
 
-    impl_ringbuffer_ext!(buf, readptr, writeptr, crate::mask);
+    impl_ringbuffer_ext!(
+        get_unchecked,
+        get_unchecked_mut,
+        readptr,
+        writeptr,
+        crate::mask
+    );
 }
 
 impl<T> AllocRingBuffer<T> {
@@ -147,9 +153,23 @@ impl<T> AllocRingBuffer<T> {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Get a reference from the buffer without checking it is initialized.
+    /// Caller must be sure the index is in bounds, or this will panic.
+    /// However, it's not unsafe -- only unsafe to match signature of other methods.
+    unsafe fn get_unchecked(&self, index: usize) -> &T {
+        &self.buf[index]
+    }
+
+    /// Get a mut reference from the buffer without checking it is initialized.
+    /// Caller must be sure the index is in bounds, or this will panic.
+    /// However, it's not unsafe -- only unsafe to match signature of other methods.
+    unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
+        &mut self.buf[index]
+    }
 }
 
-impl<RB: 'static + Default> FromIterator<RB> for AllocRingBuffer<RB> {
+impl<RB: 'static> FromIterator<RB> for AllocRingBuffer<RB> {
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
@@ -174,7 +194,7 @@ impl<T> Default for AllocRingBuffer<T> {
     }
 }
 
-impl<T: 'static + Default> Index<usize> for AllocRingBuffer<T> {
+impl<T: 'static> Index<usize> for AllocRingBuffer<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -182,7 +202,7 @@ impl<T: 'static + Default> Index<usize> for AllocRingBuffer<T> {
     }
 }
 
-impl<T: 'static + Default> IndexMut<usize> for AllocRingBuffer<T> {
+impl<T: 'static> IndexMut<usize> for AllocRingBuffer<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }

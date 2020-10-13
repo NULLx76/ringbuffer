@@ -15,7 +15,7 @@ use core::iter::FromIterator;
 ///
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing RingBuffer.
-pub trait RingBuffer<T: 'static + Default>: Default {
+pub trait RingBuffer<T: 'static>: Default {
     /// Returns the length of the internal buffer.
     /// ```
     /// # use ringbuffer::{AllocRingBuffer, RingBuffer, WritableRingbuffer, RingBufferExt};
@@ -87,7 +87,7 @@ impl<T> PushValue<T> for T {
 }
 
 /// Defines RingBuffer methods necessary to write to the ringbuffer in a
-pub trait WritableRingbuffer<T: 'static + Default>: RingBuffer<T> {
+pub trait WritableRingbuffer<T: 'static>: RingBuffer<T> {
     /// Pushes a value onto the buffer. Returns Err(Self::PushReturn) when the buffer is full. Returns Ok(())
     /// when it could push the item.
     /// ```
@@ -102,7 +102,7 @@ pub trait WritableRingbuffer<T: 'static + Default>: RingBuffer<T> {
 }
 
 /// Defines RingBuffer methods necessary to read from the ringbuffer. This includes dequeue.
-pub trait ReadableRingbuffer<T: 'static + Default>: RingBuffer<T> {
+pub trait ReadableRingbuffer<T: 'static>: RingBuffer<T> {
     /// Pops an item off the queue, but does not return it. Instead it is dropped.
     /// If the ringbuffer is empty, this function is a nop.
     /// ```
@@ -129,7 +129,7 @@ pub trait ReadableRingbuffer<T: 'static + Default>: RingBuffer<T> {
 ///
 /// Notably, the thread safe ringbuffer does *not* implement this trait because
 /// to modify or read data in the middle of the buffer would require locking, something we want to avoid.
-pub trait RingBufferExt<T: 'static + Default>:
+pub trait RingBufferExt<T: 'static>:
     RingBuffer<T>
     + WritableRingbuffer<T>
     + ReadableRingbuffer<T>
@@ -259,12 +259,12 @@ pub trait RingBufferExt<T: 'static + Default>:
 }
 
 /// Trait which combines [`ReadableRingbuffer`] and [`WritableRingbuffer`]
-pub trait ReadWriteRingbuffer<T: 'static + Default>:
+pub trait ReadWriteRingbuffer<T: 'static>:
     RingBuffer<T> + WritableRingbuffer<T> + ReadableRingbuffer<T>
 {
 }
 
-impl<S, T: 'static + Default> ReadWriteRingbuffer<T> for S where
+impl<S, T: 'static> ReadWriteRingbuffer<T> for S where
     S: RingBuffer<T> + ReadableRingbuffer<T> + WritableRingbuffer<T>
 {
 }
@@ -275,13 +275,13 @@ mod iter {
 
     /// RingBufferIterator holds a reference to a RingBuffer and iterates over it. `index` is the
     /// current iterator position.
-    pub struct RingBufferIterator<'rb, T: 'static + Default, RB: RingBufferExt<T>> {
+    pub struct RingBufferIterator<'rb, T: 'static, RB: RingBufferExt<T>> {
         obj: &'rb RB,
         index: usize,
         phantom: PhantomData<T>,
     }
 
-    impl<'rb, T: 'static + Default, RB: RingBufferExt<T>> RingBufferIterator<'rb, T, RB> {
+    impl<'rb, T: 'static, RB: RingBufferExt<T>> RingBufferIterator<'rb, T, RB> {
         #[inline]
         pub fn new(obj: &'rb RB) -> Self {
             Self {
@@ -292,7 +292,7 @@ mod iter {
         }
     }
 
-    impl<'rb, T: 'static + Default, RB: RingBufferExt<T>> Iterator for RingBufferIterator<'rb, T, RB> {
+    impl<'rb, T: 'static, RB: RingBufferExt<T>> Iterator for RingBufferIterator<'rb, T, RB> {
         type Item = &'rb T;
 
         #[inline]
@@ -308,13 +308,13 @@ mod iter {
     ///
     /// WARNING: NEVER ACCESS THE `obj` FIELD. it's private on purpose, and can technically be accessed
     /// in the same module. However, this breaks the safety of `next()`
-    pub struct RingBufferMutIterator<'rb, T: 'static + Default, RB: RingBufferExt<T>> {
+    pub struct RingBufferMutIterator<'rb, T: 'static, RB: RingBufferExt<T>> {
         obj: &'rb mut RB,
         index: usize,
         phantom: PhantomData<T>,
     }
 
-    impl<'rb, T: 'static + Default, RB: RingBufferExt<T>> RingBufferMutIterator<'rb, T, RB> {
+    impl<'rb, T: 'static, RB: RingBufferExt<T>> RingBufferMutIterator<'rb, T, RB> {
         #[inline]
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {
@@ -338,7 +338,7 @@ pub use iter::{RingBufferIterator, RingBufferMutIterator};
 /// Implement the get, get_mut, get_absolute and get_absolute_mut functions on implementors
 /// of RingBuffer. This is to avoid duplicate code.
 macro_rules! impl_ringbuffer {
-    ($buf: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
+    ($readptr: ident, $writeptr: ident) => {
         #[inline]
         fn len(&self) -> usize {
             self.$writeptr - self.$readptr
@@ -353,33 +353,44 @@ macro_rules! impl_ringbuffer {
 }
 
 macro_rules! impl_read_ringbuffer {
-    ($buf: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
+    ($readptr: ident)  => {
         #[inline]
         fn skip(&mut self) {
-            self.readptr += 1;
+            self.$readptr += 1;
         }
     };
 }
 
 macro_rules! impl_ringbuffer_ext {
-    ($buf: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
+    ($get_unchecked: ident, $get_unchecked_mut: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
         #[inline]
         fn get(&self, index: usize) -> Option<&T> {
-            if self.is_empty() || index >= self.len() {
-                None
+            if !self.is_empty() {
+                let index = (self.$readptr as isize + index) as usize % self.len();
+
+                unsafe {
+                    // SAFETY: index has been modulo-ed and offset from readptr
+                    // to be within bounds
+                    Some(self.$get_unchecked(index))
+                }
             } else {
-                let masked_index = $mask(self, self.$readptr + index);
-                self.$buf.get(masked_index)
+                None
             }
+
         }
 
         #[inline]
         fn get_mut(&mut self, index: usize) -> Option<&mut T> {
-            if self.is_empty() || index >= self.len() {
-                None
+            if !self.is_empty() {
+                let index = (self.$readptr as isize + index) as usize % self.len();
+
+                unsafe {
+                    // SAFETY: index has been modulo-ed and offset from readptr
+                    // to be within bounds
+                    Some(self.$get_unchecked_mut(index))
+                }
             } else {
-                let masked_index = $mask(self, self.$readptr + index);
-                self.$buf.get_mut(masked_index)
+                None
             }
         }
 
@@ -387,7 +398,10 @@ macro_rules! impl_ringbuffer_ext {
         fn front(&self) -> Option<&T> {
             if !self.is_empty() {
                 let masked_index = $mask(self, self.$writeptr - 1);
-                self.$buf.get(masked_index)
+
+                unsafe {
+                    self.$get_unchecked(masked_index)
+                }
             } else {
                 None
             }
@@ -397,7 +411,10 @@ macro_rules! impl_ringbuffer_ext {
         fn front_mut(&mut self) -> Option<&mut T> {
             if !self.is_empty() {
                 let masked_index = $mask(self, self.$writeptr - 1);
-                self.$buf.get_mut(masked_index)
+
+                unsafe {
+                    self.$get_unchecked(masked_index)
+                }
             } else {
                 None
             }
