@@ -1,5 +1,6 @@
 use crate::RingBuffer;
 use core::iter::FromIterator;
+use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
 
 /// The ConstGenericRingBuffer struct is a RingBuffer implementation which does not require `alloc`.
@@ -31,17 +32,32 @@ use core::ops::{Index, IndexMut};
 /// buffer.push(1);
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
-#[derive(PartialEq, Eq, Debug)]
+#[derive(Debug)]
 pub struct ConstGenericRingBuffer<T, const CAP: usize> {
-    buf: [T; CAP],
+    buf: [MaybeUninit<T>; CAP],
     readptr: usize,
     writeptr: usize,
 }
 
-/// It is only possible to create a Generic RingBuffer if the type T in it implements Default.
-/// This is because the array needs to be allocated at compile time, and needs to be filled with
-/// some default value.
-impl<T: Default, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
+// We need to manually implement PartialEq because MaybeUninit isn't PartialEq
+impl<T: 'static + PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuffer<T, CAP> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            false
+        } else {
+            for (a, b) in self.iter().zip(other.iter()) {
+                if a != b {
+                    return false;
+                }
+            }
+            true
+        }
+    }
+}
+
+impl<T: 'static + PartialEq, const CAP: usize> Eq for ConstGenericRingBuffer<T, CAP> {}
+
+impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     /// Creates a new RingBuffer. The method is here for compatibility with the alloc version of
     /// RingBuffer. This method simply creates a default ringbuffer. The capacity is given as a
     /// type parameter.
@@ -49,9 +65,27 @@ impl<T: Default, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Get a reference from the buffer without checking it is initialized
+    /// Caller MUST be sure this index is initialized, or undefined behavior will happen
+    unsafe fn get_unchecked(&self, index: usize) -> &T {
+        self.buf[index]
+            .as_ptr()
+            .as_ref()
+            .expect("const array ptr shouldn't be null!")
+    }
+
+    /// Get a mutable reference from the buffer without checking it is initialized
+    /// Caller MUST be sure this index is initialized, or undefined behavior will happen
+    unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
+        self.buf[index]
+            .as_mut_ptr()
+            .as_mut()
+            .expect("const array ptr shouldn't be null!")
+    }
 }
 
-impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
+impl<T: 'static, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
     #[cfg(not(tarpaulin_include))]
     fn capacity(&self) -> usize {
@@ -61,10 +95,18 @@ impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingB
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
+            let index = crate::mask(self, self.readptr);
+            unsafe {
+                // make sure we drop whatever is being overwritten
+                // SAFETY: the buffer is full, so this must be inited
+                //       : also, index has been masked
+                // make sure we drop because it won't happen automatically
+                core::ptr::drop_in_place(self.buf[index].as_mut_ptr());
+            }
             self.readptr += 1;
         }
         let index = crate::mask(self, self.writeptr);
-        self.buf[index] = value;
+        self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
     }
 
@@ -72,8 +114,11 @@ impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingB
     fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
             let index = crate::mask(self, self.readptr);
-            let res = &self.buf[index];
             self.readptr += 1;
+            let res = unsafe {
+                // SAFETY: index has been masked
+                self.get_unchecked(index)
+            };
 
             Some(res)
         } else {
@@ -81,17 +126,17 @@ impl<T: 'static + Default, const CAP: usize> RingBuffer<T> for ConstGenericRingB
         }
     }
 
-    impl_ringbuffer!(buf, readptr, writeptr, crate::mask);
+    impl_ringbuffer!(get_unchecked, get_unchecked_mut, readptr, writeptr, crate::mask);
 }
 
-impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
+impl<T, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     /// Creates a buffer with a capacity specified through the Cap type parameter.
     #[inline]
     fn default() -> Self {
         assert_ne!(CAP, 0, "Capacity must be greater than 0");
         assert!(CAP.is_power_of_two(), "Capacity must be a power of two");
 
-        let arr = array_init::array_init(|_| T::default());
+        let arr = array_init::array_init(|_| MaybeUninit::uninit());
 
         Self {
             buf: arr,
@@ -101,7 +146,7 @@ impl<T: Default, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     }
 }
 
-impl<RB: 'static + Default, const CAP: usize> FromIterator<RB> for ConstGenericRingBuffer<RB, CAP> {
+impl<RB: 'static, const CAP: usize> FromIterator<RB> for ConstGenericRingBuffer<RB, CAP> {
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
@@ -112,7 +157,7 @@ impl<RB: 'static + Default, const CAP: usize> FromIterator<RB> for ConstGenericR
     }
 }
 
-impl<T: 'static + Default, const CAP: usize> Index<isize> for ConstGenericRingBuffer<T, CAP> {
+impl<T: 'static, const CAP: usize> Index<isize> for ConstGenericRingBuffer<T, CAP> {
     type Output = T;
 
     fn index(&self, index: isize) -> &Self::Output {
@@ -120,7 +165,7 @@ impl<T: 'static + Default, const CAP: usize> Index<isize> for ConstGenericRingBu
     }
 }
 
-impl<T: 'static + Default, const CAP: usize> IndexMut<isize> for ConstGenericRingBuffer<T, CAP> {
+impl<T: 'static, const CAP: usize> IndexMut<isize> for ConstGenericRingBuffer<T, CAP> {
     fn index_mut(&mut self, index: isize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }
