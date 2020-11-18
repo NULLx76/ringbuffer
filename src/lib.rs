@@ -1,6 +1,5 @@
 #![no_std]
-#![cfg_attr(feature = "const_generics", feature(const_generics))]
-#![cfg_attr(feature = "const_generics", allow(incomplete_features))]
+#![cfg_attr(feature = "const_generics", feature(min_const_generics))]
 #![deny(missing_docs)]
 #![deny(warnings)]
 #![deny(unused_import_braces)]
