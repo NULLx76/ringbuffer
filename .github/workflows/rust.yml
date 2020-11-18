@@ -63,7 +63,7 @@ jobs:
         override: true
 
     - name: rust-tarpaulin
-      uses: actions-rs/tarpaulin@v0.1.0
+      uses: actions-rs/tarpaulin@v0.1.3
       with:
         args: --all-features --out Xml
 
