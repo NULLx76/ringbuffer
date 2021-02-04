@@ -56,7 +56,7 @@
 //! | --- | --- | --- |
 //! | alloc | ✓ | Disable this feature to remove the dependency on alloc. Useful for kernels. |
 //! | const_generics | ✗ | Enables the ConstGenericRingBuffer. This requires nightly. |
-//! | generic_array | ✓ | Disable this feature to remove the [`generic_array`] and [`typenum`] dependencies (and disables [`GenericRingBuffer`]). |
+//! | generic-array | ✓ | Disable this feature to remove the [`generic_array`] and [`typenum`] dependencies (and disables [`GenericRingBuffer`]). |
 //!
 //! # License
 //!
