@@ -6,23 +6,6 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
-    name: Test Stable
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Install stable toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-
-    - name: Run cargo test
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -48,8 +31,25 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: --all-features
 
-  test-nightly:
-    name: Test Nightly + Coverage
+  test:
+    name: Test Stable
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Run cargo test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+
+  test-beta:
+    name: Test Beta + Coverage
     runs-on: ubuntu-latest
 
     steps:
@@ -59,7 +59,7 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         profile: minimal
-        toolchain: nightly
+        toolchain: beta
         override: true
 
     - name: rust-tarpaulin
@@ -77,3 +77,21 @@ jobs:
       with:
         name: code-coverage-report
         path: cobertura.xml
+
+  test-nightly:
+    name: Test Nightly
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        override: true
+
+    - name: Run cargo test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --all-features
