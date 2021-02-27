@@ -20,7 +20,6 @@ pub trait RingBuffer<T: 'static>:
     /// This is because when the length is reached, new items are appended at the start.
     fn len(&self) -> usize;
 
-    // TODO: issue #21: pop feature
     /// Returns true if the buffer is entirely empty.
     /// This is currently only true when nothing has ever been pushed, or when the [`Self::clear`]
     /// function is called. This might change when the `pop` function is added with issue #21
@@ -74,7 +73,7 @@ pub trait RingBuffer<T: 'static>:
         self.get(-1)
     }
 
-    /// Returns the value at the back of the queue.
+    /// Returns the value at the front of the queue.
     /// This is the value that will be overwritten by the next push and also the value pushed
     /// the longest ago.
     /// (alias of peek)
@@ -98,7 +97,6 @@ pub trait RingBuffer<T: 'static>:
         self.get_mut(0)
     }
 
-    /// Creates an iterator over the buffer starting from the latest push.
     /// Creates an iterator over the buffer starting from the item pushed the longest ago,
     /// and ending at the element most recently pushed.
     #[inline]
@@ -106,7 +104,6 @@ pub trait RingBuffer<T: 'static>:
         RingBufferIterator::new(self)
     }
 
-    ///  Creates a mutable iterator over the buffer starting from the latest push.
     /// Creates a mutable iterator over the buffer starting from the item pushed the longest ago,
     /// and ending at the element most recently pushed.
     #[inline]
@@ -131,20 +128,20 @@ pub trait RingBuffer<T: 'static>:
         self.iter().any(|i| i == elem)
     }
 
-    /// Dequeues the top item off the ringbuffer. Returns a reference to the item. This means
+    /// Pops the top item off the ringbuffer. Returns a reference to the item. This means
     /// that lifetimes will be problematic because as long as this reference exists,
     /// you can not push to the queue. To solve this, use the pop method. This requires
     /// the item to be clone. Easily moving out of the ringbuffer is sadly impossible.
     ///
     /// Returns None when the ringbuffer is empty.
-    fn dequeue_ref(&mut self) -> Option<&T>;
+    fn pop_ref(&mut self) -> Option<&T>;
 
-    /// Dequeues the top item off the ringbuffer and returns an owned version. See the [`pop_ref`](Self::pop_ref) docs
-    fn dequeue(&mut self) -> Option<T>
+    /// Pops the top item off the ringbuffer and returns a cloned version. See the [`pop_ref`] docs
+    fn pop(&mut self) -> Option<T>
     where
         T: Clone,
     {
-        self.dequeue_ref().cloned()
+        self.pop_ref().cloned()
     }
 
     /// Pops the top item off the queue, but does not return it. Instead it is dropped.
@@ -299,7 +296,9 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn skip(&mut self) {
-            self.readptr += 1;
+            if !self.is_empty(){
+                self.readptr += 1;
+            }
         }
     };
 }

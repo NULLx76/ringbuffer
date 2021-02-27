@@ -33,7 +33,7 @@ use core::ops::{Index, IndexMut};
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
 #[derive(Debug)]
-pub struct ConstGenericRingBuffer<T, const CAP: usize> {
+pub struct ConstGenericRingBuffer<T, const CAP: usize>   {
     buf: [MaybeUninit<T>; CAP],
     readptr: usize,
     writeptr: usize,
@@ -111,7 +111,7 @@ impl<T: 'static, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, C
     }
 
     #[inline]
-    fn dequeue_ref(&mut self) -> Option<&T> {
+    fn pop_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
             let index = crate::mask(self, self.readptr);
             self.readptr += 1;

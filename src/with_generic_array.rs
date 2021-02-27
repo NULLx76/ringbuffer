@@ -165,7 +165,7 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRing
     }
 
     #[inline]
-    fn dequeue_ref(&mut self) -> Option<&T> {
+    fn pop_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
             let index = crate::mask(self, self.readptr);
             self.readptr += 1;
@@ -190,8 +190,8 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRing
 
 #[cfg(test)]
 mod tests {
-    use crate::GenericRingBuffer;
     use generic_array::typenum;
+    use super::*;
 
     #[test]
     #[should_panic]

@@ -758,47 +758,47 @@ mod tests {
     }
 
     #[test]
-    fn run_test_dequeue_ref() {
-        fn run_test_dequeue_ref(mut b: impl RingBuffer<i32>) {
+    fn run_test_pop_ref() {
+        fn run_test_pop_ref(mut b: impl RingBuffer<i32>) {
             b.push(0);
             b.push(1);
 
             assert_eq!(b.len(), 2);
 
-            assert_eq!(b.dequeue_ref(), Some(&0));
-            assert_eq!(b.dequeue_ref(), Some(&1));
+            assert_eq!(b.pop_ref(), Some(&0));
+            assert_eq!(b.pop_ref(), Some(&1));
 
             assert_eq!(b.len(), 0);
 
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.pop_ref(), None);
         }
 
-        run_test_dequeue_ref(AllocRingBuffer::with_capacity(8));
-        run_test_dequeue_ref(GenericRingBuffer::<i32, typenum::U8>::new());
+        run_test_pop_ref(AllocRingBuffer::with_capacity(8));
+        run_test_pop_ref(GenericRingBuffer::<i32, typenum::U8>::new());
         #[cfg(feature = "const_generics")]
-        run_test_dequeue_ref(ConstGenericRingBuffer::<i32, 8>::new());
+        run_test_pop_ref(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
     #[test]
-    fn run_test_dequeue() {
-        fn run_test_dequeue(mut b: impl RingBuffer<i32>) {
+    fn run_test_pop() {
+        fn run_test_pop(mut b: impl RingBuffer<i32>) {
             b.push(0);
             b.push(1);
 
             assert_eq!(b.len(), 2);
 
-            assert_eq!(b.dequeue(), Some(0));
-            assert_eq!(b.dequeue(), Some(1));
+            assert_eq!(b.pop(), Some(0));
+            assert_eq!(b.pop(), Some(1));
 
             assert_eq!(b.len(), 0);
 
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.pop_ref(), None);
         }
 
-        run_test_dequeue(AllocRingBuffer::with_capacity(8));
-        run_test_dequeue(GenericRingBuffer::<i32, typenum::U8>::new());
+        run_test_pop(AllocRingBuffer::with_capacity(8));
+        run_test_pop(GenericRingBuffer::<i32, typenum::U8>::new());
         #[cfg(feature = "const_generics")]
-        run_test_dequeue(ConstGenericRingBuffer::<i32, 8>::new());
+        run_test_pop(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
     #[test]
@@ -822,21 +822,40 @@ mod tests {
     }
 
     #[test]
+    fn run_test_skip_2() {
+        fn test_skip2(mut rb: impl RingBuffer<i32>) {
+            rb.skip();
+            rb.skip();
+            rb.skip();
+            rb.push(1);
+            assert_eq!(rb.pop(), Some(1));
+            assert_eq!(rb.pop(), None);
+            rb.skip();
+            assert_eq!(rb.pop(), None);
+        }
+
+        test_skip2(AllocRingBuffer::with_capacity(2));
+        test_skip2(GenericRingBuffer::<i32, typenum::U2>::new());
+        #[cfg(feature = "const_generics")]
+        test_skip2(ConstGenericRingBuffer::<i32, 2>::new());
+    }
+
+    #[test]
     fn run_test_push_pop_push() {
         fn test_push_pop_push(mut b: impl RingBuffer<i32>) {
             b.push(0);
             b.push(1);
 
-            assert_eq!(b.dequeue(), Some(0));
-            assert_eq!(b.dequeue(), Some(1));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.pop(), Some(0));
+            assert_eq!(b.pop(), Some(1));
+            assert_eq!(b.pop_ref(), None);
 
             b.push(0);
             b.push(1);
 
-            assert_eq!(b.dequeue(), Some(0));
-            assert_eq!(b.dequeue(), Some(1));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.pop(), Some(0));
+            assert_eq!(b.pop(), Some(1));
+            assert_eq!(b.pop_ref(), None);
         }
 
         test_push_pop_push(AllocRingBuffer::with_capacity(8));
@@ -852,17 +871,17 @@ mod tests {
             b.push(1);
             b.push(2);
 
-            assert_eq!(b.dequeue(), Some(1));
-            assert_eq!(b.dequeue(), Some(2));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.pop(), Some(1));
+            assert_eq!(b.pop(), Some(2));
+            assert_eq!(b.pop_ref(), None);
 
             b.push(0);
             b.push(1);
             b.push(2);
 
-            assert_eq!(b.dequeue(), Some(1));
-            assert_eq!(b.dequeue(), Some(2));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.pop(), Some(1));
+            assert_eq!(b.pop(), Some(2));
+            assert_eq!(b.pop_ref(), None);
         }
 
         test_push_pop_push_full(AllocRingBuffer::with_capacity(2));
@@ -878,17 +897,17 @@ mod tests {
             b.push(1);
             b.push(2);
 
-            assert_eq!(b.dequeue(), Some(1));
-            assert_eq!(b.dequeue(), Some(2));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.pop(), Some(1));
+            assert_eq!(b.pop(), Some(2));
+            assert_eq!(b.pop_ref(), None);
 
             b.push(0);
             b.push(1);
             b.push(2);
 
-            assert_eq!(b.dequeue(), Some(1));
-            assert_eq!(b.dequeue(), Some(2));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.pop(), Some(1));
+            assert_eq!(b.pop(), Some(2));
+            assert_eq!(b.pop_ref(), None);
 
             b.push(0);
             b.push(1);
@@ -912,14 +931,14 @@ mod tests {
                 rb.push(1);
                 rb.push(2);
 
-                assert_eq!(rb.dequeue(), Some(1));
-                assert_eq!(rb.dequeue(), Some(2));
+                assert_eq!(rb.pop(), Some(1));
+                assert_eq!(rb.pop(), Some(2));
 
                 rb.push(1);
                 rb.push(2);
 
-                assert_eq!(rb.dequeue(), Some(1));
-                assert_eq!(rb.dequeue(), Some(2));
+                assert_eq!(rb.pop(), Some(1));
+                assert_eq!(rb.pop(), Some(2));
 
                 rb.push(1);
                 rb.push(2);

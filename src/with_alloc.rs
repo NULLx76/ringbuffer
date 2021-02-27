@@ -69,7 +69,7 @@ impl<T: 'static> RingBuffer<T> for AllocRingBuffer<T> {
     }
 
     #[inline]
-    fn dequeue_ref(&mut self) -> Option<&T> {
+    fn pop_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
             let index = crate::mask(self, self.readptr);
             let res = &self.buf[index];
@@ -155,10 +155,9 @@ impl<T> Default for AllocRingBuffer<T> {
     /// Creates a buffer with a capacity of [crate::RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
     fn default() -> Self {
-        let cap = RINGBUFFER_DEFAULT_CAPACITY;
         Self {
-            buf: Vec::with_capacity(cap),
-            capacity: cap,
+            buf: Vec::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
+            capacity: RINGBUFFER_DEFAULT_CAPACITY,
             readptr: 0,
             writeptr: 0,
         }
