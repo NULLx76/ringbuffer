@@ -57,7 +57,7 @@ impl<T: 'static> RingBuffer<T> for AllocRingBuffer<T> {
             self.readptr += 1;
         }
 
-        let index = crate::mask(self, self.writeptr);
+        let index = crate::mask(self.capacity, self.writeptr);
 
         if index >= self.buf.len() {
             self.buf.push(value);
@@ -71,7 +71,7 @@ impl<T: 'static> RingBuffer<T> for AllocRingBuffer<T> {
     #[inline]
     fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
-            let index = crate::mask(self, self.readptr);
+            let index = crate::mask(self.capacity, self.readptr);
             let res = &self.buf[index];
             self.readptr += 1;
 

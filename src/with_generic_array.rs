@@ -149,7 +149,7 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRing
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
-            let index = crate::mask(self, self.readptr);
+            let index = crate::mask(self.cap, self.readptr);
             unsafe {
                 // make sure we drop whatever is being overwritten
                 // SAFETY: the buffer is full, so this must be inited
@@ -159,7 +159,7 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRing
             }
             self.readptr += 1;
         }
-        let index = crate::mask(self, self.writeptr);
+        let index = crate::mask(self.cap, self.writeptr);
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
     }
@@ -167,7 +167,7 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRing
     #[inline]
     fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
-            let index = crate::mask(self, self.readptr);
+            let index = crate::mask(self.cap, self.readptr);
             self.readptr += 1;
             let res = unsafe {
                 // SAFETY: index has been masked
