@@ -19,8 +19,8 @@
 //! | type | description |
 //! | --- | --- |
 //! | [`AllocRingBuffer`] | Ringbuffer allocated on the heap at runtime. This ringbuffer is still fixed size and requires alloc. |
-//! | [`GenericRingBuffer`] | Ringbuffer allocated on the stack. This is done using the [`typenum`] crate to provide a const-generic like interface without needing nightly |
-//! | [`ConstGenericRingBuffer`] | Ringbuffer which uses const generics to allocate on the stack. This type is feature-gated behind `const_generics` and only works in nightly rust.|
+//! | [`GenericRingBuffer`] | Ringbuffer allocated on the stack. This is done using the [`typenum`] crate to provide a const-generic like interface without needing beta |
+//! | [`ConstGenericRingBuffer`] | Ringbuffer which uses const generics to allocate on the stack. This type is feature-gated behind `const_generics` and only works in beta rust.|
 //!
 //! All of these ringbuffers also implement the [`RingBuffer`] trait for their shared API surface.
 //!
