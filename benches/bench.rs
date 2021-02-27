@@ -17,7 +17,7 @@ fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     })
 }
 
-fn benchmark_push_pop<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_push_dequeue<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
@@ -25,14 +25,14 @@ fn benchmark_push_pop<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F)
             rb.push(1);
             rb.push(2);
 
-            assert_eq!(rb.pop(), Some(1));
-            assert_eq!(rb.pop(), Some(2));
+            assert_eq!(rb.dequeue(), Some(1));
+            assert_eq!(rb.dequeue(), Some(2));
 
             rb.push(1);
             rb.push(2);
 
-            assert_eq!(rb.pop(), Some(1));
-            assert_eq!(rb.pop(), Some(2));
+            assert_eq!(rb.dequeue(), Some(1));
+            assert_eq!(rb.dequeue(), Some(2));
 
             rb.push(1);
             rb.push(2);
@@ -159,7 +159,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         AllocRingBuffer,
         i32,
         with_capacity,
-        benchmark_push_pop,
+        benchmark_push_dequeue,
         16,
         1024,
         4096,
@@ -171,7 +171,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         ConstGenericRingBuffer,
         i32,
         new,
-        benchmark_push_pop,
+        benchmark_push_dequeue,
         16,
         1024,
         4096,
@@ -183,7 +183,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         GenericRingBuffer,
         i32,
         new,
-        benchmark_push_pop,
+        benchmark_push_dequeue,
         U16,
         U1024,
         U4096,

@@ -21,8 +21,6 @@ pub trait RingBuffer<T: 'static>:
     fn len(&self) -> usize;
 
     /// Returns true if the buffer is entirely empty.
-    /// This is currently only true when nothing has ever been pushed, or when the [`Self::clear`]
-    /// function is called. This might change when the `pop` function is added with issue #21
     #[inline]
     fn is_empty(&self) -> bool {
         self.len() == 0
@@ -128,23 +126,23 @@ pub trait RingBuffer<T: 'static>:
         self.iter().any(|i| i == elem)
     }
 
-    /// Pops the top item off the ringbuffer. Returns a reference to the item. This means
+    /// dequeues the top item off the ringbuffer. Returns a reference to the item. This means
     /// that lifetimes will be problematic because as long as this reference exists,
-    /// you can not push to the queue. To solve this, use the pop method. This requires
+    /// you can not push to the queue. To solve this, use the dequeue method. This requires
     /// the item to be clone. Easily moving out of the ringbuffer is sadly impossible.
     ///
     /// Returns None when the ringbuffer is empty.
-    fn pop_ref(&mut self) -> Option<&T>;
+    fn dequeue_ref(&mut self) -> Option<&T>;
 
-    /// Pops the top item off the ringbuffer and returns a cloned version. See the [`pop_ref`] docs
-    fn pop(&mut self) -> Option<T>
+    /// dequeues the top item off the ringbuffer and returns a cloned version. See the [`dequeue_ref`] docs
+    fn dequeue(&mut self) -> Option<T>
     where
         T: Clone,
     {
-        self.pop_ref().cloned()
+        self.dequeue_ref().cloned()
     }
 
-    /// Pops the top item off the queue, but does not return it. Instead it is dropped.
+    /// dequeues the top item off the queue, but does not return it. Instead it is dropped.
     /// If the ringbuffer is empty, this function is a nop.
     fn skip(&mut self);
 }
