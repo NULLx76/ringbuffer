@@ -21,7 +21,7 @@ fn benchmark_push_dequeue<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new
     b.iter(|| {
         let mut rb = new();
 
-        for i in 0..100_000 {
+        for _i in 0..100_000 {
             rb.push(1);
             rb.push(2);
 

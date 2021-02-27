@@ -33,7 +33,7 @@ use core::iter::FromIterator;
 /// buffer.push(1);
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
-#[derive(PartialEq, Eq, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AllocRingBuffer<T> {
     buf: Vec<T>,
     capacity: usize,
@@ -128,6 +128,7 @@ impl<T> AllocRingBuffer<T> {
     /// Get a reference from the buffer without checking it is initialized.
     /// Caller must be sure the index is in bounds, or this will panic.
     /// However, it's not unsafe -- only unsafe to match signature of other methods.
+    #[inline]
     unsafe fn get_unchecked(&self, index: usize) -> &T {
         &self.buf[index]
     }
@@ -135,6 +136,7 @@ impl<T> AllocRingBuffer<T> {
     /// Get a mut reference from the buffer without checking it is initialized.
     /// Caller must be sure the index is in bounds, or this will panic.
     /// However, it's not unsafe -- only unsafe to match signature of other methods.
+    #[inline]
     unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
         &mut self.buf[index]
     }

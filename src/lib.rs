@@ -498,9 +498,9 @@ mod tests {
         }
 
         test_get_relative_mut(AllocRingBuffer::with_capacity(8));
+        test_get_relative_mut(GenericRingBuffer::<i32, typenum::U8>::new());
         #[cfg(feature = "const_generics")]
         test_get_relative_mut(ConstGenericRingBuffer::<i32, 8>::new());
-        test_get_relative_mut(GenericRingBuffer::<i32, typenum::U8>::new());
     }
 
     #[test]
@@ -525,9 +525,9 @@ mod tests {
         }
 
         test_wrapping_get_relative_mut(AllocRingBuffer::with_capacity(2));
+        test_wrapping_get_relative_mut(GenericRingBuffer::<i32, typenum::U2>::new());
         #[cfg(feature = "const_generics")]
         test_wrapping_get_relative_mut(ConstGenericRingBuffer::<i32, 2>::new());
-        test_wrapping_get_relative_mut(GenericRingBuffer::<i32, typenum::U2>::new());
     }
 
     #[test]
@@ -537,9 +537,9 @@ mod tests {
         }
 
         test_get_relative_mut_zero_length(AllocRingBuffer::with_capacity(8));
+        test_get_relative_mut_zero_length(GenericRingBuffer::<i32, typenum::U8>::new());
         #[cfg(feature = "const_generics")]
         test_get_relative_mut_zero_length(ConstGenericRingBuffer::<i32, 8>::new());
-        test_get_relative_mut_zero_length(GenericRingBuffer::<i32, typenum::U8>::new());
     }
 
     #[test]
@@ -560,9 +560,9 @@ mod tests {
         }
 
         test_get_absolute(AllocRingBuffer::with_capacity(8));
+        test_get_absolute(GenericRingBuffer::<i32, typenum::U8>::new());
         #[cfg(feature = "const_generics")]
         test_get_absolute(ConstGenericRingBuffer::<i32, 8>::new());
-        test_get_absolute(GenericRingBuffer::<i32, typenum::U8>::new());
     }
 
     #[test]
@@ -574,9 +574,9 @@ mod tests {
         }
 
         test_from_iterator::<AllocRingBuffer<i32>>();
+        test_from_iterator::<GenericRingBuffer<i32, typenum::U1024>>();
         #[cfg(feature = "const_generics")]
         test_from_iterator::<ConstGenericRingBuffer<i32, 1024>>();
-        test_from_iterator::<GenericRingBuffer<i32, typenum::U1024>>();
     }
 
     #[test]
@@ -588,9 +588,9 @@ mod tests {
         }
 
         test_from_iterator_wrap::<AllocRingBuffer<i32>>();
+        test_from_iterator_wrap::<GenericRingBuffer<i32, typenum::U1024>>();
         #[cfg(feature = "const_generics")]
         test_from_iterator_wrap::<ConstGenericRingBuffer<i32, 1024>>();
-        test_from_iterator_wrap::<GenericRingBuffer<i32, typenum::U1024>>();
     }
 
     #[test]
@@ -954,6 +954,32 @@ mod tests {
         test_push_dequeue_push_full_get_rep(GenericRingBuffer::<i32, typenum::U8>::new());
         #[cfg(feature = "const_generics")]
         test_push_dequeue_push_full_get_rep(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
+    #[test]
+    fn run_test_clone() {
+        use std::fmt;
+        fn test_clone(mut rb: impl RingBuffer<i32> + Clone + Eq + fmt::Debug) {
+            rb.push(42);
+            rb.push(32);
+            rb.push(22);
+
+            let mut other = rb.clone();
+
+            assert_eq!(rb, other);
+
+            rb.push(11);
+            rb.push(12);
+            other.push(11);
+            other.push(12);
+
+            assert_eq!(rb, other);
+        }
+
+        test_clone(AllocRingBuffer::with_capacity(4));
+        test_clone(GenericRingBuffer::<i32, typenum::U4>::new());
+        #[cfg(feature = "const_generics")]
+        test_clone(ConstGenericRingBuffer::<i32, 4>::new());
     }
 
     mod test_dropping {

@@ -33,10 +33,20 @@ use core::ops::{Index, IndexMut};
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
 #[derive(Debug)]
-pub struct ConstGenericRingBuffer<T, const CAP: usize>   {
+pub struct ConstGenericRingBuffer<T, const CAP: usize> {
     buf: [MaybeUninit<T>; CAP],
     readptr: usize,
     writeptr: usize,
+}
+
+impl<T: 'static + Clone, const CAP: usize> Clone for ConstGenericRingBuffer<T, CAP> {
+    fn clone(&self) -> Self {
+        let mut new = ConstGenericRingBuffer::<T, CAP>::new();
+        for elem in self.iter() {
+            new.push(elem.clone())
+        }
+        new
+    }
 }
 
 // We need to manually implement PartialEq because MaybeUninit isn't PartialEq
