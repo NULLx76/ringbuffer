@@ -63,6 +63,8 @@
 
 #[macro_use]
 pub(crate) mod ringbuffer_trait;
+use core::usize;
+
 pub use ringbuffer_trait::RingBuffer;
 
 #[cfg(feature = "alloc")]
@@ -87,8 +89,8 @@ pub use with_generic_array::GenericRingBuffer;
 
 /// Used internally. Computes the bitmask used to properly wrap the ringbuffers.
 #[inline]
-fn mask<T: 'static>(this: &impl RingBuffer<T>, index: usize) -> usize {
-    index & (this.capacity() - 1)
+const fn mask(cap: usize, index: usize) -> usize {
+    index & (cap - 1)
 }
 
 #[cfg(test)]

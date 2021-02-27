@@ -6,14 +6,13 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::iter::FromIterator;
 
-// TODO: Remove Default <Issue #13>
 /// RingBuffer is a trait defining the standard interface for all RingBuffer
 /// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`GenericRingBuffer`](crate::GenericRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
 ///
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing RingBuffer.
 pub trait RingBuffer<T: 'static>:
-    Default + Index<isize, Output = T> + IndexMut<isize> + FromIterator<T>
+    Index<isize, Output = T> + IndexMut<isize> + FromIterator<T>
 {
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.
@@ -134,7 +133,7 @@ pub trait RingBuffer<T: 'static>:
     /// Returns None when the ringbuffer is empty.
     fn dequeue_ref(&mut self) -> Option<&T>;
 
-    /// dequeues the top item off the ringbuffer and returns a cloned version. See the [`dequeue_ref`] docs
+    /// dequeues the top item off the ringbuffer and returns a cloned version. See the [`dequeue_ref`](Self::dequeue_ref) docs
     fn dequeue(&mut self) -> Option<T>
     where
         T: Clone,
@@ -257,8 +256,8 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn get_absolute(&self, index: usize) -> Option<&T> {
-            let read = $mask(self, self.$readptr);
-            let write = $mask(self, self.$writeptr);
+            let read = $mask(self.capacity(), self.$readptr);
+            let write = $mask(self.capacity(), self.$writeptr);
             if index >= read && index < write {
                 unsafe {
                     // SAFETY: index has been checked against $mask to be within bounds
@@ -271,7 +270,7 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T> {
-            if index >= $mask(self, self.$readptr) && index < $mask(self, self.$writeptr) {
+            if index >= $mask(self.capacity(), self.$readptr) && index < $mask(self.capacity(), self.$writeptr) {
                 unsafe {
                     // SAFETY: index has been checked against $mask to be within bounds
                     Some(self.$get_unchecked_mut(index))
