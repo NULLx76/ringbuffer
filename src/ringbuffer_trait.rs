@@ -63,13 +63,6 @@ pub trait RingBuffer<T: 'static>:
         self.front()
     }
 
-    /// Returns the value at the back of the queue.
-    /// This is the item that was pushed most recently.
-    #[inline]
-    fn back(&self) -> Option<&T> {
-        self.get(-1)
-    }
-
     /// Returns the value at the front of the queue.
     /// This is the value that will be overwritten by the next push and also the value pushed
     /// the longest ago.
@@ -80,18 +73,25 @@ pub trait RingBuffer<T: 'static>:
     }
 
     /// Returns a mutable reference to the value at the back of the queue.
-    /// This is the item that was pushed most recently.
-    #[inline]
-    fn back_mut(&mut self) -> Option<&mut T> {
-        self.get_mut(-1)
-    }
-
-    /// Returns a mutable reference to the value at the back of the queue.
     /// This is the value that will be overwritten by the next push.
     /// (alias of peek)
     #[inline]
     fn front_mut(&mut self) -> Option<&mut T> {
         self.get_mut(0)
+    }
+
+    /// Returns the value at the back of the queue.
+    /// This is the item that was pushed most recently.
+    #[inline]
+    fn back(&self) -> Option<&T> {
+        self.get(-1)
+    }
+
+    /// Returns a mutable reference to the value at the back of the queue.
+    /// This is the item that was pushed most recently.
+    #[inline]
+    fn back_mut(&mut self) -> Option<&mut T> {
+        self.get_mut(-1)
     }
 
     /// Creates an iterator over the buffer starting from the item pushed the longest ago,
@@ -220,64 +220,56 @@ mod iter {
 
 pub use iter::{RingBufferIterator, RingBufferMutIterator};
 
-/// Implement the get, get_mut, get_absolute and get_absolute_mut functions on implementors
-/// of RingBuffer. This is to avoid duplicate code.
+/// Implement various functions on implementors of RingBuffer.
+/// This is to avoid duplicate code.
 macro_rules! impl_ringbuffer {
     ($get_unchecked: ident, $get_unchecked_mut: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
         #[inline]
         fn get(&self, index: isize) -> Option<&T> {
-            if !self.is_empty() {
+            use core::ops::Not;
+            self.is_empty().not().then(move || {
                 let index = (self.$readptr as isize + index) as usize % self.len();
 
                 unsafe {
                     // SAFETY: index has been modulo-ed and offset from readptr
                     // to be within bounds
-                    Some(self.$get_unchecked(index))
+                    self.$get_unchecked(index)
                 }
-            } else {
-                None
-            }
+            })
         }
 
         #[inline]
         fn get_mut(&mut self, index: isize) -> Option<&mut T> {
-            if !self.is_empty() {
+            use core::ops::Not;
+            self.is_empty().not().then(move || {
                 let index = (self.$readptr as isize + index) as usize % self.len();
 
                 unsafe {
                     // SAFETY: index has been modulo-ed and offset from readptr
                     // to be within bounds
-                    Some(self.$get_unchecked_mut(index))
+                    self.$get_unchecked_mut(index)
                 }
-            } else {
-                None
-            }
+            })
         }
 
         #[inline]
         fn get_absolute(&self, index: usize) -> Option<&T> {
             let read = $mask(self.capacity(), self.$readptr);
             let write = $mask(self.capacity(), self.$writeptr);
-            if index >= read && index < write {
-                unsafe {
-                    // SAFETY: index has been checked against $mask to be within bounds
-                    Some(self.$get_unchecked(index))
-                }
-            } else {
-                None
-            }
+            (index >= read && index < write).then(|| unsafe {
+                // SAFETY: index has been checked against $mask to be within bounds
+                self.$get_unchecked(index)
+            })
         }
 
         #[inline]
         fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T> {
-            if index >= $mask(self.capacity(), self.$readptr) && index < $mask(self.capacity(), self.$writeptr) {
-                unsafe {
-                    // SAFETY: index has been checked against $mask to be within bounds
-                    Some(self.$get_unchecked_mut(index))
-                }
-            } else {
-                None
-            }
+            (index >= $mask(self.capacity(), self.$readptr)
+                && index < $mask(self.capacity(), self.$writeptr))
+            .then(move || unsafe {
+                // SAFETY: index has been checked against $mask to be within bounds
+                self.$get_unchecked_mut(index)
+            })
         }
 
         #[inline]
@@ -293,7 +285,7 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn skip(&mut self) {
-            if !self.is_empty(){
+            if !self.is_empty() {
                 self.readptr += 1;
             }
         }
