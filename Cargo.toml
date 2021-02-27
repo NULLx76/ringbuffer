@@ -14,7 +14,7 @@ license = "LGPL-3.0"
 
 [dependencies]
 generic-array = { version = "0.14.4", optional = true }
-array-init = { git = "https://github.com/NULLx76/array-init.git", optional = true }
+array-init = { git = "https://github.com/manishearth/array-init.git", optional = true }
 
 [dev-dependencies]
 criterion = "0.1.2"
