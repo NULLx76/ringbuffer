@@ -69,7 +69,7 @@ impl<T: 'static> RingBuffer<T> for AllocRingBuffer<T> {
     }
 
     #[inline]
-    fn pop_ref(&mut self) -> Option<&T> {
+    fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
             let index = crate::mask(self, self.readptr);
             let res = &self.buf[index];
