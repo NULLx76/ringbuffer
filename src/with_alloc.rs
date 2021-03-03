@@ -33,7 +33,7 @@ use core::iter::FromIterator;
 /// buffer.push(1);
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
-#[derive(PartialEq, Eq, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AllocRingBuffer<T> {
     buf: Vec<T>,
     capacity: usize,
@@ -57,7 +57,7 @@ impl<T: 'static> RingBuffer<T> for AllocRingBuffer<T> {
             self.readptr += 1;
         }
 
-        let index = crate::mask(self, self.writeptr);
+        let index = crate::mask(self.capacity, self.writeptr);
 
         if index >= self.buf.len() {
             self.buf.push(value);
@@ -71,7 +71,7 @@ impl<T: 'static> RingBuffer<T> for AllocRingBuffer<T> {
     #[inline]
     fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
-            let index = crate::mask(self, self.readptr);
+            let index = crate::mask(self.capacity, self.readptr);
             let res = &self.buf[index];
             self.readptr += 1;
 
@@ -128,6 +128,7 @@ impl<T> AllocRingBuffer<T> {
     /// Get a reference from the buffer without checking it is initialized.
     /// Caller must be sure the index is in bounds, or this will panic.
     /// However, it's not unsafe -- only unsafe to match signature of other methods.
+    #[inline]
     unsafe fn get_unchecked(&self, index: usize) -> &T {
         &self.buf[index]
     }
@@ -135,6 +136,7 @@ impl<T> AllocRingBuffer<T> {
     /// Get a mut reference from the buffer without checking it is initialized.
     /// Caller must be sure the index is in bounds, or this will panic.
     /// However, it's not unsafe -- only unsafe to match signature of other methods.
+    #[inline]
     unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
         &mut self.buf[index]
     }
@@ -155,10 +157,9 @@ impl<T> Default for AllocRingBuffer<T> {
     /// Creates a buffer with a capacity of [crate::RINGBUFFER_DEFAULT_CAPACITY].
     #[inline]
     fn default() -> Self {
-        let cap = RINGBUFFER_DEFAULT_CAPACITY;
         Self {
-            buf: Vec::with_capacity(cap),
-            capacity: cap,
+            buf: Vec::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
+            capacity: RINGBUFFER_DEFAULT_CAPACITY,
             readptr: 0,
             writeptr: 0,
         }

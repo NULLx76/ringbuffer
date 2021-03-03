@@ -6,24 +6,20 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::iter::FromIterator;
 
-// TODO: Remove Default <Issue #13>
 /// RingBuffer is a trait defining the standard interface for all RingBuffer
 /// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`GenericRingBuffer`](crate::GenericRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
 ///
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing RingBuffer.
 pub trait RingBuffer<T: 'static>:
-    Default + Index<isize, Output = T> + IndexMut<isize> + FromIterator<T>
+    Index<isize, Output = T> + IndexMut<isize> + FromIterator<T>
 {
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.
     /// This is because when the length is reached, new items are appended at the start.
     fn len(&self) -> usize;
 
-    // TODO: issue #21: pop feature
     /// Returns true if the buffer is entirely empty.
-    /// This is currently only true when nothing has ever been pushed, or when the [`Self::clear`]
-    /// function is called. This might change when the `pop` function is added with issue #21
     #[inline]
     fn is_empty(&self) -> bool {
         self.len() == 0
@@ -67,27 +63,13 @@ pub trait RingBuffer<T: 'static>:
         self.front()
     }
 
-    /// Returns the value at the back of the queue.
-    /// This is the item that was pushed most recently.
-    #[inline]
-    fn back(&self) -> Option<&T> {
-        self.get(-1)
-    }
-
-    /// Returns the value at the back of the queue.
+    /// Returns the value at the front of the queue.
     /// This is the value that will be overwritten by the next push and also the value pushed
     /// the longest ago.
     /// (alias of peek)
     #[inline]
     fn front(&self) -> Option<&T> {
         self.get(0)
-    }
-
-    /// Returns a mutable reference to the value at the back of the queue.
-    /// This is the item that was pushed most recently.
-    #[inline]
-    fn back_mut(&mut self) -> Option<&mut T> {
-        self.get_mut(-1)
     }
 
     /// Returns a mutable reference to the value at the back of the queue.
@@ -98,7 +80,20 @@ pub trait RingBuffer<T: 'static>:
         self.get_mut(0)
     }
 
-    /// Creates an iterator over the buffer starting from the latest push.
+    /// Returns the value at the back of the queue.
+    /// This is the item that was pushed most recently.
+    #[inline]
+    fn back(&self) -> Option<&T> {
+        self.get(-1)
+    }
+
+    /// Returns a mutable reference to the value at the back of the queue.
+    /// This is the item that was pushed most recently.
+    #[inline]
+    fn back_mut(&mut self) -> Option<&mut T> {
+        self.get_mut(-1)
+    }
+
     /// Creates an iterator over the buffer starting from the item pushed the longest ago,
     /// and ending at the element most recently pushed.
     #[inline]
@@ -106,7 +101,6 @@ pub trait RingBuffer<T: 'static>:
         RingBufferIterator::new(self)
     }
 
-    ///  Creates a mutable iterator over the buffer starting from the latest push.
     /// Creates a mutable iterator over the buffer starting from the item pushed the longest ago,
     /// and ending at the element most recently pushed.
     #[inline]
@@ -131,15 +125,15 @@ pub trait RingBuffer<T: 'static>:
         self.iter().any(|i| i == elem)
     }
 
-    /// Dequeues the top item off the ringbuffer. Returns a reference to the item. This means
+    /// dequeues the top item off the ringbuffer. Returns a reference to the item. This means
     /// that lifetimes will be problematic because as long as this reference exists,
-    /// you can not push to the queue. To solve this, use the pop method. This requires
+    /// you can not push to the queue. To solve this, use the dequeue method. This requires
     /// the item to be clone. Easily moving out of the ringbuffer is sadly impossible.
     ///
     /// Returns None when the ringbuffer is empty.
     fn dequeue_ref(&mut self) -> Option<&T>;
 
-    /// Dequeues the top item off the ringbuffer and returns an owned version. See the [`pop_ref`](Self::pop_ref) docs
+    /// dequeues the top item off the ringbuffer and returns a cloned version. See the [`dequeue_ref`](Self::dequeue_ref) docs
     fn dequeue(&mut self) -> Option<T>
     where
         T: Clone,
@@ -147,7 +141,7 @@ pub trait RingBuffer<T: 'static>:
         self.dequeue_ref().cloned()
     }
 
-    /// Pops the top item off the queue, but does not return it. Instead it is dropped.
+    /// dequeues the top item off the queue, but does not return it. Instead it is dropped.
     /// If the ringbuffer is empty, this function is a nop.
     fn skip(&mut self);
 }
@@ -226,64 +220,56 @@ mod iter {
 
 pub use iter::{RingBufferIterator, RingBufferMutIterator};
 
-/// Implement the get, get_mut, get_absolute and get_absolute_mut functions on implementors
-/// of RingBuffer. This is to avoid duplicate code.
+/// Implement various functions on implementors of RingBuffer.
+/// This is to avoid duplicate code.
 macro_rules! impl_ringbuffer {
     ($get_unchecked: ident, $get_unchecked_mut: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
         #[inline]
         fn get(&self, index: isize) -> Option<&T> {
-            if !self.is_empty() {
+            use core::ops::Not;
+            self.is_empty().not().then(move || {
                 let index = (self.$readptr as isize + index) as usize % self.len();
 
                 unsafe {
                     // SAFETY: index has been modulo-ed and offset from readptr
                     // to be within bounds
-                    Some(self.$get_unchecked(index))
+                    self.$get_unchecked(index)
                 }
-            } else {
-                None
-            }
+            })
         }
 
         #[inline]
         fn get_mut(&mut self, index: isize) -> Option<&mut T> {
-            if !self.is_empty() {
+            use core::ops::Not;
+            self.is_empty().not().then(move || {
                 let index = (self.$readptr as isize + index) as usize % self.len();
 
                 unsafe {
                     // SAFETY: index has been modulo-ed and offset from readptr
                     // to be within bounds
-                    Some(self.$get_unchecked_mut(index))
+                    self.$get_unchecked_mut(index)
                 }
-            } else {
-                None
-            }
+            })
         }
 
         #[inline]
         fn get_absolute(&self, index: usize) -> Option<&T> {
-            let read = $mask(self, self.$readptr);
-            let write = $mask(self, self.$writeptr);
-            if index >= read && index < write {
-                unsafe {
-                    // SAFETY: index has been checked against $mask to be within bounds
-                    Some(self.$get_unchecked(index))
-                }
-            } else {
-                None
-            }
+            let read = $mask(self.capacity(), self.$readptr);
+            let write = $mask(self.capacity(), self.$writeptr);
+            (index >= read && index < write).then(|| unsafe {
+                // SAFETY: index has been checked against $mask to be within bounds
+                self.$get_unchecked(index)
+            })
         }
 
         #[inline]
         fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T> {
-            if index >= $mask(self, self.$readptr) && index < $mask(self, self.$writeptr) {
-                unsafe {
-                    // SAFETY: index has been checked against $mask to be within bounds
-                    Some(self.$get_unchecked_mut(index))
-                }
-            } else {
-                None
-            }
+            (index >= $mask(self.capacity(), self.$readptr)
+                && index < $mask(self.capacity(), self.$writeptr))
+            .then(move || unsafe {
+                // SAFETY: index has been checked against $mask to be within bounds
+                self.$get_unchecked_mut(index)
+            })
         }
 
         #[inline]
@@ -299,7 +285,9 @@ macro_rules! impl_ringbuffer {
 
         #[inline]
         fn skip(&mut self) {
-            self.readptr += 1;
+            if !self.is_empty() {
+                self.readptr += 1;
+            }
         }
     };
 }

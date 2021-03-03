@@ -3,7 +3,7 @@ use core::ops::{Index, IndexMut};
 use crate::RingBuffer;
 use core::iter::FromIterator;
 use core::mem::MaybeUninit;
-use generic_array::{sequence::GenericSequence, ArrayLength, GenericArray};
+use generic_array::{sequence::GenericSequence, typenum::PowerOfTwo, ArrayLength, GenericArray};
 
 /// The GenericRingBuffer struct is a RingBuffer implementation which does not require `alloc`.
 /// However it does depend on the typenum crate, to provide compile time integers without needing
@@ -38,15 +38,27 @@ use generic_array::{sequence::GenericSequence, ArrayLength, GenericArray};
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
 #[derive(Debug)]
-pub struct GenericRingBuffer<T, Cap: ArrayLength<MaybeUninit<T>>> {
+pub struct GenericRingBuffer<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> {
     buf: GenericArray<MaybeUninit<T>, Cap>,
     cap: usize,
     readptr: usize,
     writeptr: usize,
 }
 
+impl<T: 'static + Clone, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Clone
+    for GenericRingBuffer<T, Cap>
+{
+    fn clone(&self) -> Self {
+        let mut new = GenericRingBuffer::<T, Cap>::new();
+        for elem in self.iter() {
+            new.push(elem.clone())
+        }
+        new
+    }
+}
+
 // We need to manually implement PartialEq because MaybeUninit isn't PartialEq
-impl<T: 'static + PartialEq, Cap: ArrayLength<MaybeUninit<T>>> PartialEq
+impl<T: 'static + PartialEq, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> PartialEq
     for GenericRingBuffer<T, Cap>
 {
     fn eq(&self, other: &Self) -> bool {
@@ -63,9 +75,12 @@ impl<T: 'static + PartialEq, Cap: ArrayLength<MaybeUninit<T>>> PartialEq
     }
 }
 
-impl<T: 'static + PartialEq, Cap: ArrayLength<MaybeUninit<T>>> Eq for GenericRingBuffer<T, Cap> {}
+impl<T: 'static + PartialEq, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Eq
+    for GenericRingBuffer<T, Cap>
+{
+}
 
-impl<T, Cap: ArrayLength<MaybeUninit<T>>> GenericRingBuffer<T, Cap> {
+impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> GenericRingBuffer<T, Cap> {
     /// Creates a new RingBuffer. The method is here for compatibility with the alloc version of
     /// RingBuffer. This method simply creates a default ringbuffer. The capacity is given as a
     /// type parameter.
@@ -76,6 +91,7 @@ impl<T, Cap: ArrayLength<MaybeUninit<T>>> GenericRingBuffer<T, Cap> {
 
     /// Get a reference from the buffer without checking it is initialized
     /// Caller MUST be sure this index is initialized, or undefined behavior will happen
+    #[inline]
     unsafe fn get_unchecked(&self, index: usize) -> &T {
         self.buf[index]
             .as_ptr()
@@ -85,6 +101,7 @@ impl<T, Cap: ArrayLength<MaybeUninit<T>>> GenericRingBuffer<T, Cap> {
 
     /// Get a mutable reference from the buffer without checking it is initialized
     /// Caller MUST be sure this index is initialized, or undefined behavior will happen
+    #[inline]
     unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
         self.buf[index]
             .as_mut_ptr()
@@ -93,15 +110,11 @@ impl<T, Cap: ArrayLength<MaybeUninit<T>>> GenericRingBuffer<T, Cap> {
     }
 }
 
-impl<T, Cap: ArrayLength<MaybeUninit<T>>> Default for GenericRingBuffer<T, Cap> {
+impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Default for GenericRingBuffer<T, Cap> {
     /// Creates a buffer with a capacity specified through the `Cap` type parameter.
     #[inline]
     fn default() -> Self {
         assert_ne!(Cap::to_usize(), 0, "Capacity must be greater than 0");
-        assert!(
-            Cap::to_usize().is_power_of_two(),
-            "Capacity must be a power of two"
-        );
 
         Self {
             buf: GenericArray::generate(|_| MaybeUninit::uninit()),
@@ -112,7 +125,7 @@ impl<T, Cap: ArrayLength<MaybeUninit<T>>> Default for GenericRingBuffer<T, Cap> 
     }
 }
 
-impl<RB: 'static, Cap: ArrayLength<MaybeUninit<RB>>> FromIterator<RB>
+impl<RB: 'static, Cap: PowerOfTwo + ArrayLength<MaybeUninit<RB>>> FromIterator<RB>
     for GenericRingBuffer<RB, Cap>
 {
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
@@ -125,7 +138,9 @@ impl<RB: 'static, Cap: ArrayLength<MaybeUninit<RB>>> FromIterator<RB>
     }
 }
 
-impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> Index<isize> for GenericRingBuffer<T, Cap> {
+impl<T: 'static, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Index<isize>
+    for GenericRingBuffer<T, Cap>
+{
     type Output = T;
 
     fn index(&self, index: isize) -> &Self::Output {
@@ -133,13 +148,17 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> Index<isize> for GenericRingB
     }
 }
 
-impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> IndexMut<isize> for GenericRingBuffer<T, Cap> {
+impl<T: 'static, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> IndexMut<isize>
+    for GenericRingBuffer<T, Cap>
+{
     fn index_mut(&mut self, index: isize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }
 }
 
-impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRingBuffer<T, Cap> {
+impl<T: 'static, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBuffer<T>
+    for GenericRingBuffer<T, Cap>
+{
     #[inline(always)]
     #[cfg(not(tarpaulin_include))]
     fn capacity(&self) -> usize {
@@ -149,7 +168,7 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRing
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
-            let index = crate::mask(self, self.readptr);
+            let index = crate::mask(self.cap, self.readptr);
             unsafe {
                 // make sure we drop whatever is being overwritten
                 // SAFETY: the buffer is full, so this must be inited
@@ -159,7 +178,7 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRing
             }
             self.readptr += 1;
         }
-        let index = crate::mask(self, self.writeptr);
+        let index = crate::mask(self.cap, self.writeptr);
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
     }
@@ -167,7 +186,7 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRing
     #[inline]
     fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
-            let index = crate::mask(self, self.readptr);
+            let index = crate::mask(self.cap, self.readptr);
             self.readptr += 1;
             let res = unsafe {
                 // SAFETY: index has been masked
@@ -190,20 +209,8 @@ impl<T: 'static, Cap: ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRing
 
 #[cfg(test)]
 mod tests {
-    use crate::GenericRingBuffer;
+    use super::*;
     use generic_array::typenum;
-
-    #[test]
-    #[should_panic]
-    fn test_no_empty() {
-        let _ = GenericRingBuffer::<u32, typenum::U0>::new();
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_with_capacity_no_power_of_two() {
-        let _ = GenericRingBuffer::<i32, typenum::U10>::new();
-    }
 
     #[test]
     #[should_panic]
