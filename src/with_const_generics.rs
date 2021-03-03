@@ -39,6 +39,16 @@ pub struct ConstGenericRingBuffer<T, const CAP: usize> {
     writeptr: usize,
 }
 
+impl<T: 'static + Clone, const CAP: usize> Clone for ConstGenericRingBuffer<T, CAP> {
+    fn clone(&self) -> Self {
+        let mut new = ConstGenericRingBuffer::<T, CAP>::new();
+        for elem in self.iter() {
+            new.push(elem.clone())
+        }
+        new
+    }
+}
+
 // We need to manually implement PartialEq because MaybeUninit isn't PartialEq
 impl<T: 'static + PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuffer<T, CAP> {
     fn eq(&self, other: &Self) -> bool {
@@ -58,8 +68,7 @@ impl<T: 'static + PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuf
 impl<T: 'static + PartialEq, const CAP: usize> Eq for ConstGenericRingBuffer<T, CAP> {}
 
 impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
-    /// Creates a new RingBuffer. The method is here for compatibility with the alloc version of
-    /// RingBuffer. This method simply creates a default ringbuffer. The capacity is given as a
+    /// Creates a new RingBuffer. This method simply creates a default ringbuffer. The capacity is given as a
     /// type parameter.
     #[inline]
     pub fn new() -> Self {
@@ -95,7 +104,7 @@ impl<T: 'static, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, C
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
-            let index = crate::mask(self, self.readptr);
+            let index = crate::mask(CAP, self.readptr);
             unsafe {
                 // make sure we drop whatever is being overwritten
                 // SAFETY: the buffer is full, so this must be inited
@@ -105,7 +114,7 @@ impl<T: 'static, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, C
             }
             self.readptr += 1;
         }
-        let index = crate::mask(self, self.writeptr);
+        let index = crate::mask(CAP, self.writeptr);
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
     }
@@ -113,7 +122,7 @@ impl<T: 'static, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, C
     #[inline]
     fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
-            let index = crate::mask(self, self.readptr);
+            let index = crate::mask(CAP, self.readptr);
             self.readptr += 1;
             let res = unsafe {
                 // SAFETY: index has been masked
