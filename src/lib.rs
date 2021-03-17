@@ -239,6 +239,30 @@ mod tests {
         test_iter(GenericRingBuffer::<i32, typenum::U8>::new());
     }
 
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn run_test_iter_with_lifetimes() {
+        fn test_iter<'a>(string: &'a str, mut b: impl RingBuffer<&'a str>) {
+            b.push(&string[0..1]);
+            b.push(&string[1..2]);
+            b.push(&string[2..3]);
+
+            let mut iter = b.iter();
+            assert_eq!(&&string[0..1], iter.next().unwrap());
+            assert_eq!(&&string[1..2], iter.next().unwrap());
+            assert_eq!(&&string[2..3], iter.next().unwrap());
+        }
+
+        extern crate alloc;
+        use alloc::string::ToString as _;
+        let string = "abc".to_string();
+
+        test_iter(&string, AllocRingBuffer::with_capacity(8));
+        #[cfg(feature = "const_generics")]
+        test_iter(&string, ConstGenericRingBuffer::<&str, 8>::new());
+        test_iter(&string, GenericRingBuffer::<&str, typenum::U8>::new());
+    }
+
     #[test]
     fn run_test_double_iter() {
         fn test_double_iter(mut b: impl RingBuffer<i32>) {
