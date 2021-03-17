@@ -39,7 +39,7 @@ pub struct ConstGenericRingBuffer<T, const CAP: usize> {
     writeptr: usize,
 }
 
-impl<T: 'static + Clone, const CAP: usize> Clone for ConstGenericRingBuffer<T, CAP> {
+impl<T: Clone, const CAP: usize> Clone for ConstGenericRingBuffer<T, CAP> {
     fn clone(&self) -> Self {
         let mut new = ConstGenericRingBuffer::<T, CAP>::new();
         for elem in self.iter() {
@@ -50,7 +50,7 @@ impl<T: 'static + Clone, const CAP: usize> Clone for ConstGenericRingBuffer<T, C
 }
 
 // We need to manually implement PartialEq because MaybeUninit isn't PartialEq
-impl<T: 'static + PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuffer<T, CAP> {
+impl<T: PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuffer<T, CAP> {
     fn eq(&self, other: &Self) -> bool {
         if self.len() != other.len() {
             false
@@ -65,7 +65,7 @@ impl<T: 'static + PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuf
     }
 }
 
-impl<T: 'static + PartialEq, const CAP: usize> Eq for ConstGenericRingBuffer<T, CAP> {}
+impl<T: PartialEq, const CAP: usize> Eq for ConstGenericRingBuffer<T, CAP> {}
 
 impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     /// Creates a new RingBuffer. This method simply creates a default ringbuffer. The capacity is given as a
@@ -94,7 +94,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     }
 }
 
-impl<T: 'static, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
+impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
     #[cfg(not(tarpaulin_include))]
     fn capacity(&self) -> usize {
@@ -161,7 +161,7 @@ impl<T, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     }
 }
 
-impl<RB: 'static, const CAP: usize> FromIterator<RB> for ConstGenericRingBuffer<RB, CAP> {
+impl<RB, const CAP: usize> FromIterator<RB> for ConstGenericRingBuffer<RB, CAP> {
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
@@ -172,7 +172,7 @@ impl<RB: 'static, const CAP: usize> FromIterator<RB> for ConstGenericRingBuffer<
     }
 }
 
-impl<T: 'static, const CAP: usize> Index<isize> for ConstGenericRingBuffer<T, CAP> {
+impl<T, const CAP: usize> Index<isize> for ConstGenericRingBuffer<T, CAP> {
     type Output = T;
 
     fn index(&self, index: isize) -> &Self::Output {
@@ -180,7 +180,7 @@ impl<T: 'static, const CAP: usize> Index<isize> for ConstGenericRingBuffer<T, CA
     }
 }
 
-impl<T: 'static, const CAP: usize> IndexMut<isize> for ConstGenericRingBuffer<T, CAP> {
+impl<T, const CAP: usize> IndexMut<isize> for ConstGenericRingBuffer<T, CAP> {
     fn index_mut(&mut self, index: isize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }

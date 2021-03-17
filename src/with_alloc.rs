@@ -45,7 +45,7 @@ pub struct AllocRingBuffer<T> {
 // must be a power of 2
 pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
-impl<T: 'static> RingBuffer<T> for AllocRingBuffer<T> {
+impl<T> RingBuffer<T> for AllocRingBuffer<T> {
     #[inline]
     fn capacity(&self) -> usize {
         self.capacity
@@ -142,7 +142,7 @@ impl<T> AllocRingBuffer<T> {
     }
 }
 
-impl<RB: 'static> FromIterator<RB> for AllocRingBuffer<RB> {
+impl<RB> FromIterator<RB> for AllocRingBuffer<RB> {
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
@@ -166,7 +166,7 @@ impl<T> Default for AllocRingBuffer<T> {
     }
 }
 
-impl<T: 'static> Index<isize> for AllocRingBuffer<T> {
+impl<T> Index<isize> for AllocRingBuffer<T> {
     type Output = T;
 
     fn index(&self, index: isize) -> &Self::Output {
@@ -174,7 +174,7 @@ impl<T: 'static> Index<isize> for AllocRingBuffer<T> {
     }
 }
 
-impl<T: 'static> IndexMut<isize> for AllocRingBuffer<T> {
+impl<T> IndexMut<isize> for AllocRingBuffer<T> {
     fn index_mut(&mut self, index: isize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }
