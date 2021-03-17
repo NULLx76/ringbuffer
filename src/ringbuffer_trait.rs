@@ -6,12 +6,16 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::iter::FromIterator;
 
+
+
 /// RingBuffer is a trait defining the standard interface for all RingBuffer
 /// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`GenericRingBuffer`](crate::GenericRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
 ///
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing RingBuffer.
-pub trait RingBuffer<T>: Index<isize, Output = T> + IndexMut<isize> + FromIterator<T> {
+///
+/// Most actual functionality of ringbuffers is contained in the extension traits [`RingBufferExt`], [`RingBufferRead`] and [`RingBufferWrite`]
+pub trait RingBuffer<T> {
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.
     /// This is because when the length is reached, new items are appended at the start.
@@ -30,11 +34,46 @@ pub trait RingBuffer<T>: Index<isize, Output = T> + IndexMut<isize> + FromIterat
         self.len() == self.capacity()
     }
 
-    /// Empties the buffer entirely. Sets the length to 0 but keeps the capacity allocated.
-    fn clear(&mut self);
-
     /// Returns the capacity of the buffer.
     fn capacity(&self) -> usize;
+}
+
+/// Defines behaviour for ringbuffers which allow for writing to the end of them (as a queue).
+/// For arbitrary buffer access however, [`RingBufferExt`] is necessary.
+pub trait RingBufferWrite<T>: RingBuffer<T> {
+    /// Pushes a value onto the buffer. Cycles around if capacity is reached.
+    fn push(&mut self, value: T);
+}
+
+/// Defines behaviour for ringbuffers which allow for reading from the start of them (as a queue).
+/// For arbitrary buffer access however, [`RingBufferExt`] is necessary.
+pub trait RingBufferRead<T>: RingBuffer<T> {
+    /// dequeues the top item off the ringbuffer. Returns a reference to the item. This means
+    /// that lifetimes will be problematic because as long as this reference exists,
+    /// you can not push to the queue. To solve this, use the dequeue method. This requires
+    /// the item to be clone. Easily moving out of the ringbuffer is sadly impossible.
+    ///
+    /// Returns None when the ringbuffer is empty.
+    fn dequeue_ref(&mut self) -> Option<&T>;
+
+    /// dequeues the top item off the ringbuffer and returns a cloned version. See the [`dequeue_ref`](Self::dequeue_ref) docs
+    fn dequeue(&mut self) -> Option<T>
+        where
+            T: Clone,
+    {
+        self.dequeue_ref().cloned()
+    }
+
+    /// dequeues the top item off the queue, but does not return it. Instead it is dropped.
+    /// If the ringbuffer is empty, this function is a nop.
+    fn skip(&mut self);
+}
+
+/// Defines behaviour for ringbuffers which allow them to be used as a general purpose buffer.
+/// With this trait, arbitrary access of elements in the buffer is possible.
+pub trait RingBufferExt<T>: RingBuffer<T> + RingBufferRead<T> + RingBufferWrite<T> + Index<isize, Output = T> + IndexMut<isize> + FromIterator<T> {
+    /// Empties the buffer entirely. Sets the length to 0 but keeps the capacity allocated.
+    fn clear(&mut self);
 
     /// Gets a value relative to the current index. 0 is the next index to be written to with push.
     /// -1 and down are the last elements pushed and 0 and up are the items that were pushed the longest ago.
@@ -49,9 +88,6 @@ pub trait RingBuffer<T>: Index<isize, Output = T> + IndexMut<isize> + FromIterat
 
     /// Gets a value mutably relative to the start of the array (rarely useful, usually you want [`Self::get_mut`])
     fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T>;
-
-    /// Pushes a value onto the buffer. Cycles around if capacity is reached.
-    fn push(&mut self, value: T);
 
     /// Returns the value at the current index.
     /// This is the value that will be overwritten by the next push and also the value pushed
@@ -92,13 +128,6 @@ pub trait RingBuffer<T>: Index<isize, Output = T> + IndexMut<isize> + FromIterat
         self.get_mut(-1)
     }
 
-    /// Creates an iterator over the buffer starting from the item pushed the longest ago,
-    /// and ending at the element most recently pushed.
-    #[inline]
-    fn iter(&self) -> RingBufferIterator<T, Self> {
-        RingBufferIterator::new(self)
-    }
-
     /// Creates a mutable iterator over the buffer starting from the item pushed the longest ago,
     /// and ending at the element most recently pushed.
     #[inline]
@@ -106,57 +135,44 @@ pub trait RingBuffer<T>: Index<isize, Output = T> + IndexMut<isize> + FromIterat
         RingBufferMutIterator::new(self)
     }
 
+    /// Creates an iterator over the buffer starting from the item pushed the longest ago,
+    /// and ending at the element most recently pushed.
+    #[inline]
+    fn iter(&self) -> RingBufferIterator<T, Self> {
+        RingBufferIterator::new(self)
+    }
+
     /// Converts the buffer to a vector. This Copies all elements in the ringbuffer.
     #[cfg(feature = "alloc")]
     fn to_vec(&self) -> Vec<T>
-    where
-        T: Clone,
+        where
+            T: Clone,
     {
         self.iter().cloned().collect()
     }
 
     /// Returns true if elem is in the ringbuffer.
     fn contains(&self, elem: &T) -> bool
-    where
-        T: PartialEq,
+        where
+            T: PartialEq,
     {
         self.iter().any(|i| i == elem)
     }
-
-    /// dequeues the top item off the ringbuffer. Returns a reference to the item. This means
-    /// that lifetimes will be problematic because as long as this reference exists,
-    /// you can not push to the queue. To solve this, use the dequeue method. This requires
-    /// the item to be clone. Easily moving out of the ringbuffer is sadly impossible.
-    ///
-    /// Returns None when the ringbuffer is empty.
-    fn dequeue_ref(&mut self) -> Option<&T>;
-
-    /// dequeues the top item off the ringbuffer and returns a cloned version. See the [`dequeue_ref`](Self::dequeue_ref) docs
-    fn dequeue(&mut self) -> Option<T>
-    where
-        T: Clone,
-    {
-        self.dequeue_ref().cloned()
-    }
-
-    /// dequeues the top item off the queue, but does not return it. Instead it is dropped.
-    /// If the ringbuffer is empty, this function is a nop.
-    fn skip(&mut self);
 }
 
 mod iter {
-    use crate::RingBuffer;
+    use crate::RingBufferExt;
     use core::marker::PhantomData;
 
     /// RingBufferIterator holds a reference to a RingBuffer and iterates over it. `index` is the
     /// current iterator position.
-    pub struct RingBufferIterator<'rb, T, RB: RingBuffer<T>> {
+    pub struct RingBufferIterator<'rb, T, RB: RingBufferExt<T>> {
         obj: &'rb RB,
         index: usize,
         phantom: PhantomData<T>,
     }
 
-    impl<'rb, T, RB: RingBuffer<T>> RingBufferIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBufferExt<T>> RingBufferIterator<'rb, T, RB> {
         #[inline]
         pub fn new(obj: &'rb RB) -> Self {
             Self {
@@ -167,7 +183,7 @@ mod iter {
         }
     }
 
-    impl<'rb, T: 'rb, RB: RingBuffer<T>> Iterator for RingBufferIterator<'rb, T, RB> {
+    impl<'rb, T: 'rb, RB: RingBufferExt<T>> Iterator for RingBufferIterator<'rb, T, RB> {
         type Item = &'rb T;
 
         #[inline]
@@ -187,13 +203,13 @@ mod iter {
     ///
     /// WARNING: NEVER ACCESS THE `obj` FIELD. it's private on purpose, and can technically be accessed
     /// in the same module. However, this breaks the safety of `next()`
-    pub struct RingBufferMutIterator<'rb, T, RB: RingBuffer<T>> {
+    pub struct RingBufferMutIterator<'rb, T, RB: RingBufferExt<T>> {
         obj: &'rb mut RB,
         index: usize,
         phantom: PhantomData<T>,
     }
 
-    impl<'rb, T, RB: RingBuffer<T>> RingBufferMutIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBufferExt<T>> RingBufferMutIterator<'rb, T, RB> {
         #[inline]
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {
@@ -218,9 +234,34 @@ mod iter {
 
 pub use iter::{RingBufferIterator, RingBufferMutIterator};
 
+/// Implement various functions on implementors of RingBufferRead.
+/// This is to avoid duplicate code.
+macro_rules! impl_ringbuffer_read {
+    ($readptr: ident) => {
+        #[inline]
+        fn skip(&mut self) {
+            if !self.is_empty() {
+                self.$readptr += 1;
+            }
+        }
+    }
+}
+
+
 /// Implement various functions on implementors of RingBuffer.
 /// This is to avoid duplicate code.
 macro_rules! impl_ringbuffer {
+    ($readptr: ident, $writeptr: ident) => {
+        #[inline]
+        fn len(&self) -> usize {
+            self.$writeptr - self.$readptr
+        }
+    }
+}
+
+/// Implement various functions on implementors of RingBufferExt.
+/// This is to avoid duplicate code.
+macro_rules! impl_ringbuffer_ext {
     ($get_unchecked: ident, $get_unchecked_mut: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
         #[inline]
         fn get(&self, index: isize) -> Option<&T> {
@@ -271,21 +312,9 @@ macro_rules! impl_ringbuffer {
         }
 
         #[inline]
-        fn len(&self) -> usize {
-            self.$writeptr - self.$readptr
-        }
-
-        #[inline]
         fn clear(&mut self) {
             self.$readptr = 0;
             self.$writeptr = 0;
-        }
-
-        #[inline]
-        fn skip(&mut self) {
-            if !self.is_empty() {
-                self.readptr += 1;
-            }
         }
     };
 }
