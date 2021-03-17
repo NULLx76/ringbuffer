@@ -65,7 +65,7 @@
 pub(crate) mod ringbuffer_trait;
 use core::usize;
 
-pub use ringbuffer_trait::{RingBuffer, RingBufferWrite, RingBufferRead, RingBufferExt};
+pub use ringbuffer_trait::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 
 #[cfg(feature = "alloc")]
 mod with_alloc;
@@ -81,9 +81,6 @@ pub use with_const_generics::ConstGenericRingBuffer;
 
 #[cfg(feature = "generic-array")]
 mod with_generic_array;
-
-#[cfg(feature = "asynchronous")]
-mod with_async;
 
 #[cfg(feature = "generic-array")]
 pub use generic_array::{typenum, ArrayLength};
@@ -103,7 +100,9 @@ mod tests {
 
     #[cfg(feature = "const_generics")]
     use crate::ConstGenericRingBuffer;
-    use crate::{typenum, AllocRingBuffer, GenericRingBuffer, RingBuffer, RingBufferWrite, RingBufferExt};
+    use crate::{
+        typenum, AllocRingBuffer, GenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite,
+    };
 
     #[test]
     fn run_test_default() {

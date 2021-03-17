@@ -149,7 +149,9 @@ impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> IndexMut<isize>
     }
 }
 
-impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBufferExt<T> for GenericRingBuffer<T, Cap> {
+impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBufferExt<T>
+    for GenericRingBuffer<T, Cap>
+{
     impl_ringbuffer_ext!(
         get_unchecked,
         get_unchecked_mut,
@@ -159,7 +161,9 @@ impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBufferExt<T> for Gene
     );
 }
 
-impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBufferRead<T> for GenericRingBuffer<T, Cap> {
+impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBufferRead<T>
+    for GenericRingBuffer<T, Cap>
+{
     #[inline]
     fn dequeue_ref(&mut self) -> Option<&T> {
         if !self.is_empty() {
@@ -178,7 +182,9 @@ impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBufferRead<T> for Gen
     impl_ringbuffer_read!(readptr);
 }
 
-impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBufferWrite<T> for GenericRingBuffer<T, Cap> {
+impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBufferWrite<T>
+    for GenericRingBuffer<T, Cap>
+{
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
@@ -205,11 +211,7 @@ impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBuffer<T> for Generic
         self.cap
     }
 
-
-    impl_ringbuffer!(
-        readptr,
-        writeptr
-    );
+    impl_ringbuffer!(readptr, writeptr);
 }
 
 #[cfg(test)]

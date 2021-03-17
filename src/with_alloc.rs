@@ -1,6 +1,6 @@
 use core::ops::{Index, IndexMut};
 
-use crate::ringbuffer_trait::{RingBuffer, RingBufferWrite, RingBufferRead, RingBufferExt};
+use crate::ringbuffer_trait::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 
 extern crate alloc;
 // We need vecs so depend on alloc
@@ -69,7 +69,6 @@ impl<T> RingBufferRead<T> for AllocRingBuffer<T> {
         }
     }
 
-
     impl_ringbuffer_read!(readptr);
 }
 
@@ -98,10 +97,7 @@ impl<T> RingBuffer<T> for AllocRingBuffer<T> {
         self.capacity
     }
 
-    impl_ringbuffer!(
-        readptr,
-        writeptr
-    );
+    impl_ringbuffer!(readptr, writeptr);
 }
 
 impl<T> AllocRingBuffer<T> {

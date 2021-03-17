@@ -6,8 +6,6 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::iter::FromIterator;
 
-
-
 /// RingBuffer is a trait defining the standard interface for all RingBuffer
 /// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`GenericRingBuffer`](crate::GenericRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
 ///
@@ -58,8 +56,8 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
 
     /// dequeues the top item off the ringbuffer and returns a cloned version. See the [`dequeue_ref`](Self::dequeue_ref) docs
     fn dequeue(&mut self) -> Option<T>
-        where
-            T: Clone,
+    where
+        T: Clone,
     {
         self.dequeue_ref().cloned()
     }
@@ -91,14 +89,23 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
     ///
     /// ```
     fn drain(&mut self) -> RingBufferDrainingIterator<T, Self>
-        where T: Clone {
+    where
+        T: Clone,
+    {
         RingBufferDrainingIterator::new(self)
     }
 }
 
 /// Defines behaviour for ringbuffers which allow them to be used as a general purpose buffer.
 /// With this trait, arbitrary access of elements in the buffer is possible.
-pub trait RingBufferExt<T>: RingBuffer<T> + RingBufferRead<T> + RingBufferWrite<T> + Index<isize, Output = T> + IndexMut<isize> + FromIterator<T> {
+pub trait RingBufferExt<T>:
+    RingBuffer<T>
+    + RingBufferRead<T>
+    + RingBufferWrite<T>
+    + Index<isize, Output = T>
+    + IndexMut<isize>
+    + FromIterator<T>
+{
     /// Empties the buffer entirely. Sets the length to 0 but keeps the capacity allocated.
     fn clear(&mut self);
 
@@ -172,16 +179,16 @@ pub trait RingBufferExt<T>: RingBuffer<T> + RingBufferRead<T> + RingBufferWrite<
     /// Converts the buffer to a vector. This Copies all elements in the ringbuffer.
     #[cfg(feature = "alloc")]
     fn to_vec(&self) -> Vec<T>
-        where
-            T: Clone,
+    where
+        T: Clone,
     {
         self.iter().cloned().collect()
     }
 
     /// Returns true if elem is in the ringbuffer.
     fn contains(&self, elem: &T) -> bool
-        where
-            T: PartialEq,
+    where
+        T: PartialEq,
     {
         self.iter().any(|i| i == elem)
     }
@@ -284,7 +291,7 @@ mod iter {
     }
 }
 
-pub use iter::{RingBufferIterator, RingBufferMutIterator, RingBufferDrainingIterator};
+pub use iter::{RingBufferDrainingIterator, RingBufferIterator, RingBufferMutIterator};
 
 /// Implement various functions on implementors of RingBufferRead.
 /// This is to avoid duplicate code.
@@ -296,9 +303,8 @@ macro_rules! impl_ringbuffer_read {
                 self.$readptr += 1;
             }
         }
-    }
+    };
 }
-
 
 /// Implement various functions on implementors of RingBuffer.
 /// This is to avoid duplicate code.
@@ -308,7 +314,7 @@ macro_rules! impl_ringbuffer {
         fn len(&self) -> usize {
             self.$writeptr - self.$readptr
         }
-    }
+    };
 }
 
 /// Implement various functions on implementors of RingBufferExt.
