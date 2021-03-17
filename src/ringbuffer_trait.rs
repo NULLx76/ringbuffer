@@ -11,9 +11,7 @@ use core::iter::FromIterator;
 ///
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing RingBuffer.
-pub trait RingBuffer<T: 'static>:
-    Index<isize, Output = T> + IndexMut<isize> + FromIterator<T>
-{
+pub trait RingBuffer<T>: Index<isize, Output = T> + IndexMut<isize> + FromIterator<T> {
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.
     /// This is because when the length is reached, new items are appended at the start.
@@ -152,13 +150,13 @@ mod iter {
 
     /// RingBufferIterator holds a reference to a RingBuffer and iterates over it. `index` is the
     /// current iterator position.
-    pub struct RingBufferIterator<'rb, T: 'static, RB: RingBuffer<T>> {
+    pub struct RingBufferIterator<'rb, T, RB: RingBuffer<T>> {
         obj: &'rb RB,
         index: usize,
         phantom: PhantomData<T>,
     }
 
-    impl<'rb, T: 'static, RB: RingBuffer<T>> RingBufferIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBuffer<T>> RingBufferIterator<'rb, T, RB> {
         #[inline]
         pub fn new(obj: &'rb RB) -> Self {
             Self {
@@ -169,7 +167,7 @@ mod iter {
         }
     }
 
-    impl<'rb, T: 'static, RB: RingBuffer<T>> Iterator for RingBufferIterator<'rb, T, RB> {
+    impl<'rb, T: 'rb, RB: RingBuffer<T>> Iterator for RingBufferIterator<'rb, T, RB> {
         type Item = &'rb T;
 
         #[inline]
@@ -189,13 +187,13 @@ mod iter {
     ///
     /// WARNING: NEVER ACCESS THE `obj` FIELD. it's private on purpose, and can technically be accessed
     /// in the same module. However, this breaks the safety of `next()`
-    pub struct RingBufferMutIterator<'rb, T: 'static, RB: RingBuffer<T>> {
+    pub struct RingBufferMutIterator<'rb, T, RB: RingBuffer<T>> {
         obj: &'rb mut RB,
         index: usize,
         phantom: PhantomData<T>,
     }
 
-    impl<'rb, T: 'static, RB: RingBuffer<T>> RingBufferMutIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBuffer<T>> RingBufferMutIterator<'rb, T, RB> {
         #[inline]
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {

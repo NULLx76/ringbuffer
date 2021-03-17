@@ -45,9 +45,7 @@ pub struct GenericRingBuffer<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> {
     writeptr: usize,
 }
 
-impl<T: 'static + Clone, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Clone
-    for GenericRingBuffer<T, Cap>
-{
+impl<T: Clone, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Clone for GenericRingBuffer<T, Cap> {
     fn clone(&self) -> Self {
         let mut new = GenericRingBuffer::<T, Cap>::new();
         for elem in self.iter() {
@@ -58,7 +56,7 @@ impl<T: 'static + Clone, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Clone
 }
 
 // We need to manually implement PartialEq because MaybeUninit isn't PartialEq
-impl<T: 'static + PartialEq, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> PartialEq
+impl<T: PartialEq, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> PartialEq
     for GenericRingBuffer<T, Cap>
 {
     fn eq(&self, other: &Self) -> bool {
@@ -75,10 +73,7 @@ impl<T: 'static + PartialEq, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Part
     }
 }
 
-impl<T: 'static + PartialEq, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Eq
-    for GenericRingBuffer<T, Cap>
-{
-}
+impl<T: PartialEq, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Eq for GenericRingBuffer<T, Cap> {}
 
 impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> GenericRingBuffer<T, Cap> {
     /// Creates a new RingBuffer. The method is here for compatibility with the alloc version of
@@ -125,7 +120,7 @@ impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Default for GenericRingBu
     }
 }
 
-impl<RB: 'static, Cap: PowerOfTwo + ArrayLength<MaybeUninit<RB>>> FromIterator<RB>
+impl<RB, Cap: PowerOfTwo + ArrayLength<MaybeUninit<RB>>> FromIterator<RB>
     for GenericRingBuffer<RB, Cap>
 {
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
@@ -138,9 +133,7 @@ impl<RB: 'static, Cap: PowerOfTwo + ArrayLength<MaybeUninit<RB>>> FromIterator<R
     }
 }
 
-impl<T: 'static, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Index<isize>
-    for GenericRingBuffer<T, Cap>
-{
+impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Index<isize> for GenericRingBuffer<T, Cap> {
     type Output = T;
 
     fn index(&self, index: isize) -> &Self::Output {
@@ -148,7 +141,7 @@ impl<T: 'static, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> Index<isize>
     }
 }
 
-impl<T: 'static, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> IndexMut<isize>
+impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> IndexMut<isize>
     for GenericRingBuffer<T, Cap>
 {
     fn index_mut(&mut self, index: isize) -> &mut Self::Output {
@@ -156,9 +149,7 @@ impl<T: 'static, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> IndexMut<isize>
     }
 }
 
-impl<T: 'static, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBuffer<T>
-    for GenericRingBuffer<T, Cap>
-{
+impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRingBuffer<T, Cap> {
     #[inline(always)]
     #[cfg(not(tarpaulin_include))]
     fn capacity(&self) -> usize {
