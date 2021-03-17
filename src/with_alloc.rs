@@ -1,6 +1,6 @@
 use core::ops::{Index, IndexMut};
 
-use crate::ringbuffer_trait::RingBuffer;
+use crate::ringbuffer_trait::{RingBuffer, RingBufferWrite, RingBufferRead, RingBufferExt};
 
 extern crate alloc;
 // We need vecs so depend on alloc
@@ -13,7 +13,7 @@ use core::iter::FromIterator;
 ///
 /// # Example
 /// ```
-/// use ringbuffer::{AllocRingBuffer, RingBuffer};
+/// use ringbuffer::{AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite};
 ///
 /// let mut buffer = AllocRingBuffer::with_capacity(2);
 ///
@@ -45,12 +45,35 @@ pub struct AllocRingBuffer<T> {
 // must be a power of 2
 pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
-impl<T> RingBuffer<T> for AllocRingBuffer<T> {
+impl<T> RingBufferExt<T> for AllocRingBuffer<T> {
+    impl_ringbuffer_ext!(
+        get_unchecked,
+        get_unchecked_mut,
+        readptr,
+        writeptr,
+        crate::mask
+    );
+}
+
+impl<T> RingBufferRead<T> for AllocRingBuffer<T> {
     #[inline]
-    fn capacity(&self) -> usize {
-        self.capacity
+    fn dequeue_ref(&mut self) -> Option<&T> {
+        if !self.is_empty() {
+            let index = crate::mask(self.capacity, self.readptr);
+            let res = &self.buf[index];
+            self.readptr += 1;
+
+            Some(res)
+        } else {
+            None
+        }
     }
 
+
+    impl_ringbuffer_read!(readptr);
+}
+
+impl<T> RingBufferWrite<T> for AllocRingBuffer<T> {
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
@@ -67,26 +90,17 @@ impl<T> RingBuffer<T> for AllocRingBuffer<T> {
 
         self.writeptr += 1;
     }
+}
 
+impl<T> RingBuffer<T> for AllocRingBuffer<T> {
     #[inline]
-    fn dequeue_ref(&mut self) -> Option<&T> {
-        if !self.is_empty() {
-            let index = crate::mask(self.capacity, self.readptr);
-            let res = &self.buf[index];
-            self.readptr += 1;
-
-            Some(res)
-        } else {
-            None
-        }
+    fn capacity(&self) -> usize {
+        self.capacity
     }
 
     impl_ringbuffer!(
-        get_unchecked,
-        get_unchecked_mut,
         readptr,
-        writeptr,
-        crate::mask
+        writeptr
     );
 }
 
@@ -183,7 +197,7 @@ impl<T> IndexMut<isize> for AllocRingBuffer<T> {
 #[cfg(test)]
 mod tests {
     use super::alloc::vec::Vec;
-    use crate::{AllocRingBuffer, RingBuffer, RINGBUFFER_DEFAULT_CAPACITY};
+    use crate::{AllocRingBuffer, RingBuffer, RingBufferExt, RINGBUFFER_DEFAULT_CAPACITY};
 
     #[test]
     fn test_default() {

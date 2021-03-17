@@ -1,6 +1,6 @@
 use core::ops::{Index, IndexMut};
 
-use crate::RingBuffer;
+use crate::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 use core::iter::FromIterator;
 use core::mem::MaybeUninit;
 use generic_array::{sequence::GenericSequence, typenum::PowerOfTwo, ArrayLength, GenericArray};
@@ -16,7 +16,7 @@ use generic_array::{sequence::GenericSequence, typenum::PowerOfTwo, ArrayLength,
 ///
 /// # Example
 /// ```
-/// use ringbuffer::{RingBuffer, GenericRingBuffer};
+/// use ringbuffer::{RingBufferExt, RingBufferWrite, RingBuffer, GenericRingBuffer};
 /// use ringbuffer::typenum; // for numbers as types in stable rust
 ///
 /// let mut buffer = GenericRingBuffer::<_, typenum::U2>::new();
@@ -149,13 +149,36 @@ impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> IndexMut<isize>
     }
 }
 
-impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRingBuffer<T, Cap> {
-    #[inline(always)]
-    #[cfg(not(tarpaulin_include))]
-    fn capacity(&self) -> usize {
-        self.cap
+impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBufferExt<T> for GenericRingBuffer<T, Cap> {
+    impl_ringbuffer_ext!(
+        get_unchecked,
+        get_unchecked_mut,
+        readptr,
+        writeptr,
+        crate::mask
+    );
+}
+
+impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBufferRead<T> for GenericRingBuffer<T, Cap> {
+    #[inline]
+    fn dequeue_ref(&mut self) -> Option<&T> {
+        if !self.is_empty() {
+            let index = crate::mask(self.cap, self.readptr);
+            self.readptr += 1;
+            let res = unsafe {
+                // SAFETY: index has been masked
+                self.get_unchecked(index)
+            };
+            Some(res)
+        } else {
+            None
+        }
     }
 
+    impl_ringbuffer_read!(readptr);
+}
+
+impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBufferWrite<T> for GenericRingBuffer<T, Cap> {
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
@@ -173,28 +196,19 @@ impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBuffer<T> for Generic
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
     }
+}
 
-    #[inline]
-    fn dequeue_ref(&mut self) -> Option<&T> {
-        if !self.is_empty() {
-            let index = crate::mask(self.cap, self.readptr);
-            self.readptr += 1;
-            let res = unsafe {
-                // SAFETY: index has been masked
-                self.get_unchecked(index)
-            };
-            Some(res)
-        } else {
-            None
-        }
+impl<T, Cap: PowerOfTwo + ArrayLength<MaybeUninit<T>>> RingBuffer<T> for GenericRingBuffer<T, Cap> {
+    #[inline(always)]
+    #[cfg(not(tarpaulin_include))]
+    fn capacity(&self) -> usize {
+        self.cap
     }
 
+
     impl_ringbuffer!(
-        get_unchecked,
-        get_unchecked_mut,
         readptr,
-        writeptr,
-        crate::mask
+        writeptr
     );
 }
 

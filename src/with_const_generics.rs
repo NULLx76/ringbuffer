@@ -1,7 +1,7 @@
-use crate::RingBuffer;
 use core::iter::FromIterator;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
+use crate::{RingBufferRead, RingBufferExt, RingBufferWrite, RingBuffer};
 
 /// The ConstGenericRingBuffer struct is a RingBuffer implementation which does not require `alloc`.
 /// However, it does require the still unstable rust feature `const-generics`. Therefore this struct
@@ -12,7 +12,7 @@ use core::ops::{Index, IndexMut};
 ///
 /// # Example
 /// ```
-/// use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
+/// use ringbuffer::{ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite};
 ///
 /// let mut buffer = ConstGenericRingBuffer::<_, 2>::new();
 ///
@@ -94,13 +94,29 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     }
 }
 
-impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
+impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
-    #[cfg(not(tarpaulin_include))]
-    fn capacity(&self) -> usize {
-        CAP
+    fn dequeue_ref(&mut self) -> Option<&T> {
+        if !self.is_empty() {
+            let index = crate::mask(CAP, self.readptr);
+            self.readptr += 1;
+            let res = unsafe {
+                // SAFETY: index has been masked
+                self.get_unchecked(index)
+            };
+
+            Some(res)
+        } else {
+            None
+        }
     }
 
+    impl_ringbuffer_read!(
+        readptr
+    );
+}
+
+impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
@@ -118,29 +134,30 @@ impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
     }
+}
 
-    #[inline]
-    fn dequeue_ref(&mut self) -> Option<&T> {
-        if !self.is_empty() {
-            let index = crate::mask(CAP, self.readptr);
-            self.readptr += 1;
-            let res = unsafe {
-                // SAFETY: index has been masked
-                self.get_unchecked(index)
-            };
-
-            Some(res)
-        } else {
-            None
-        }
-    }
-
-    impl_ringbuffer!(
+impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
+    impl_ringbuffer_ext!(
         get_unchecked,
         get_unchecked_mut,
         readptr,
         writeptr,
         crate::mask
+    );
+}
+
+
+impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
+    #[inline]
+    #[cfg(not(tarpaulin_include))]
+    fn capacity(&self) -> usize {
+        CAP
+    }
+
+
+    impl_ringbuffer!(
+        readptr,
+        writeptr
     );
 }
 
