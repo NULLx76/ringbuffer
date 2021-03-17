@@ -1,7 +1,7 @@
+use crate::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 use core::iter::FromIterator;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
-use crate::{RingBufferRead, RingBufferExt, RingBufferWrite, RingBuffer};
 
 /// The ConstGenericRingBuffer struct is a RingBuffer implementation which does not require `alloc`.
 /// However, it does require the still unstable rust feature `const-generics`. Therefore this struct
@@ -111,9 +111,7 @@ impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
         }
     }
 
-    impl_ringbuffer_read!(
-        readptr
-    );
+    impl_ringbuffer_read!(readptr);
 }
 
 impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> {
@@ -146,7 +144,6 @@ impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
     );
 }
 
-
 impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
     #[cfg(not(tarpaulin_include))]
@@ -154,11 +151,7 @@ impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
         CAP
     }
 
-
-    impl_ringbuffer!(
-        readptr,
-        writeptr
-    );
+    impl_ringbuffer!(readptr, writeptr);
 }
 
 impl<T, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
