@@ -15,7 +15,7 @@ use core::iter::FromIterator;
 /// define a generic function over types implementing RingBuffer.
 ///
 /// Most actual functionality of ringbuffers is contained in the extension traits [`RingBufferExt`], [`RingBufferRead`] and [`RingBufferWrite`]
-pub trait RingBuffer<T> {
+pub trait RingBuffer<T>: Sized {
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.
     /// This is because when the length is reached, new items are appended at the start.
@@ -67,6 +67,33 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
     /// dequeues the top item off the queue, but does not return it. Instead it is dropped.
     /// If the ringbuffer is empty, this function is a nop.
     fn skip(&mut self);
+
+    /// Returns an iterator over the elements in the ringbuffer,
+    /// dequeueing elements as they are iterated over.
+    ///
+    /// ```
+    /// use ringbuffer::{AllocRingBuffer, RingBufferWrite, RingBufferRead, RingBuffer};
+    ///
+    /// let mut rb = AllocRingBuffer::with_capacity(16);
+    /// for i in 0..8 {
+    ///     rb.push(i);
+    /// }
+    ///
+    /// assert_eq!(rb.len(), 8);
+    ///
+    /// for i in rb.drain() {
+    ///     // prints the numbers 0 through 8
+    ///     println!("{}", i);
+    /// }
+    ///
+    /// // No elements remain
+    /// assert_eq!(rb.len(), 0);
+    ///
+    /// ```
+    fn drain(&mut self) -> RingBufferDrainingIterator<T, Self>
+        where T: Clone {
+        RingBufferDrainingIterator::new(self)
+    }
 }
 
 /// Defines behaviour for ringbuffers which allow them to be used as a general purpose buffer.
@@ -161,7 +188,7 @@ pub trait RingBufferExt<T>: RingBuffer<T> + RingBufferRead<T> + RingBufferWrite<
 }
 
 mod iter {
-    use crate::RingBufferExt;
+    use crate::{RingBufferExt, RingBufferRead};
     use core::marker::PhantomData;
 
     /// RingBufferIterator holds a reference to a RingBuffer and iterates over it. `index` is the
@@ -230,9 +257,34 @@ mod iter {
             }
         }
     }
+
+    /// RingBufferMutIterator holds a reference to a RingBuffer and iterates over it. `index` is the
+    /// current iterator position.
+    pub struct RingBufferDrainingIterator<'rb, T: Clone, RB: RingBufferRead<T>> {
+        obj: &'rb mut RB,
+        phantom: PhantomData<T>,
+    }
+
+    impl<'rb, T: Clone, RB: RingBufferRead<T>> RingBufferDrainingIterator<'rb, T, RB> {
+        #[inline]
+        pub fn new(obj: &'rb mut RB) -> Self {
+            Self {
+                obj,
+                phantom: Default::default(),
+            }
+        }
+    }
+
+    impl<'rb, T: Clone, RB: RingBufferRead<T>> Iterator for RingBufferDrainingIterator<'rb, T, RB> {
+        type Item = T;
+
+        fn next(&mut self) -> Option<T> {
+            self.obj.dequeue()
+        }
+    }
 }
 
-pub use iter::{RingBufferIterator, RingBufferMutIterator};
+pub use iter::{RingBufferIterator, RingBufferMutIterator, RingBufferDrainingIterator};
 
 /// Implement various functions on implementors of RingBufferRead.
 /// This is to avoid duplicate code.
