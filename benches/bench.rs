@@ -2,8 +2,7 @@
 extern crate criterion;
 
 use criterion::{black_box, Bencher, Criterion};
-use ringbuffer::typenum::*;
-use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, GenericRingBuffer, RingBuffer};
+use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBuffer};
 
 fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
@@ -104,19 +103,6 @@ fn criterion_benchmark(c: &mut Criterion) {
         8192
     ];
     generate_benches![
-        typed,
-        c,
-        GenericRingBuffer,
-        i32,
-        new,
-        benchmark_push,
-        U16,
-        U1024,
-        U4096,
-        U8192
-    ];
-
-    generate_benches![
         called,
         c,
         AllocRingBuffer,
@@ -141,19 +127,6 @@ fn criterion_benchmark(c: &mut Criterion) {
         8192
     ];
     generate_benches![
-        typed,
-        c,
-        GenericRingBuffer,
-        i32,
-        new,
-        benchmark_various,
-        U16,
-        U1024,
-        U4096,
-        U8192
-    ];
-
-    generate_benches![
         called,
         c,
         AllocRingBuffer,
@@ -176,18 +149,6 @@ fn criterion_benchmark(c: &mut Criterion) {
         1024,
         4096,
         8192
-    ];
-    generate_benches![
-        typed,
-        c,
-        GenericRingBuffer,
-        i32,
-        new,
-        benchmark_push_dequeue,
-        U16,
-        U1024,
-        U4096,
-        U8192
     ];
 }
 

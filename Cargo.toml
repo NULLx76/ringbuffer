@@ -13,19 +13,15 @@ categories = ["data-structures"]
 license = "LGPL-3.0"
 
 [dependencies]
-generic-array = { version = "0.14.4", optional = true }
-array-init = { git = "https://github.com/manishearth/array-init.git", optional = true }
+array-init = { git = "https://github.com/NULLx76/array-init.git" }
 
 [dev-dependencies]
 criterion = "0.1.2"
 
 [features]
-default = ["alloc", "generic-array"]
+default = ["alloc"]
 # disable the alloc based ringbuffer, to make RingBuffers work in no_alloc environments
 alloc = []
-
-# enable the version of RingBuffer which uses the beta const_generics feature of rust
-const_generics = ["array-init", "array-init/const-generics"]
 
 [[bench]]
 name = "bench"
