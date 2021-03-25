@@ -11,7 +11,6 @@ Implementations for three kinds of ringbuffers, with a mostly similar API are pr
 | type | description |
 | --- | --- |
 | `AllocRingBuffer` | Ringbuffer allocated on the heap at runtime. This ringbuffer is still fixed size and requires alloc. |
-| `GenericRingBuffer` | Ringbuffer allocated on the stack. This is done using the `typenum` crate to provide a const-generic like interface without needing beta |
 | `ConstGenericRingBuffer` | Ringbuffer which uses const generics to allocate on the stack. This type is feature-gated behind `const_generics` and only works in beta rust.|
 
 All of these ringbuffers also implement the RingBuffer trait for their shared API surface.
@@ -46,8 +45,7 @@ fn main() {
 | name | default | description |
 | --- | --- | --- |
 | alloc | ✓ | Disable this feature to remove the dependency on alloc. Useful for kernels. |
-| const_generics | ✗ | Enables the ConstGenericRingBuffer. This requires beta rust. |
-| generic-array | ✓ | Disable this feature to remove the generic_array and typenum dependencies (and disables GenericRingBuffer). |
+| const_generics | ✓ | Enables the ConstGenericRingBuffer. |
 
 # License
 
