@@ -3,9 +3,8 @@ use core::iter::FromIterator;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
 
-/// The ConstGenericRingBuffer struct is a RingBuffer implementation which does not require `alloc`.
-/// However, it does require the still unstable rust feature `const-generics`. Therefore this struct
-/// is feature-gated behind the `const_generics` feature and when enabled only works on nightly rust.
+/// The ConstGenericRingBuffer struct is a RingBuffer implementation which does not require `alloc` but
+/// uses const generics instead.
 ///
 /// [`ConstGenericRingBuffer`] allocates the ringbuffer on the stack, and the size must be known at
 /// compile time through const-generics.

@@ -7,7 +7,7 @@ use alloc::vec::Vec;
 use core::iter::FromIterator;
 
 /// RingBuffer is a trait defining the standard interface for all RingBuffer
-/// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`GenericRingBuffer`](crate::GenericRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
+/// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
 ///
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing RingBuffer.
