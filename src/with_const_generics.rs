@@ -121,7 +121,7 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
             let index = crate::mask(CAP, self.readptr);
             unsafe {
                 // make sure we drop whatever is being overwritten
-                // SAFETY: the buffer is full, so this must be inited
+                // SAFETY: the buffer is full, so this must be initialized
                 //       : also, index has been masked
                 // make sure we drop because it won't happen automatically
                 core::ptr::drop_in_place(self.buf[index].as_mut_ptr());
