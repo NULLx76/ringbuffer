@@ -2,9 +2,9 @@
 extern crate criterion;
 
 use criterion::{black_box, Bencher, Criterion};
-use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBuffer};
+use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBufferExt};
 
-fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_push<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
@@ -16,7 +16,7 @@ fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     })
 }
 
-fn benchmark_push_dequeue<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_push_dequeue<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
@@ -44,7 +44,7 @@ fn benchmark_push_dequeue<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new
     })
 }
 
-fn benchmark_various<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_various<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
@@ -77,6 +77,11 @@ macro_rules! generate_benches {
 
 fn criterion_benchmark(c: &mut Criterion) {
     c.with_plots();
+
+    // TODO: Improve benchmarks
+    // * What are representative operations
+    // * Make sure it's accurate
+    // * more general benchmarks but preferably less/quickjer
 
     generate_benches![
         called,
