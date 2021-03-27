@@ -3,7 +3,7 @@ use core::iter::FromIterator;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
 
-/// The ConstGenericRingBuffer struct is a RingBuffer implementation which does not require `alloc` but
+/// The `ConstGenericRingBuffer` struct is a `RingBuffer` implementation which does not require `alloc` but
 /// uses const generics instead.
 ///
 /// [`ConstGenericRingBuffer`] allocates the ringbuffer on the stack, and the size must be known at
@@ -51,15 +51,15 @@ impl<T: Clone, const CAP: usize> Clone for ConstGenericRingBuffer<T, CAP> {
 // We need to manually implement PartialEq because MaybeUninit isn't PartialEq
 impl<T: PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuffer<T, CAP> {
     fn eq(&self, other: &Self) -> bool {
-        if self.len() != other.len() {
-            false
-        } else {
+        if self.len() == other.len() {
             for (a, b) in self.iter().zip(other.iter()) {
                 if a != b {
                     return false;
                 }
             }
             true
+        } else {
+            false
         }
     }
 }
@@ -67,7 +67,7 @@ impl<T: PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuffer<T, CAP
 impl<T: PartialEq, const CAP: usize> Eq for ConstGenericRingBuffer<T, CAP> {}
 
 impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
-    /// Creates a new RingBuffer. This method simply creates a default ringbuffer. The capacity is given as a
+    /// Creates a new `RingBuffer`. This method simply creates a default ringbuffer. The capacity is given as a
     /// type parameter.
     #[inline]
     pub fn new() -> Self {
@@ -96,7 +96,9 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
 impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
     fn dequeue_ref(&mut self) -> Option<&T> {
-        if !self.is_empty() {
+        if self.is_empty() {
+            None
+        } else {
             let index = crate::mask(CAP, self.readptr);
             self.readptr += 1;
             let res = unsafe {
@@ -105,8 +107,6 @@ impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
             };
 
             Some(res)
-        } else {
-            None
         }
     }
 
@@ -155,6 +155,8 @@ impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
 
 impl<T, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     /// Creates a buffer with a capacity specified through the Cap type parameter.
+    /// # Panics
+    /// Panics if `CAP` is 0 or not a power of two
     #[inline]
     fn default() -> Self {
         assert_ne!(CAP, 0, "Capacity must be greater than 0");
