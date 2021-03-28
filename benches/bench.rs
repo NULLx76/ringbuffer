@@ -2,10 +2,9 @@
 extern crate criterion;
 
 use criterion::{black_box, Bencher, Criterion};
-use ringbuffer::typenum::*;
-use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, GenericRingBuffer, RingBuffer};
+use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBufferExt};
 
-fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_push<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
@@ -17,7 +16,7 @@ fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     })
 }
 
-fn benchmark_push_dequeue<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_push_dequeue<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
@@ -45,7 +44,7 @@ fn benchmark_push_dequeue<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new
     })
 }
 
-fn benchmark_various<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_various<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
@@ -79,42 +78,10 @@ macro_rules! generate_benches {
 fn criterion_benchmark(c: &mut Criterion) {
     c.with_plots();
 
-    generate_benches![
-        called,
-        c,
-        AllocRingBuffer,
-        i32,
-        with_capacity,
-        benchmark_push,
-        16,
-        1024,
-        4096,
-        8192
-    ];
-    generate_benches![
-        typed,
-        c,
-        ConstGenericRingBuffer,
-        i32,
-        new,
-        benchmark_push,
-        16,
-        1024,
-        4096,
-        8192
-    ];
-    generate_benches![
-        typed,
-        c,
-        GenericRingBuffer,
-        i32,
-        new,
-        benchmark_push,
-        U16,
-        U1024,
-        U4096,
-        U8192
-    ];
+    // TODO: Improve benchmarks
+    // * What are representative operations
+    // * Make sure it's accurate
+    // * more general benchmarks but preferably less/quickjer
 
     generate_benches![
         called,
@@ -122,6 +89,30 @@ fn criterion_benchmark(c: &mut Criterion) {
         AllocRingBuffer,
         i32,
         with_capacity,
+        benchmark_push,
+        16,
+        1024,
+        4096,
+        8192
+    ];
+    generate_benches![
+        typed,
+        c,
+        ConstGenericRingBuffer,
+        i32,
+        new,
+        benchmark_push,
+        16,
+        1024,
+        4096,
+        8192
+    ];
+    generate_benches![
+        called,
+        c,
+        AllocRingBuffer,
+        i32,
+        with_capacity,
         benchmark_various,
         16,
         1024,
@@ -140,19 +131,6 @@ fn criterion_benchmark(c: &mut Criterion) {
         4096,
         8192
     ];
-    generate_benches![
-        typed,
-        c,
-        GenericRingBuffer,
-        i32,
-        new,
-        benchmark_various,
-        U16,
-        U1024,
-        U4096,
-        U8192
-    ];
-
     generate_benches![
         called,
         c,
@@ -176,18 +154,6 @@ fn criterion_benchmark(c: &mut Criterion) {
         1024,
         4096,
         8192
-    ];
-    generate_benches![
-        typed,
-        c,
-        GenericRingBuffer,
-        i32,
-        new,
-        benchmark_push_dequeue,
-        U16,
-        U1024,
-        U4096,
-        U8192
     ];
 }
 

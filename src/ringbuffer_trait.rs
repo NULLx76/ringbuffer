@@ -6,11 +6,11 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::iter::FromIterator;
 
-/// RingBuffer is a trait defining the standard interface for all RingBuffer
-/// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`GenericRingBuffer`](crate::GenericRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
+/// `RingBuffer` is a trait defining the standard interface for all RingBuffer
+/// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
 ///
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
-/// define a generic function over types implementing RingBuffer.
+/// define a generic function over types implementing `RingBuffer`.
 ///
 /// Most actual functionality of ringbuffers is contained in the extension traits [`RingBufferExt`], [`RingBufferRead`] and [`RingBufferWrite`]
 pub trait RingBuffer<T>: Sized {
@@ -198,7 +198,7 @@ mod iter {
     use crate::{RingBufferExt, RingBufferRead};
     use core::marker::PhantomData;
 
-    /// RingBufferIterator holds a reference to a RingBuffer and iterates over it. `index` is the
+    /// RingBufferIterator holds a reference to a `RingBufferExt` and iterates over it. `index` is the
     /// current iterator position.
     pub struct RingBufferIterator<'rb, T, RB: RingBufferExt<T>> {
         obj: &'rb RB,
@@ -212,7 +212,7 @@ mod iter {
             Self {
                 obj,
                 index: 0,
-                phantom: Default::default(),
+                phantom: PhantomData::default(),
             }
         }
     }
@@ -232,7 +232,7 @@ mod iter {
         }
     }
 
-    /// RingBufferMutIterator holds a reference to a RingBuffer and iterates over it. `index` is the
+    /// `RingBufferMutIterator` holds a reference to a `RingBufferExt` and iterates over it. `index` is the
     /// current iterator position.
     ///
     /// WARNING: NEVER ACCESS THE `obj` FIELD. it's private on purpose, and can technically be accessed
@@ -249,7 +249,7 @@ mod iter {
             Self {
                 obj,
                 index: 0,
-                phantom: Default::default(),
+                phantom: PhantomData::default(),
             }
         }
 
@@ -265,7 +265,7 @@ mod iter {
         }
     }
 
-    /// RingBufferMutIterator holds a reference to a RingBuffer and iterates over it. `index` is the
+    /// `RingBufferMutIterator` holds a reference to a `RingBufferRead` and iterates over it. `index` is the
     /// current iterator position.
     pub struct RingBufferDrainingIterator<'rb, T: Clone, RB: RingBufferRead<T>> {
         obj: &'rb mut RB,
@@ -277,7 +277,7 @@ mod iter {
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {
                 obj,
-                phantom: Default::default(),
+                phantom: PhantomData::default(),
             }
         }
     }
