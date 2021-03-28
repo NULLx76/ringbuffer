@@ -7,7 +7,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::iter::FromIterator;
 
-/// The AllocRingBuffer is a RingBuffer which is based on a Vec. This means it allocates at runtime
+/// The `AllocRingBuffer` is a `RingBufferExt` which is based on a Vec. This means it allocates at runtime
 /// on the heap, and therefore needs the [`alloc`] crate. This struct and therefore the dependency on
 /// alloc can be disabled by disabling the `alloc` (default) feature.
 ///
@@ -41,7 +41,7 @@ pub struct AllocRingBuffer<T> {
     writeptr: usize,
 }
 
-/// The capacity of a RingBuffer created by new or default (`1024`).
+/// The capacity of a `RingBuffer` created by new or default (`1024`).
 // must be a power of 2
 pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
@@ -58,14 +58,14 @@ impl<T> RingBufferExt<T> for AllocRingBuffer<T> {
 impl<T> RingBufferRead<T> for AllocRingBuffer<T> {
     #[inline]
     fn dequeue_ref(&mut self) -> Option<&T> {
-        if !self.is_empty() {
+        if self.is_empty() {
+            None
+        } else {
             let index = crate::mask(self.capacity, self.readptr);
             let res = &self.buf[index];
             self.readptr += 1;
 
             Some(res)
-        } else {
-            None
         }
     }
 
@@ -101,7 +101,7 @@ impl<T> RingBuffer<T> for AllocRingBuffer<T> {
 }
 
 impl<T> AllocRingBuffer<T> {
-    /// Creates a RingBuffer with a certain capacity. This capacity is fixed.
+    /// Creates a `AllocRingBuffer` with a certain capacity. This capacity is fixed.
     /// for this ringbuffer to work, cap must be a power of two and greater than zero.
     #[inline]
     pub fn with_capacity_unchecked(cap: usize) -> Self {
@@ -113,7 +113,7 @@ impl<T> AllocRingBuffer<T> {
         }
     }
 
-    /// Creates a RingBuffer with a certain capacity. The actual capacity is the input to the
+    /// Creates a `AllocRingBuffer` with a certain capacity. The actual capacity is the input to the
     /// function raised to the power of two (effectively the input is the log2 of the actual capacity)
     #[inline]
     pub fn with_capacity_power_of_2(cap_power_of_two: usize) -> Self {
@@ -121,7 +121,9 @@ impl<T> AllocRingBuffer<T> {
     }
 
     #[inline]
-    /// Creates a RingBuffer with a certain capacity. The capacity must be a power of two.
+    /// Creates a `AllocRingBuffer` with a certain capacity. The capacity must be a power of two.
+    /// # Panics
+    /// Panics when capacity is zero or not a power of two
     pub fn with_capacity(cap: usize) -> Self {
         assert_ne!(cap, 0, "Capacity must be greater than 0");
         assert!(cap.is_power_of_two(), "Capacity must be a power of two");
@@ -129,7 +131,7 @@ impl<T> AllocRingBuffer<T> {
         Self::with_capacity_unchecked(cap)
     }
 
-    /// Creates a RingBuffer with a capacity of [RINGBUFFER_DEFAULT_CAPACITY].
+    /// Creates a `AllocRingBuffer` with a capacity of [`RINGBUFFER_DEFAULT_CAPACITY`].
     #[inline]
     pub fn new() -> Self {
         Self::default()
@@ -164,7 +166,7 @@ impl<RB> FromIterator<RB> for AllocRingBuffer<RB> {
 }
 
 impl<T> Default for AllocRingBuffer<T> {
-    /// Creates a buffer with a capacity of [crate::RINGBUFFER_DEFAULT_CAPACITY].
+    /// Creates a buffer with a capacity of [`crate::RINGBUFFER_DEFAULT_CAPACITY`].
     #[inline]
     fn default() -> Self {
         Self {
