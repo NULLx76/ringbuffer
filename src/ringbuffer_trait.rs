@@ -202,6 +202,7 @@ mod iter {
     /// current iterator position.
     pub struct RingBufferIterator<'rb, T, RB: RingBufferExt<T>> {
         obj: &'rb RB,
+        len: usize,
         index: usize,
         phantom: PhantomData<T>,
     }
@@ -211,6 +212,7 @@ mod iter {
         pub fn new(obj: &'rb RB) -> Self {
             Self {
                 obj,
+                len: obj.len(),
                 index: 0,
                 phantom: PhantomData::default(),
             }
@@ -222,9 +224,22 @@ mod iter {
 
         #[inline]
         fn next(&mut self) -> Option<Self::Item> {
-            if self.index < self.obj.len() {
+            if self.index < self.len {
                 let res = self.obj.get(self.index as isize);
                 self.index += 1;
+                res
+            } else {
+                None
+            }
+        }
+    }
+
+    impl<'rb, T: 'rb, RB: RingBufferExt<T>> DoubleEndedIterator for RingBufferIterator<'rb, T, RB> {
+        #[inline]
+        fn next_back(&mut self) -> Option<Self::Item> {
+            if self.len > 0 && self.index < self.len {
+                let res = self.obj.get((self.len - 1) as isize);
+                self.len -= 1;
                 res
             } else {
                 None
