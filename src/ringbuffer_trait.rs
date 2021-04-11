@@ -197,6 +197,7 @@ pub trait RingBufferExt<T>:
 mod iter {
     use crate::{RingBufferExt, RingBufferRead};
     use core::marker::PhantomData;
+    use core::iter::FusedIterator;
 
     /// RingBufferIterator holds a reference to a `RingBufferExt` and iterates over it. `index` is the
     /// current iterator position.
@@ -238,7 +239,9 @@ mod iter {
         }
     }
 
-    impl<'rb, T: 'rb, RB: RingBufferExt<T>> core::iter::FusedIterator for RingBufferIterator<'rb, T, RB> { }
+    impl<'rb, T: 'rb, RB: RingBufferExt<T>> FusedIterator for RingBufferIterator<'rb, T, RB> { }
+
+    impl<'rb, T: 'rb, RB: RingBufferExt<T>> ExactSizeIterator for RingBufferIterator<'rb, T, RB> { }
 
     impl<'rb, T: 'rb, RB: RingBufferExt<T>> DoubleEndedIterator for RingBufferIterator<'rb, T, RB> {
         #[inline]
