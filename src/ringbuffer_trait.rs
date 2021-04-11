@@ -238,6 +238,8 @@ mod iter {
         }
     }
 
+    impl<'rb, T: 'rb, RB: RingBufferExt<T>> core::iter::FusedIterator for RingBufferIterator<'rb, T, RB> { }
+
     impl<'rb, T: 'rb, RB: RingBufferExt<T>> DoubleEndedIterator for RingBufferIterator<'rb, T, RB> {
         #[inline]
         fn next_back(&mut self) -> Option<Self::Item> {
