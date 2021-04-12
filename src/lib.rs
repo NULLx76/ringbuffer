@@ -197,12 +197,18 @@ mod tests {
             b.push(2);
             b.push(3);
             b.push(4);
+            b.push(5);
+            b.push(6);
+            b.push(7);
 
             let mut iter = b.iter();
             assert_eq!(&1, iter.next().unwrap());
-            assert_eq!(&4, iter.next_back().unwrap());
+            assert_eq!(&7, iter.next_back().unwrap());
             assert_eq!(&2, iter.next().unwrap());
             assert_eq!(&3, iter.next().unwrap());
+            assert_eq!(&6, iter.next_back().unwrap());
+            assert_eq!(&5, iter.next_back().unwrap());
+            assert_eq!(&4, iter.next().unwrap());
             assert_eq!(None, iter.next());
         }
 
