@@ -349,10 +349,10 @@ macro_rules! impl_ringbuffer_ext {
         fn get(&self, index: isize) -> Option<&T> {
             use core::ops::Not;
             self.is_empty().not().then(move || {
-                let index = (self.$readptr as isize + index) as usize % self.len();
+                let index = (self.$writeptr as isize + index) as usize % self.len();
 
                 unsafe {
-                    // SAFETY: index has been modulo-ed and offset from readptr
+                    // SAFETY: index has been modulo-ed to be within range
                     // to be within bounds
                     self.$get_unchecked(index)
                 }
@@ -363,10 +363,10 @@ macro_rules! impl_ringbuffer_ext {
         fn get_mut(&mut self, index: isize) -> Option<&mut T> {
             use core::ops::Not;
             self.is_empty().not().then(move || {
-                let index = (self.$readptr as isize + index) as usize % self.len();
+                let index = (self.$writeptr as isize + index) as usize % self.len();
 
                 unsafe {
-                    // SAFETY: index has been modulo-ed and offset from readptr
+                    // SAFETY: index has been modulo-ed to be within range
                     // to be within bounds
                     self.$get_unchecked_mut(index)
                 }
