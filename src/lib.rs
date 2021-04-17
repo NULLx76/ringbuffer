@@ -81,6 +81,7 @@ const fn mask(cap: usize, index: usize) -> usize {
 }
 
 #[cfg(test)]
+#[allow(non_upper_case_globals)]
 mod tests {
     extern crate std;
     use std::vec;
@@ -88,6 +89,22 @@ mod tests {
     use crate::{
         AllocRingBuffer, ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite,
     };
+
+    #[test]
+    fn run_test_neg_index() {
+        //! Test for issue #43
+
+        const capacity: usize = 8;
+        fn test_neg_index(mut b: impl RingBufferExt<usize>) {
+            for i in 0..capacity + 2 {
+                b.push(i);
+                assert_eq!(b.get(-1), Some(&i));
+            }
+        }
+
+        test_neg_index(AllocRingBuffer::with_capacity(capacity));
+        test_neg_index(ConstGenericRingBuffer::<usize, capacity>::new());
+    }
 
     #[test]
     fn run_test_default() {
