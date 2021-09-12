@@ -7,8 +7,8 @@ extern crate std;
 // We need vecs so depend on alloc
 use alloc::vec::Vec;
 use core::iter::FromIterator;
-use core::mem::MaybeUninit;
 use core::mem;
+use core::mem::MaybeUninit;
 
 /// The `AllocRingBuffer` is a `RingBufferExt` which is based on a Vec. This means it allocates at runtime
 /// on the heap, and therefore needs the [`alloc`] crate. This struct and therefore the dependency on
@@ -61,18 +61,16 @@ impl<T: Clone> Clone for AllocRingBuffer<T> {
 }
 impl<T: PartialEq> PartialEq for AllocRingBuffer<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.capacity == other.capacity &&
-        self.len() == other.len() &&
-        self.iter()
-            .zip(other.iter())
-            .fold(true, |p, (a, b)| {
-                p && a == b
-            })
+        self.capacity == other.capacity
+            && self.len() == other.len()
+            && self
+                .iter()
+                .zip(other.iter())
+                .fold(true, |p, (a, b)| p && a == b)
     }
 }
 
 impl<T: Eq + PartialEq> Eq for AllocRingBuffer<T> {}
-
 
 /// The capacity of a `RingBuffer` created by new or default (`1024`).
 // must be a power of 2
@@ -100,9 +98,7 @@ impl<T> RingBufferRead<T> for AllocRingBuffer<T> {
             // Safety: the fact that we got this maybeuninit from the buffer (with mask) means that
             // it's initialized. If it wasn't the is_empty call would have caught it. Values
             // are always initialized when inserted so this is safe.
-            unsafe {
-                Some(res.assume_init())
-            }
+            unsafe { Some(res.assume_init()) }
         }
     }
 
@@ -123,7 +119,10 @@ impl<T> RingBufferWrite<T> for AllocRingBuffer<T> {
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
-            let previous_value = mem::replace(&mut self.buf[crate::mask(self.capacity, self.readptr)], MaybeUninit::uninit());
+            let previous_value = mem::replace(
+                &mut self.buf[crate::mask(self.capacity, self.readptr)],
+                MaybeUninit::uninit(),
+            );
             // make sure we drop whatever is being overwritten
             // SAFETY: the buffer is full, so this must be initialized
             //       : also, index has been masked

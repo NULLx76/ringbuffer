@@ -162,7 +162,10 @@ pub trait RingBufferExt<T>:
 
     /// Converts the buffer to a vector. This Copies all elements in the ringbuffer.
     #[cfg(feature = "alloc")]
-    fn to_vec(&self) -> Vec<T> where T: Clone {
+    fn to_vec(&self) -> Vec<T>
+    where
+        T: Clone,
+    {
         self.iter().cloned().collect()
     }
 
@@ -336,7 +339,8 @@ macro_rules! impl_ringbuffer_ext {
                     self.len() as isize + index
                 };
 
-                let normalized_index = self.readptr as isize + index_from_readptr.rem_euclid(self.len() as isize);
+                let normalized_index =
+                    self.readptr as isize + index_from_readptr.rem_euclid(self.len() as isize);
 
                 unsafe {
                     // SAFETY: index has been modulo-ed to be within range
@@ -356,12 +360,16 @@ macro_rules! impl_ringbuffer_ext {
                     self.len() as isize + index
                 };
 
-                let normalized_index = self.readptr as isize + index_from_readptr.rem_euclid(self.len() as isize);
+                let normalized_index =
+                    self.readptr as isize + index_from_readptr.rem_euclid(self.len() as isize);
 
                 unsafe {
                     // SAFETY: index has been modulo-ed to be within range
                     // to be within bounds
-                    self.$get_unchecked_mut($crate::mask(self.capacity(), normalized_index as usize))
+                    self.$get_unchecked_mut($crate::mask(
+                        self.capacity(),
+                        normalized_index as usize,
+                    ))
                 }
             })
         }

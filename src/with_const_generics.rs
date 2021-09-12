@@ -1,8 +1,8 @@
 use crate::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 use core::iter::FromIterator;
+use core::mem;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
-use core::mem;
 
 /// The `ConstGenericRingBuffer` struct is a `RingBuffer` implementation which does not require `alloc` but
 /// uses const generics instead.
@@ -114,9 +114,7 @@ impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
             // Safety: the fact that we got this maybeuninit from the buffer (with mask) means that
             // it's initialized. If it wasn't the is_empty call would have caught it. Values
             // are always initialized when inserted so this is safe.
-            unsafe {
-                Some(res.assume_init())
-            }
+            unsafe { Some(res.assume_init()) }
         }
     }
 
@@ -137,7 +135,10 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
-            let previous_value = mem::replace(&mut self.buf[crate::mask(CAP, self.readptr)], MaybeUninit::uninit());
+            let previous_value = mem::replace(
+                &mut self.buf[crate::mask(CAP, self.readptr)],
+                MaybeUninit::uninit(),
+            );
             // make sure we drop whatever is being overwritten
             // SAFETY: the buffer is full, so this must be initialized
             //       : also, index has been masked
