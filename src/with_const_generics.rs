@@ -110,6 +110,10 @@ impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
         }
     }
 
+    fn dequeue(&mut self) -> Option<T> {
+        todo!()
+    }
+
     impl_ringbuffer_read!(readptr);
 }
 
@@ -133,10 +137,7 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
     }
 
     #[inline]
-    fn extend(&mut self, values: &[T])
-    where
-        T: Clone,
-    {
+    fn extend(&mut self, values: &[T]) {
         let skip_n = values.len() as isize - CAP as isize;
         let skip_n = if skip_n > 0 {
             // values "too long"

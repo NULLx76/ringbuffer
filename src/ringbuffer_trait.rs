@@ -43,9 +43,7 @@ pub trait RingBufferWrite<T>: RingBuffer<T> {
     fn push(&mut self, value: T);
 
     /// Pushes a slices of elements to the ring buffer.
-    fn extend(&mut self, values: &[T])
-    where
-        T: Clone;
+    fn extend(&mut self, values: &[T]);
 }
 
 /// Defines behaviour for ringbuffers which allow for reading from the start of them (as a queue).
@@ -59,13 +57,8 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
     /// Returns None when the ringbuffer is empty.
     fn dequeue_ref(&mut self) -> Option<&T>;
 
-    /// dequeues the top item off the ringbuffer and returns a cloned version. See the [`dequeue_ref`](Self::dequeue_ref) docs
-    fn dequeue(&mut self) -> Option<T>
-    where
-        T: Clone,
-    {
-        self.dequeue_ref().cloned()
-    }
+    /// dequeues the top item off the ringbuffer, and moves this item out.
+    fn dequeue(&mut self) -> Option<T>;
 
     /// dequeues the top item off the queue, but does not return it. Instead it is dropped.
     /// If the ringbuffer is empty, this function is a nop.
@@ -93,10 +86,7 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
     /// assert_eq!(rb.len(), 0);
     ///
     /// ```
-    fn drain(&mut self) -> RingBufferDrainingIterator<T, Self>
-    where
-        T: Clone,
-    {
+    fn drain(&mut self) -> RingBufferDrainingIterator<T, Self> {
         RingBufferDrainingIterator::new(self)
     }
 }
@@ -183,10 +173,7 @@ pub trait RingBufferExt<T>:
 
     /// Converts the buffer to a vector. This Copies all elements in the ringbuffer.
     #[cfg(feature = "alloc")]
-    fn to_vec(&self) -> Vec<T>
-    where
-        T: Clone,
-    {
+    fn to_vec(&self) -> Vec<T> where T: Clone {
         self.iter().cloned().collect()
     }
 
@@ -296,12 +283,12 @@ mod iter {
 
     /// `RingBufferMutIterator` holds a reference to a `RingBufferRead` and iterates over it. `index` is the
     /// current iterator position.
-    pub struct RingBufferDrainingIterator<'rb, T: Clone, RB: RingBufferRead<T>> {
+    pub struct RingBufferDrainingIterator<'rb, T, RB: RingBufferRead<T>> {
         obj: &'rb mut RB,
         phantom: PhantomData<T>,
     }
 
-    impl<'rb, T: Clone, RB: RingBufferRead<T>> RingBufferDrainingIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBufferRead<T>> RingBufferDrainingIterator<'rb, T, RB> {
         #[inline]
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {
@@ -311,7 +298,7 @@ mod iter {
         }
     }
 
-    impl<'rb, T: Clone, RB: RingBufferRead<T>> Iterator for RingBufferDrainingIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBufferRead<T>> Iterator for RingBufferDrainingIterator<'rb, T, RB> {
         type Item = T;
 
         fn next(&mut self) -> Option<T> {

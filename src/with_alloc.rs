@@ -69,6 +69,10 @@ impl<T> RingBufferRead<T> for AllocRingBuffer<T> {
         }
     }
 
+    fn dequeue(&mut self) -> Option<T> {
+        todo!()
+    }
+
     impl_ringbuffer_read!(readptr);
 }
 
@@ -91,10 +95,7 @@ impl<T> RingBufferWrite<T> for AllocRingBuffer<T> {
     }
 
     #[inline]
-    fn extend(&mut self, values: &[T])
-    where
-        T: Clone,
-    {
+    fn extend(&mut self, values: &[T]) {
         let skip_n = values.len() as isize - self.capacity as isize;
         let skip_n = if skip_n > 0 {
             // values "too long"
