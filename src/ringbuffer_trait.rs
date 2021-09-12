@@ -41,6 +41,9 @@ pub trait RingBuffer<T>: Sized {
 pub trait RingBufferWrite<T>: RingBuffer<T> {
     /// Pushes a value onto the buffer. Cycles around if capacity is reached.
     fn push(&mut self, value: T);
+
+    /// Pushes a slices of elements to the ring buffer.
+    fn extend(&mut self, values: &[T]) where T: Clone;
 }
 
 /// Defines behaviour for ringbuffers which allow for reading from the start of them (as a queue).
