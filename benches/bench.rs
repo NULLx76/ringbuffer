@@ -2,7 +2,7 @@
 extern crate criterion;
 
 use criterion::{black_box, Bencher, Criterion};
-use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBufferExt};
+use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBufferExt, RingBufferWrite};
 
 fn benchmark_push<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
@@ -157,5 +157,39 @@ fn criterion_benchmark(c: &mut Criterion) {
     ];
 }
 
-criterion_group!(benches, criterion_benchmark);
+fn bench_extend(c: &mut Criterion) {
+    c.bench_function("test extend generic", |b| b.iter(|| {
+        let mut buf = ConstGenericRingBuffer::<u8, 4>::new();
+        (0..4).for_each(|_| buf.push(0));
+
+        let new_data = [0, 1, 2];
+        buf.extend(new_data);
+
+        let expected = [0, 0, 1, 2];
+
+        for i in 0..4 {
+            let actual = buf[i as isize];
+            let expected = expected[i];
+            assert_eq!(actual, expected);
+        }
+    }));
+
+    c.bench_function("test extend overflow", |b| b.iter(|| {
+        let mut buf = ConstGenericRingBuffer::<u8, 8>::new();
+        (0..8).for_each(|_| buf.push(0));
+
+        let new_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        buf.extend(new_data);
+
+        let expected = [2, 3, 4, 5, 6, 7, 8, 9];
+
+        for i in 0..8 {
+            let actual = buf[i as isize];
+            let expected = expected[i];
+            assert_eq!(actual, expected);
+        }
+    }));
+}
+
+criterion_group!(benches, criterion_benchmark, bench_extend);
 criterion_main!(benches);
