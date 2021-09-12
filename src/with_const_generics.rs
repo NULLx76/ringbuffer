@@ -2,6 +2,7 @@ use crate::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 use core::iter::FromIterator;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
+use core::mem;
 
 /// The `ConstGenericRingBuffer` struct is a `RingBuffer` implementation which does not require `alloc` but
 /// uses const generics instead.
@@ -36,6 +37,14 @@ pub struct ConstGenericRingBuffer<T, const CAP: usize> {
     buf: [MaybeUninit<T>; CAP],
     readptr: usize,
     writeptr: usize,
+}
+
+impl<T, const CAP: usize> Drop for ConstGenericRingBuffer<T, CAP> {
+    fn drop(&mut self) {
+        for i in self.drain() {
+            drop(i);
+        }
+    }
 }
 
 impl<T: Clone, const CAP: usize> Clone for ConstGenericRingBuffer<T, CAP> {
@@ -94,24 +103,21 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
 }
 
 impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
-    #[inline]
-    fn dequeue_ref(&mut self) -> Option<&T> {
+    fn dequeue(&mut self) -> Option<T> {
         if self.is_empty() {
             None
         } else {
             let index = crate::mask(CAP, self.readptr);
+            let res = mem::replace(&mut self.buf[index], MaybeUninit::uninit());
             self.readptr += 1;
-            let res = unsafe {
-                // SAFETY: index has been masked
-                self.get_unchecked(index)
-            };
 
-            Some(res)
+            // Safety: the fact that we got this maybeuninit from the buffer (with mask) means that
+            // it's initialized. If it wasn't the is_empty call would have caught it. Values
+            // are always initialized when inserted so this is safe.
+            unsafe {
+                Some(res.assume_init())
+            }
         }
-    }
-
-    fn dequeue(&mut self) -> Option<T> {
-        todo!()
     }
 
     impl_ringbuffer_read!(readptr);
@@ -131,13 +137,13 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
-            let index = crate::mask(CAP, self.readptr);
+            let previous_value = mem::replace(&mut self.buf[crate::mask(CAP, self.readptr)], MaybeUninit::uninit());
+            // make sure we drop whatever is being overwritten
+            // SAFETY: the buffer is full, so this must be initialized
+            //       : also, index has been masked
+            // make sure we drop because it won't happen automatically
             unsafe {
-                // make sure we drop whatever is being overwritten
-                // SAFETY: the buffer is full, so this must be initialized
-                //       : also, index has been masked
-                // make sure we drop because it won't happen automatically
-                core::ptr::drop_in_place(self.buf[index].as_mut_ptr());
+                drop(previous_value.assume_init());
             }
             self.readptr += 1;
         }

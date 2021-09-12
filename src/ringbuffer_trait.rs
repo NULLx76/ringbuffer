@@ -46,14 +46,6 @@ pub trait RingBufferWrite<T>: RingBuffer<T> + Extend<T> {
 /// Defines behaviour for ringbuffers which allow for reading from the start of them (as a queue).
 /// For arbitrary buffer access however, [`RingBufferExt`] is necessary.
 pub trait RingBufferRead<T>: RingBuffer<T> {
-    /// dequeues the top item off the ringbuffer. Returns a reference to the item. This means
-    /// that lifetimes will be problematic because as long as this reference exists,
-    /// you can not push to the queue. To solve this, use the dequeue method. This requires
-    /// the item to be clone. Easily moving out of the ringbuffer is sadly impossible.
-    ///
-    /// Returns None when the ringbuffer is empty.
-    fn dequeue_ref(&mut self) -> Option<&T>;
-
     /// dequeues the top item off the ringbuffer, and moves this item out.
     fn dequeue(&mut self) -> Option<T>;
 
@@ -338,12 +330,18 @@ macro_rules! impl_ringbuffer_ext {
         fn get(&self, index: isize) -> Option<&T> {
             use core::ops::Not;
             self.is_empty().not().then(move || {
-                let index = (self.$writeptr as isize + index) as usize % self.len();
+                let index_from_readptr = if index >= 0 {
+                    index
+                } else {
+                    self.len() as isize + index
+                };
+
+                let normalized_index = self.readptr as isize + index_from_readptr.rem_euclid(self.len() as isize);
 
                 unsafe {
                     // SAFETY: index has been modulo-ed to be within range
                     // to be within bounds
-                    self.$get_unchecked(index)
+                    self.$get_unchecked($crate::mask(self.capacity(), normalized_index as usize))
                 }
             })
         }
@@ -352,12 +350,18 @@ macro_rules! impl_ringbuffer_ext {
         fn get_mut(&mut self, index: isize) -> Option<&mut T> {
             use core::ops::Not;
             self.is_empty().not().then(move || {
-                let index = (self.$writeptr as isize + index) as usize % self.len();
+                let index_from_readptr = if index >= 0 {
+                    index
+                } else {
+                    self.len() as isize + index
+                };
+
+                let normalized_index = self.readptr as isize + index_from_readptr.rem_euclid(self.len() as isize);
 
                 unsafe {
                     // SAFETY: index has been modulo-ed to be within range
                     // to be within bounds
-                    self.$get_unchecked_mut(index)
+                    self.$get_unchecked_mut($crate::mask(self.capacity(), normalized_index as usize))
                 }
             })
         }
