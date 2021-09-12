@@ -3,9 +3,12 @@ use core::ops::{Index, IndexMut};
 use crate::ringbuffer_trait::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 
 extern crate alloc;
+extern crate std;
 // We need vecs so depend on alloc
 use alloc::vec::Vec;
 use core::iter::FromIterator;
+use core::mem;
+use core::mem::MaybeUninit;
 
 /// The `AllocRingBuffer` is a `RingBufferExt` which is based on a Vec. This means it allocates at runtime
 /// on the heap, and therefore needs the [`alloc`] crate. This struct and therefore the dependency on
@@ -33,13 +36,39 @@ use core::iter::FromIterator;
 /// buffer.push(1);
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct AllocRingBuffer<T> {
-    buf: Vec<T>,
+    buf: Vec<MaybeUninit<T>>,
     capacity: usize,
     readptr: usize,
     writeptr: usize,
 }
+
+impl<T> Drop for AllocRingBuffer<T> {
+    fn drop(&mut self) {
+        self.drain().for_each(drop);
+    }
+}
+
+impl<T: Clone> Clone for AllocRingBuffer<T> {
+    fn clone(&self) -> Self {
+        let mut new = Self::with_capacity(self.capacity);
+        self.iter().cloned().for_each(|i| new.push(i));
+        new
+    }
+}
+impl<T: PartialEq> PartialEq for AllocRingBuffer<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.capacity == other.capacity
+            && self.len() == other.len()
+            && self
+                .iter()
+                .zip(other.iter())
+                .fold(true, |p, (a, b)| p && a == b)
+    }
+}
+
+impl<T: Eq + PartialEq> Eq for AllocRingBuffer<T> {}
 
 /// The capacity of a `RingBuffer` created by new or default (`1024`).
 // must be a power of 2
@@ -56,57 +85,64 @@ impl<T> RingBufferExt<T> for AllocRingBuffer<T> {
 }
 
 impl<T> RingBufferRead<T> for AllocRingBuffer<T> {
-    #[inline]
-    fn dequeue_ref(&mut self) -> Option<&T> {
+    fn dequeue(&mut self) -> Option<T> {
         if self.is_empty() {
             None
         } else {
             let index = crate::mask(self.capacity, self.readptr);
-            let res = &self.buf[index];
+            let res = mem::replace(&mut self.buf[index], MaybeUninit::uninit());
             self.readptr += 1;
 
-            Some(res)
+            // Safety: the fact that we got this maybeuninit from the buffer (with mask) means that
+            // it's initialized. If it wasn't the is_empty call would have caught it. Values
+            // are always initialized when inserted so this is safe.
+            unsafe { Some(res.assume_init()) }
         }
     }
 
     impl_ringbuffer_read!(readptr);
 }
 
+impl<T> Extend<T> for AllocRingBuffer<T> {
+    fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
+        let iter = iter.into_iter();
+
+        for i in iter {
+            self.push(i)
+        }
+    }
+}
+
 impl<T> RingBufferWrite<T> for AllocRingBuffer<T> {
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
+            let previous_value = mem::replace(
+                &mut self.buf[crate::mask(self.capacity, self.readptr)],
+                MaybeUninit::uninit(),
+            );
+            // make sure we drop whatever is being overwritten
+            // SAFETY: the buffer is full, so this must be initialized
+            //       : also, index has been masked
+            // make sure we drop because it won't happen automatically
+            unsafe {
+                drop(previous_value.assume_init());
+            }
+
             self.readptr += 1;
         }
 
         let index = crate::mask(self.capacity, self.writeptr);
 
         if index >= self.buf.len() {
-            self.buf.push(value);
+            // initializing the maybeuninit when values are inserted/pushed
+            self.buf.push(MaybeUninit::new(value));
         } else {
-            self.buf[index] = value;
+            // initializing the maybeuninit when values are inserted/pushed
+            self.buf[index] = MaybeUninit::new(value);
         }
 
         self.writeptr += 1;
-    }
-
-    #[inline]
-    fn extend(&mut self, values: &[T])
-    where
-        T: Clone,
-    {
-        let skip_n = values.len() as isize - self.capacity as isize;
-        let skip_n = if skip_n > 0 {
-            // values "too long"
-            skip_n
-        } else {
-            0
-        } as usize;
-        // skip_n is a performance optimization
-        values
-            .iter()
-            .skip(skip_n)
-            .for_each(|x| self.push(x.clone()))
     }
 }
 
@@ -158,18 +194,23 @@ impl<T> AllocRingBuffer<T> {
 
     /// Get a reference from the buffer without checking it is initialized.
     /// Caller must be sure the index is in bounds, or this will panic.
-    /// However, it's not unsafe -- only unsafe to match signature of other methods.
     #[inline]
     unsafe fn get_unchecked(&self, index: usize) -> &T {
-        &self.buf[index]
+        let p = &self.buf[index];
+        // Safety: caller makes sure the index is in bounds for the ringbuffer.
+        // All in bounds values in the ringbuffer are initialized
+        p.assume_init_ref()
     }
 
     /// Get a mut reference from the buffer without checking it is initialized.
     /// Caller must be sure the index is in bounds, or this will panic.
-    /// However, it's not unsafe -- only unsafe to match signature of other methods.
     #[inline]
     unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
-        &mut self.buf[index]
+        let p = &mut self.buf[index];
+
+        // Safety: caller makes sure the index is in bounds for the ringbuffer.
+        // All in bounds values in the ringbuffer are initialized
+        p.assume_init_mut()
     }
 }
 
@@ -232,10 +273,6 @@ mod tests {
         assert_eq!(0, b.iter().count());
         assert_eq!(
             Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
-            b.buf
-        );
-        assert_eq!(
-            Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
             b.to_vec()
         );
     }
@@ -271,7 +308,7 @@ mod tests {
         (0..4).for_each(|_| buf.push(0));
 
         let new_data = [0, 1, 2];
-        buf.extend(&new_data);
+        buf.extend(new_data);
 
         let expected = [0, 0, 1, 2];
 
@@ -288,7 +325,7 @@ mod tests {
         (0..8).for_each(|_| buf.push(0));
 
         let new_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-        buf.extend(&new_data);
+        buf.extend(new_data);
 
         let expected = [2, 3, 4, 5, 6, 7, 8, 9];
 
