@@ -43,7 +43,9 @@ pub trait RingBufferWrite<T>: RingBuffer<T> {
     fn push(&mut self, value: T);
 
     /// Pushes a slices of elements to the ring buffer.
-    fn extend(&mut self, values: &[T]) where T: Clone;
+    fn extend(&mut self, values: &[T])
+    where
+        T: Clone;
 }
 
 /// Defines behaviour for ringbuffers which allow for reading from the start of them (as a queue).

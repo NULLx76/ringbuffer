@@ -91,7 +91,10 @@ impl<T> RingBufferWrite<T> for AllocRingBuffer<T> {
     }
 
     #[inline]
-    fn extend(&mut self, values: &[T]) where T: Clone {
+    fn extend(&mut self, values: &[T])
+    where
+        T: Clone,
+    {
         let skip_n = values.len() as isize - self.capacity as isize;
         let skip_n = if skip_n > 0 {
             // values "too long"
@@ -100,7 +103,10 @@ impl<T> RingBufferWrite<T> for AllocRingBuffer<T> {
             0
         } as usize;
         // skip_n is a performance optimization
-        values.iter().skip(skip_n).for_each(|x| self.push(x.clone()))
+        values
+            .iter()
+            .skip(skip_n)
+            .for_each(|x| self.push(x.clone()))
     }
 }
 
@@ -208,7 +214,9 @@ impl<T> IndexMut<isize> for AllocRingBuffer<T> {
 #[cfg(test)]
 mod tests {
     use super::alloc::vec::Vec;
-    use crate::{AllocRingBuffer, RingBuffer, RingBufferExt, RINGBUFFER_DEFAULT_CAPACITY, RingBufferWrite};
+    use crate::{
+        AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite, RINGBUFFER_DEFAULT_CAPACITY,
+    };
 
     #[test]
     fn test_default() {
