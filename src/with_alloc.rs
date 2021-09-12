@@ -89,6 +89,19 @@ impl<T> RingBufferWrite<T> for AllocRingBuffer<T> {
 
         self.writeptr += 1;
     }
+
+    #[inline]
+    fn extend(&mut self, values: &[T]) where T: Clone {
+        let skip_n = values.len() as isize - self.capacity as isize;
+        let skip_n = if skip_n > 0 {
+            // values "too long"
+            skip_n
+        } else {
+            0
+        } as usize;
+        // skip_n is a performance optimization
+        values.iter().skip(skip_n).for_each(|x| self.push(x.clone()))
+    }
 }
 
 impl<T> RingBuffer<T> for AllocRingBuffer<T> {
@@ -195,7 +208,7 @@ impl<T> IndexMut<isize> for AllocRingBuffer<T> {
 #[cfg(test)]
 mod tests {
     use super::alloc::vec::Vec;
-    use crate::{AllocRingBuffer, RingBuffer, RingBufferExt, RINGBUFFER_DEFAULT_CAPACITY};
+    use crate::{AllocRingBuffer, RingBuffer, RingBufferExt, RINGBUFFER_DEFAULT_CAPACITY, RingBufferWrite};
 
     #[test]
     fn test_default() {
@@ -242,5 +255,39 @@ mod tests {
     fn test_index_zero_length() {
         let b = AllocRingBuffer::<i32>::with_capacity(2);
         let _ = b[2];
+    }
+
+    #[test]
+    fn test_extend() {
+        let mut buf = AllocRingBuffer::<u8>::with_capacity(4);
+        (0..4).for_each(|_| buf.push(0));
+
+        let new_data = [0, 1, 2];
+        buf.extend(&new_data);
+
+        let expected = [0, 0, 1, 2];
+
+        for i in 0..4 {
+            let actual = buf[i as isize];
+            let expected = expected[i];
+            assert_eq!(actual, expected);
+        }
+    }
+
+    #[test]
+    fn test_extend_with_overflow() {
+        let mut buf = AllocRingBuffer::<u8>::with_capacity(8);
+        (0..8).for_each(|_| buf.push(0));
+
+        let new_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        buf.extend(&new_data);
+
+        let expected = [2, 3, 4, 5, 6, 7, 8, 9];
+
+        for i in 0..8 {
+            let actual = buf[i as isize];
+            let expected = expected[i];
+            assert_eq!(actual, expected);
+        }
     }
 }
