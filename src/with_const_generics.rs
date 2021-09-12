@@ -117,6 +117,16 @@ impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
     impl_ringbuffer_read!(readptr);
 }
 
+impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
+    fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
+        let iter = iter.into_iter();
+
+        for i in iter {
+            self.push(i)
+        }
+    }
+}
+
 impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
     fn push(&mut self, value: T) {
@@ -134,22 +144,6 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
         let index = crate::mask(CAP, self.writeptr);
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
-    }
-
-    #[inline]
-    fn extend(&mut self, values: &[T]) {
-        let skip_n = values.len() as isize - CAP as isize;
-        let skip_n = if skip_n > 0 {
-            // values "too long"
-            skip_n
-        } else {
-            0
-        } as usize;
-        // skip_n is a performance optimization
-        values
-            .iter()
-            .skip(skip_n)
-            .for_each(|x| self.push(x.clone()))
     }
 }
 
@@ -246,7 +240,7 @@ mod tests {
         (0..4).for_each(|_| buf.push(0));
 
         let new_data = [0, 1, 2];
-        buf.extend(&new_data);
+        buf.extend(new_data);
 
         let expected = [0, 0, 1, 2];
 
@@ -263,7 +257,7 @@ mod tests {
         (0..8).for_each(|_| buf.push(0));
 
         let new_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-        buf.extend(&new_data);
+        buf.extend(new_data);
 
         let expected = [2, 3, 4, 5, 6, 7, 8, 9];
 
