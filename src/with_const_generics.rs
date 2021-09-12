@@ -1,5 +1,6 @@
 use crate::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 use core::iter::FromIterator;
+use core::mem;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
 
@@ -38,12 +39,16 @@ pub struct ConstGenericRingBuffer<T, const CAP: usize> {
     writeptr: usize,
 }
 
+impl<T, const CAP: usize> Drop for ConstGenericRingBuffer<T, CAP> {
+    fn drop(&mut self) {
+        self.drain().for_each(drop);
+    }
+}
+
 impl<T: Clone, const CAP: usize> Clone for ConstGenericRingBuffer<T, CAP> {
     fn clone(&self) -> Self {
         let mut new = ConstGenericRingBuffer::<T, CAP>::new();
-        for elem in self.iter() {
-            new.push(elem.clone())
-        }
+        self.iter().cloned().for_each(|i| new.push(i));
         new
     }
 }
@@ -94,61 +99,54 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
 }
 
 impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
-    #[inline]
-    fn dequeue_ref(&mut self) -> Option<&T> {
+    fn dequeue(&mut self) -> Option<T> {
         if self.is_empty() {
             None
         } else {
             let index = crate::mask(CAP, self.readptr);
+            let res = mem::replace(&mut self.buf[index], MaybeUninit::uninit());
             self.readptr += 1;
-            let res = unsafe {
-                // SAFETY: index has been masked
-                self.get_unchecked(index)
-            };
 
-            Some(res)
+            // Safety: the fact that we got this maybeuninit from the buffer (with mask) means that
+            // it's initialized. If it wasn't the is_empty call would have caught it. Values
+            // are always initialized when inserted so this is safe.
+            unsafe { Some(res.assume_init()) }
         }
     }
 
     impl_ringbuffer_read!(readptr);
 }
 
+impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
+    fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
+        let iter = iter.into_iter();
+
+        for i in iter {
+            self.push(i)
+        }
+    }
+}
+
 impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
-            let index = crate::mask(CAP, self.readptr);
+            let previous_value = mem::replace(
+                &mut self.buf[crate::mask(CAP, self.readptr)],
+                MaybeUninit::uninit(),
+            );
+            // make sure we drop whatever is being overwritten
+            // SAFETY: the buffer is full, so this must be initialized
+            //       : also, index has been masked
+            // make sure we drop because it won't happen automatically
             unsafe {
-                // make sure we drop whatever is being overwritten
-                // SAFETY: the buffer is full, so this must be initialized
-                //       : also, index has been masked
-                // make sure we drop because it won't happen automatically
-                core::ptr::drop_in_place(self.buf[index].as_mut_ptr());
+                drop(previous_value.assume_init());
             }
             self.readptr += 1;
         }
         let index = crate::mask(CAP, self.writeptr);
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
-    }
-
-    #[inline]
-    fn extend(&mut self, values: &[T])
-    where
-        T: Clone,
-    {
-        let skip_n = values.len() as isize - CAP as isize;
-        let skip_n = if skip_n > 0 {
-            // values "too long"
-            skip_n
-        } else {
-            0
-        } as usize;
-        // skip_n is a performance optimization
-        values
-            .iter()
-            .skip(skip_n)
-            .for_each(|x| self.push(x.clone()))
     }
 }
 
@@ -245,7 +243,7 @@ mod tests {
         (0..4).for_each(|_| buf.push(0));
 
         let new_data = [0, 1, 2];
-        buf.extend(&new_data);
+        buf.extend(new_data);
 
         let expected = [0, 0, 1, 2];
 
@@ -262,7 +260,7 @@ mod tests {
         (0..8).for_each(|_| buf.push(0));
 
         let new_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-        buf.extend(&new_data);
+        buf.extend(new_data);
 
         let expected = [2, 3, 4, 5, 6, 7, 8, 9];
 

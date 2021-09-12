@@ -38,34 +38,16 @@ pub trait RingBuffer<T>: Sized {
 
 /// Defines behaviour for ringbuffers which allow for writing to the end of them (as a queue).
 /// For arbitrary buffer access however, [`RingBufferExt`] is necessary.
-pub trait RingBufferWrite<T>: RingBuffer<T> {
+pub trait RingBufferWrite<T>: RingBuffer<T> + Extend<T> {
     /// Pushes a value onto the buffer. Cycles around if capacity is reached.
     fn push(&mut self, value: T);
-
-    /// Pushes a slices of elements to the ring buffer.
-    fn extend(&mut self, values: &[T])
-    where
-        T: Clone;
 }
 
 /// Defines behaviour for ringbuffers which allow for reading from the start of them (as a queue).
 /// For arbitrary buffer access however, [`RingBufferExt`] is necessary.
 pub trait RingBufferRead<T>: RingBuffer<T> {
-    /// dequeues the top item off the ringbuffer. Returns a reference to the item. This means
-    /// that lifetimes will be problematic because as long as this reference exists,
-    /// you can not push to the queue. To solve this, use the dequeue method. This requires
-    /// the item to be clone. Easily moving out of the ringbuffer is sadly impossible.
-    ///
-    /// Returns None when the ringbuffer is empty.
-    fn dequeue_ref(&mut self) -> Option<&T>;
-
-    /// dequeues the top item off the ringbuffer and returns a cloned version. See the [`dequeue_ref`](Self::dequeue_ref) docs
-    fn dequeue(&mut self) -> Option<T>
-    where
-        T: Clone,
-    {
-        self.dequeue_ref().cloned()
-    }
+    /// dequeues the top item off the ringbuffer, and moves this item out.
+    fn dequeue(&mut self) -> Option<T>;
 
     /// dequeues the top item off the queue, but does not return it. Instead it is dropped.
     /// If the ringbuffer is empty, this function is a nop.
@@ -93,10 +75,7 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
     /// assert_eq!(rb.len(), 0);
     ///
     /// ```
-    fn drain(&mut self) -> RingBufferDrainingIterator<T, Self>
-    where
-        T: Clone,
-    {
+    fn drain(&mut self) -> RingBufferDrainingIterator<T, Self> {
         RingBufferDrainingIterator::new(self)
     }
 }
@@ -296,12 +275,12 @@ mod iter {
 
     /// `RingBufferMutIterator` holds a reference to a `RingBufferRead` and iterates over it. `index` is the
     /// current iterator position.
-    pub struct RingBufferDrainingIterator<'rb, T: Clone, RB: RingBufferRead<T>> {
+    pub struct RingBufferDrainingIterator<'rb, T, RB: RingBufferRead<T>> {
         obj: &'rb mut RB,
         phantom: PhantomData<T>,
     }
 
-    impl<'rb, T: Clone, RB: RingBufferRead<T>> RingBufferDrainingIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBufferRead<T>> RingBufferDrainingIterator<'rb, T, RB> {
         #[inline]
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {
@@ -311,7 +290,7 @@ mod iter {
         }
     }
 
-    impl<'rb, T: Clone, RB: RingBufferRead<T>> Iterator for RingBufferDrainingIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBufferRead<T>> Iterator for RingBufferDrainingIterator<'rb, T, RB> {
         type Item = T;
 
         fn next(&mut self) -> Option<T> {
@@ -354,12 +333,19 @@ macro_rules! impl_ringbuffer_ext {
         fn get(&self, index: isize) -> Option<&T> {
             use core::ops::Not;
             self.is_empty().not().then(move || {
-                let index = (self.$writeptr as isize + index) as usize % self.len();
+                let index_from_readptr = if index >= 0 {
+                    index
+                } else {
+                    self.len() as isize + index
+                };
+
+                let normalized_index =
+                    self.readptr as isize + index_from_readptr.rem_euclid(self.len() as isize);
 
                 unsafe {
                     // SAFETY: index has been modulo-ed to be within range
                     // to be within bounds
-                    self.$get_unchecked(index)
+                    self.$get_unchecked($crate::mask(self.capacity(), normalized_index as usize))
                 }
             })
         }
@@ -368,12 +354,22 @@ macro_rules! impl_ringbuffer_ext {
         fn get_mut(&mut self, index: isize) -> Option<&mut T> {
             use core::ops::Not;
             self.is_empty().not().then(move || {
-                let index = (self.$writeptr as isize + index) as usize % self.len();
+                let index_from_readptr = if index >= 0 {
+                    index
+                } else {
+                    self.len() as isize + index
+                };
+
+                let normalized_index =
+                    self.readptr as isize + index_from_readptr.rem_euclid(self.len() as isize);
 
                 unsafe {
                     // SAFETY: index has been modulo-ed to be within range
                     // to be within bounds
-                    self.$get_unchecked_mut(index)
+                    self.$get_unchecked_mut($crate::mask(
+                        self.capacity(),
+                        normalized_index as usize,
+                    ))
                 }
             })
         }

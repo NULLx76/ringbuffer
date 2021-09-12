@@ -718,26 +718,6 @@ mod tests {
     }
 
     #[test]
-    fn run_test_dequeue_ref() {
-        fn run_test_dequeue_ref(mut b: impl RingBufferExt<i32>) {
-            b.push(0);
-            b.push(1);
-
-            assert_eq!(b.len(), 2);
-
-            assert_eq!(b.dequeue_ref(), Some(&0));
-            assert_eq!(b.dequeue_ref(), Some(&1));
-
-            assert_eq!(b.len(), 0);
-
-            assert_eq!(b.dequeue_ref(), None);
-        }
-
-        run_test_dequeue_ref(AllocRingBuffer::with_capacity(8));
-        run_test_dequeue_ref(ConstGenericRingBuffer::<i32, 8>::new());
-    }
-
-    #[test]
     fn run_test_dequeue() {
         fn run_test_dequeue(mut b: impl RingBufferExt<i32>) {
             b.push(0);
@@ -750,7 +730,7 @@ mod tests {
 
             assert_eq!(b.len(), 0);
 
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
         }
 
         run_test_dequeue(AllocRingBuffer::with_capacity(8));
@@ -801,14 +781,14 @@ mod tests {
 
             assert_eq!(b.dequeue(), Some(0));
             assert_eq!(b.dequeue(), Some(1));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
 
             b.push(0);
             b.push(1);
 
             assert_eq!(b.dequeue(), Some(0));
             assert_eq!(b.dequeue(), Some(1));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
         }
 
         test_push_dequeue_push(AllocRingBuffer::with_capacity(8));
@@ -824,7 +804,7 @@ mod tests {
 
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), Some(2));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
 
             b.push(0);
             b.push(1);
@@ -832,7 +812,7 @@ mod tests {
 
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), Some(2));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
         }
 
         test_push_dequeue_push_full(AllocRingBuffer::with_capacity(2));
@@ -848,7 +828,7 @@ mod tests {
 
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), Some(2));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
 
             b.push(0);
             b.push(1);
@@ -856,7 +836,7 @@ mod tests {
 
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), Some(2));
-            assert_eq!(b.dequeue_ref(), None);
+            assert_eq!(b.dequeue(), None);
 
             b.push(0);
             b.push(1);
