@@ -38,14 +38,9 @@ pub trait RingBuffer<T>: Sized {
 
 /// Defines behaviour for ringbuffers which allow for writing to the end of them (as a queue).
 /// For arbitrary buffer access however, [`RingBufferExt`] is necessary.
-pub trait RingBufferWrite<T>: RingBuffer<T> {
+pub trait RingBufferWrite<T>: RingBuffer<T> + Extend<T> {
     /// Pushes a value onto the buffer. Cycles around if capacity is reached.
     fn push(&mut self, value: T);
-
-    /// Pushes a slices of elements to the ring buffer.
-    fn extend(&mut self, values: &[T])
-    where
-        T: Clone;
 }
 
 /// Defines behaviour for ringbuffers which allow for reading from the start of them (as a queue).
