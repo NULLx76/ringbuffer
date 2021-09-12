@@ -133,7 +133,10 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
     }
 
     #[inline]
-    fn extend(&mut self, values: &[T]) where T: Clone {
+    fn extend(&mut self, values: &[T])
+    where
+        T: Clone,
+    {
         let skip_n = values.len() as isize - CAP as isize;
         let skip_n = if skip_n > 0 {
             // values "too long"
@@ -142,7 +145,10 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
             0
         } as usize;
         // skip_n is a performance optimization
-        values.iter().skip(skip_n).for_each(|x| self.push(x.clone()))
+        values
+            .iter()
+            .skip(skip_n)
+            .for_each(|x| self.push(x.clone()))
     }
 }
 
