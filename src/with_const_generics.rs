@@ -41,18 +41,14 @@ pub struct ConstGenericRingBuffer<T, const CAP: usize> {
 
 impl<T, const CAP: usize> Drop for ConstGenericRingBuffer<T, CAP> {
     fn drop(&mut self) {
-        for i in self.drain() {
-            drop(i);
-        }
+        self.drain().for_each(drop);
     }
 }
 
 impl<T: Clone, const CAP: usize> Clone for ConstGenericRingBuffer<T, CAP> {
     fn clone(&self) -> Self {
         let mut new = ConstGenericRingBuffer::<T, CAP>::new();
-        for elem in self.iter() {
-            new.push(elem.clone())
-        }
+        self.iter().cloned().for_each(|i| new.push(i));
         new
     }
 }

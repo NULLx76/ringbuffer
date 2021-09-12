@@ -46,9 +46,7 @@ pub struct AllocRingBuffer<T> {
 
 impl<T> Drop for AllocRingBuffer<T> {
     fn drop(&mut self) {
-        for i in self.drain() {
-            drop(i);
-        }
+        self.drain().for_each(drop);
     }
 }
 
