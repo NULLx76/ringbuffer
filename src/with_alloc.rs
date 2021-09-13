@@ -85,6 +85,8 @@ impl<T> RingBufferExt<T> for AllocRingBuffer<T> {
 
     #[inline]
     fn fill_with<F: FnMut() -> T>(&mut self, mut f: F) {
+        self.clear();
+
         self.readptr = 0;
         self.writeptr = self.capacity;
         self.buf.fill_with(|| MaybeUninit::new(f()));
@@ -110,7 +112,7 @@ impl<T> RingBufferRead<T> for AllocRingBuffer<T> {
         }
     }
 
-    impl_ringbuffer_read!(readptr);
+    impl_ringbuffer_read!();
 }
 
 impl<T> Extend<T> for AllocRingBuffer<T> {

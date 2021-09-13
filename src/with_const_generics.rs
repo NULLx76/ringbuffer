@@ -114,7 +114,7 @@ impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
         }
     }
 
-    impl_ringbuffer_read!(readptr);
+    impl_ringbuffer_read!();
 }
 
 impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
@@ -161,6 +161,7 @@ impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
 
     #[inline]
     fn fill_with<F: FnMut() -> T>(&mut self, mut f: F) {
+        self.clear();
         self.readptr = 0;
         self.writeptr = CAP;
         self.buf.fill_with(|| MaybeUninit::new(f()));
