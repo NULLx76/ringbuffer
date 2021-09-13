@@ -90,6 +90,17 @@ pub trait RingBufferExt<T>:
     + IndexMut<isize>
     + FromIterator<T>
 {
+    /// Sets every element in the ringbuffer to `T::default()`.
+    /// resets the read and writepointer
+    fn init_default(&mut self)
+    where
+        T: Default,
+    {
+        for _ in 0..self.capacity() {
+            self.push(T::default());
+        }
+    }
+
     /// Empties the buffer entirely. Sets the length to 0 but keeps the capacity allocated.
     fn clear(&mut self);
 
