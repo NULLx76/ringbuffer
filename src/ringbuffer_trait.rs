@@ -323,12 +323,10 @@ pub use iter::{RingBufferDrainingIterator, RingBufferIterator, RingBufferMutIter
 /// Implement various functions on implementors of RingBufferRead.
 /// This is to avoid duplicate code.
 macro_rules! impl_ringbuffer_read {
-    ($readptr: ident) => {
+    () => {
         #[inline]
         fn skip(&mut self) {
-            if !self.is_empty() {
-                self.$readptr += 1;
-            }
+            let _ = self.dequeue().map(drop);
         }
     };
 }
@@ -415,6 +413,10 @@ macro_rules! impl_ringbuffer_ext {
 
         #[inline]
         fn clear(&mut self) {
+            for i in self.drain() {
+                drop(i);
+            }
+
             self.$readptr = 0;
             self.$writeptr = 0;
         }
