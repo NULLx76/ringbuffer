@@ -84,15 +84,13 @@ impl<T> RingBufferExt<T> for AllocRingBuffer<T> {
     );
 
     #[inline]
-    fn init_default(&mut self)
-    where
-        T: Default,
+    fn fill_with<F: FnMut() -> T>(&mut self, mut f: F)
     {
         self.readptr = 0;
         self.writeptr = self.capacity;
-        self.buf.fill_with(|| MaybeUninit::new(Default::default()));
+        self.buf.fill_with(|| MaybeUninit::new(f()));
         while self.buf.len() < self.capacity {
-            self.buf.push(MaybeUninit::new(Default::default()));
+            self.buf.push(MaybeUninit::new(f()));
         }
     }
 }

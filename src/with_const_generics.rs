@@ -160,13 +160,11 @@ impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
     );
 
     #[inline]
-    fn init_default(&mut self)
-    where
-        T: Default,
+    fn fill_with<F: FnMut() -> T>(&mut self, mut f: F)
     {
         self.readptr = 0;
         self.writeptr = CAP;
-        self.buf.fill_with(|| MaybeUninit::new(Default::default()));
+        self.buf.fill_with(|| MaybeUninit::new(f()));
     }
 }
 
