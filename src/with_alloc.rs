@@ -10,6 +10,45 @@ use core::iter::FromIterator;
 use core::mem;
 use core::mem::MaybeUninit;
 
+
+/// Implement various functions on implementors of RingBuffer.
+/// This is to avoid duplicate code.
+macro_rules! impl_numeric_zero_constructor {
+    ($name: ident, $type: ty, $null_ele: expr) => {
+        impl $name<$type> {
+            /// Constructor that initializes the buffer with zeroes.
+            /// This is useful in scenarios, where you expect every
+            /// index of the buffer to be valid from the beginning.
+            /// Wrapper around [`with_capacity`].
+            #[inline]
+            pub fn with_capacity_zeroed(cap: usize) -> Self {
+                let mut obj = Self::with_capacity(cap);
+                for _ in 0..cap {
+                    obj.push($null_ele);
+                }
+                obj
+            }
+        }
+    };
+}
+
+macro_rules! impl_numeric_zero_constructors {
+    ($name: tt) => {
+        impl_numeric_zero_constructor!($name, i8, 0);
+        impl_numeric_zero_constructor!($name, i16, 0);
+        impl_numeric_zero_constructor!($name, i32, 0);
+        impl_numeric_zero_constructor!($name, i64, 0);
+        impl_numeric_zero_constructor!($name, i128, 0);
+        impl_numeric_zero_constructor!($name, u8, 0);
+        impl_numeric_zero_constructor!($name, u16, 0);
+        impl_numeric_zero_constructor!($name, u32, 0);
+        impl_numeric_zero_constructor!($name, u64, 0);
+        impl_numeric_zero_constructor!($name, u128, 0);
+        impl_numeric_zero_constructor!($name, f32, 0.0);
+        impl_numeric_zero_constructor!($name, f64, 0.0);
+    }
+}
+
 /// The `AllocRingBuffer` is a `RingBufferExt` which is based on a Vec. This means it allocates at runtime
 /// on the heap, and therefore needs the [`alloc`] crate. This struct and therefore the dependency on
 /// alloc can be disabled by disabling the `alloc` (default) feature.
@@ -214,6 +253,8 @@ impl<T> AllocRingBuffer<T> {
     }
 }
 
+impl_numeric_zero_constructors!(AllocRingBuffer);
+
 impl<RB> FromIterator<RB> for AllocRingBuffer<RB> {
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
@@ -334,5 +375,33 @@ mod tests {
             let expected = expected[i];
             assert_eq!(actual, expected);
         }
+    }
+
+    #[test]
+    fn test_zeroed_constructor() {
+        let obj_zeroed = AllocRingBuffer::<i8>::with_capacity_zeroed(8);
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = AllocRingBuffer::<i16>::with_capacity_zeroed(8);
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = AllocRingBuffer::<i32>::with_capacity_zeroed(8);
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = AllocRingBuffer::<i64>::with_capacity_zeroed(8);
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = AllocRingBuffer::<i128>::with_capacity_zeroed(8);
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = AllocRingBuffer::<u8>::with_capacity_zeroed(8);
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = AllocRingBuffer::<u16>::with_capacity_zeroed(8);
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = AllocRingBuffer::<u32>::with_capacity_zeroed(8);
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = AllocRingBuffer::<u64>::with_capacity_zeroed(8);
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = AllocRingBuffer::<u128>::with_capacity_zeroed(8);
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = AllocRingBuffer::<f32>::with_capacity_zeroed(8);
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0.0).count());
+        let obj_zeroed = AllocRingBuffer::<f64>::with_capacity_zeroed(8);
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0.0).count());
     }
 }

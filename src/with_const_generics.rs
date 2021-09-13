@@ -4,6 +4,45 @@ use core::mem;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
 
+
+/// Implement various functions on implementors of RingBuffer.
+/// This is to avoid duplicate code.
+macro_rules! impl_numeric_zero_constructor {
+    ($name: ident, $type: ty, $null_ele: expr) => {
+        impl<const CAP: usize> $name<$type, CAP> {
+            /// Constructor that initializes the buffer with zeroes.
+            /// This is useful in scenarios, where you expect every
+            /// index of the buffer to be valid from the beginning.
+            /// Wrapper around [`with_capacity`].
+            #[inline]
+            pub fn new_zeroed() -> Self {
+                let mut obj = Self::new();
+                for _ in 0..CAP {
+                    obj.push($null_ele);
+                }
+                obj
+            }
+        }
+    };
+}
+
+macro_rules! impl_numeric_zero_constructors {
+    ($name: ident) => {
+        impl_numeric_zero_constructor!($name, i8, 0);
+        impl_numeric_zero_constructor!($name, i16, 0);
+        impl_numeric_zero_constructor!($name, i32, 0);
+        impl_numeric_zero_constructor!($name, i64, 0);
+        impl_numeric_zero_constructor!($name, i128, 0);
+        impl_numeric_zero_constructor!($name, u8, 0);
+        impl_numeric_zero_constructor!($name, u16, 0);
+        impl_numeric_zero_constructor!($name, u32, 0);
+        impl_numeric_zero_constructor!($name, u64, 0);
+        impl_numeric_zero_constructor!($name, u128, 0);
+        impl_numeric_zero_constructor!($name, f32, 0.0);
+        impl_numeric_zero_constructor!($name, f64, 0.0);
+    }
+}
+
 /// The `ConstGenericRingBuffer` struct is a `RingBuffer` implementation which does not require `alloc` but
 /// uses const generics instead.
 ///
@@ -97,6 +136,8 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
             .expect("const array ptr shouldn't be null!")
     }
 }
+
+impl_numeric_zero_constructors!(ConstGenericRingBuffer);
 
 impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
     fn dequeue(&mut self) -> Option<T> {
@@ -269,5 +310,33 @@ mod tests {
             let expected = expected[i];
             assert_eq!(actual, expected);
         }
+    }
+
+    #[test]
+    fn test_zeroed_constructor() {
+        let obj_zeroed = ConstGenericRingBuffer::<i8, 8>::new_zeroed();
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = ConstGenericRingBuffer::<i16, 8>::new_zeroed();
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = ConstGenericRingBuffer::<i32, 8>::new_zeroed();
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = ConstGenericRingBuffer::<i64, 8>::new_zeroed();
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = ConstGenericRingBuffer::<i128, 8>::new_zeroed();
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = ConstGenericRingBuffer::<u8, 8>::new_zeroed();
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = ConstGenericRingBuffer::<u16, 8>::new_zeroed();
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = ConstGenericRingBuffer::<u32, 8>::new_zeroed();
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = ConstGenericRingBuffer::<u64, 8>::new_zeroed();
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = ConstGenericRingBuffer::<u128, 8>::new_zeroed();
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0).count());
+        let obj_zeroed = ConstGenericRingBuffer::<f32, 8>::new_zeroed();
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0.0).count());
+        let obj_zeroed = ConstGenericRingBuffer::<f64, 8>::new_zeroed();
+        assert_eq!(8, obj_zeroed.iter().filter(|x| **x == 0.0).count());
     }
 }
