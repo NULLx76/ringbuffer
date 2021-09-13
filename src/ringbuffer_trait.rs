@@ -94,13 +94,17 @@ pub trait RingBufferExt<T>:
     fn fill_with<F: FnMut() -> T>(&mut self, f: F);
 
     /// Sets every element in the ringbuffer to it's default value
-    fn fill_default(&mut self) where T: Default
+    fn fill_default(&mut self)
+    where
+        T: Default,
     {
         self.fill_with(Default::default)
     }
 
     /// Sets every element in the ringbuffer to `value`
-    fn fill(&mut self, value: T) where T: Clone
+    fn fill(&mut self, value: T)
+    where
+        T: Clone,
     {
         self.fill_with(|| value.clone())
     }
