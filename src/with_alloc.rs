@@ -82,6 +82,19 @@ impl<T> RingBufferExt<T> for AllocRingBuffer<T> {
         writeptr,
         crate::mask
     );
+
+    #[inline]
+    fn init_default(&mut self)
+    where
+        T: Default,
+    {
+        self.readptr = 0;
+        self.writeptr = self.capacity;
+        self.buf.fill_with(|| MaybeUninit::new(Default::default()));
+        while self.buf.len() < self.capacity {
+            self.buf.push(MaybeUninit::new(Default::default()));
+        }
+    }
 }
 
 impl<T> RingBufferRead<T> for AllocRingBuffer<T> {
@@ -186,7 +199,7 @@ impl<T> AllocRingBuffer<T> {
         Self::with_capacity_unchecked(cap)
     }
 
-    /// Creates a `AllocRingBuffer` with a capacity of [`RINGBUFFER_DEFAULT_CAPACITY`].
+    /// Creates an `AllocRingBuffer` with a capacity of [`RINGBUFFER_DEFAULT_CAPACITY`].
     #[inline]
     pub fn new() -> Self {
         Self::default()
