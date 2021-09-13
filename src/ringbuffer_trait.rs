@@ -90,6 +90,25 @@ pub trait RingBufferExt<T>:
     + IndexMut<isize>
     + FromIterator<T>
 {
+    /// Sets every element in the ringbuffer to the value returned by f.
+    fn fill_with<F: FnMut() -> T>(&mut self, f: F);
+
+    /// Sets every element in the ringbuffer to it's default value
+    fn fill_default(&mut self)
+    where
+        T: Default,
+    {
+        self.fill_with(Default::default)
+    }
+
+    /// Sets every element in the ringbuffer to `value`
+    fn fill(&mut self, value: T)
+    where
+        T: Clone,
+    {
+        self.fill_with(|| value.clone())
+    }
+
     /// Empties the buffer entirely. Sets the length to 0 but keeps the capacity allocated.
     fn clear(&mut self);
 
