@@ -904,15 +904,15 @@ mod tests {
     }
 
     #[test]
-    fn run_test_default_init() {
-        fn test_default_init(mut rb: impl RingBufferExt<i32>) {
+    fn run_test_default_fill() {
+        fn test_default_fill(mut rb: impl RingBufferExt<i32>) {
             for i in 0..rb.capacity() {
                 for _ in 0..i {
                     rb.push(1);
                 }
 
                 assert_eq!(rb.len(), i);
-                rb.init_default();
+                rb.fill_default();
                 assert_eq!(rb.len(), 4);
 
                 // 4x
@@ -923,8 +923,32 @@ mod tests {
             }
         }
 
-        test_default_init(AllocRingBuffer::with_capacity(4));
-        test_default_init(ConstGenericRingBuffer::<i32, 4>::new());
+        test_default_fill(AllocRingBuffer::with_capacity(4));
+        test_default_fill(ConstGenericRingBuffer::<i32, 4>::new());
+    }
+
+    #[test]
+    fn run_test_fill() {
+        fn test_fill(mut rb: impl RingBufferExt<i32>) {
+            for i in 0..rb.capacity() {
+                for _ in 0..i {
+                    rb.push(1);
+                }
+
+                assert_eq!(rb.len(), i);
+                rb.fill(3);
+                assert_eq!(rb.len(), 4);
+
+                // 4x
+                assert_eq!(rb.dequeue(), Some(3));
+                assert_eq!(rb.dequeue(), Some(3));
+                assert_eq!(rb.dequeue(), Some(3));
+                assert_eq!(rb.dequeue(), Some(3));
+            }
+        }
+
+        test_fill(AllocRingBuffer::with_capacity(4));
+        test_fill(ConstGenericRingBuffer::<i32, 4>::new());
     }
 
     mod test_dropping {
