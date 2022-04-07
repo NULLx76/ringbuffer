@@ -47,7 +47,7 @@ fn main() {
 
 | name | default | description |
 | --- | --- | --- |
-| alloc | ✓ | Disable this feature to remove the dependency on alloc. Useful for kernels. |
+| alloc | ✓ | Disable this feature to remove the dependency on alloc. The feature is compatible with `no_std`. |
 
 # License
 
