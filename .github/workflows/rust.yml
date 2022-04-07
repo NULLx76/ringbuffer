@@ -19,6 +19,7 @@ jobs:
         toolchain: nightly
         override: true
         components: clippy, rustfmt
+        default: true
 
     - name: Run cargo fmt
       uses: actions-rs/cargo@v1
@@ -95,3 +96,22 @@ jobs:
       with:
         command: test
         args: --all-features
+
+  test-no-std:
+    name: Test no-std
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: thumbv7em-none-eabihf
+        override: true
+
+    - name: Run cargo build
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --target thumbv7em-none-eabihf --all-features
