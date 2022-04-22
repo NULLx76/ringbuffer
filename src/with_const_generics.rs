@@ -80,12 +80,11 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
         assert!(CAP.is_power_of_two(), "Capacity must be a power of two");
 
         Self {
-            buf: unsafe{MaybeUninit::uninit().assume_init()},
+            buf: unsafe { MaybeUninit::uninit().assume_init() },
             writeptr: 0,
             readptr: 0,
         }
     }
-
 
     /// Creates a ringbuffer as a const fn. This function uses unsafe (but sound) code
     /// and gives less nice error messages due to const fn limitations
@@ -97,7 +96,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
         assert!(CAP.is_power_of_two());
 
         Self {
-            buf: unsafe{MaybeUninit::uninit().assume_init()},
+            buf: unsafe { MaybeUninit::uninit().assume_init() },
             writeptr: 0,
             readptr: 0,
         }
