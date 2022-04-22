@@ -76,7 +76,30 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     /// type parameter.
     #[inline]
     pub fn new() -> Self {
-        Self::default()
+        assert_ne!(CAP, 0, "Capacity must be greater than 0");
+        assert!(CAP.is_power_of_two(), "Capacity must be a power of two");
+
+        Self {
+            buf: unsafe{MaybeUninit::uninit().assume_init()},
+            writeptr: 0,
+            readptr: 0,
+        }
+    }
+
+
+    /// Creates a ringbuffer as a const fn. This function uses unsafe (but sound) code
+    /// and gives less nice error messages due to const fn limitations
+    #[inline]
+    pub fn new_const() -> Self {
+        // no const assert messages
+        assert_ne!(CAP, 0);
+        assert!(CAP.is_power_of_two());
+
+        Self {
+            buf: unsafe{MaybeUninit::uninit().assume_init()},
+            writeptr: 0,
+            readptr: 0,
+        }
     }
 
     /// Get a reference from the buffer without checking it is initialized
@@ -184,16 +207,7 @@ impl<T, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     /// Panics if `CAP` is 0 or not a power of two
     #[inline]
     fn default() -> Self {
-        assert_ne!(CAP, 0, "Capacity must be greater than 0");
-        assert!(CAP.is_power_of_two(), "Capacity must be a power of two");
-
-        let arr = array_init::array_init(|_| MaybeUninit::uninit());
-
-        Self {
-            buf: arr,
-            writeptr: 0,
-            readptr: 0,
-        }
+        Self::new()
     }
 }
 
