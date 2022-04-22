@@ -90,10 +90,15 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     /// and gives less nice error messages due to const fn limitations
     #[cfg(feature = "const-fn")]
     #[inline]
-    pub fn new_const() -> Self {
+    pub const fn new_const() -> Self {
         // no const assert messages
-        assert_ne!(CAP, 0);
-        assert!(CAP.is_power_of_two());
+        if CAP == 0 {
+            panic!()
+        }
+
+        if !CAP.is_power_of_two() {
+            panic!()
+        }
 
         Self {
             buf: unsafe { MaybeUninit::uninit().assume_init() },
