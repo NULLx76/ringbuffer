@@ -89,6 +89,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
 
     /// Creates a ringbuffer as a const fn. This function uses unsafe (but sound) code
     /// and gives less nice error messages due to const fn limitations
+    #[cfg(feature = "const-fn")]
     #[inline]
     pub fn new_const() -> Self {
         // no const assert messages
