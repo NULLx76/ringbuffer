@@ -3,7 +3,6 @@ use core::ops::{Index, IndexMut};
 use crate::ringbuffer_trait::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 
 extern crate alloc;
-extern crate std;
 // We need vecs so depend on alloc
 use alloc::vec::Vec;
 use core::iter::FromIterator;

@@ -15,6 +15,9 @@ Implementations for three kinds of ringbuffers, with a mostly similar API are pr
 
 All of these ringbuffers also implement the RingBuffer trait for their shared API surface.
 
+
+MSRV: Rust 1.55
+
 # Usage
 
 ```rust
@@ -44,7 +47,7 @@ fn main() {
 
 | name | default | description |
 | --- | --- | --- |
-| alloc | ✓ | Disable this feature to remove the dependency on alloc. Useful for kernels. |
+| alloc | ✓ | Disable this feature to remove the dependency on alloc. The feature is compatible with `no_std`. |
 
 # License
 
