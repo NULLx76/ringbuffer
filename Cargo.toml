@@ -22,6 +22,7 @@ criterion = "0.1.2"
 default = ["alloc"]
 # disable the alloc based ringbuffer, to make RingBuffers work in no_alloc environments
 alloc = []
+const-fn = []
 
 [[bench]]
 name = "bench"
