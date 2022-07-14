@@ -183,7 +183,7 @@ impl<T> AllocRingBuffer<T> {
     /// function raised to the power of two (effectively the input is the log2 of the actual capacity)
     #[inline]
     pub fn with_capacity_power_of_2(cap_power_of_two: usize) -> Self {
-        Self::with_capacity_unchecked(cap_power_of_two.pow(2))
+        Self::with_capacity_unchecked(1 << cap_power_of_two)
     }
 
     #[inline]
