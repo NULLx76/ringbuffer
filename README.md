@@ -51,4 +51,4 @@ fn main() {
 
 # License
 
-Licensed under GNU Lesser General Public License v3.0
+Licensed under MIT License
