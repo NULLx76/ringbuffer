@@ -10,7 +10,7 @@ description = "A fixed-size circular buffer"
 repository = "https://github.com/NULLx76/ringbuffer/"
 keywords = ["ring", "cyclic", "circular", "buffer", "no-std"]
 categories = ["data-structures"]
-license = "LGPL-3.0"
+license = "MIT"
 
 [dependencies]
 array-init = "2.0"
