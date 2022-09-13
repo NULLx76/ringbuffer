@@ -63,7 +63,7 @@ impl<T: PartialEq> PartialEq for AllocRingBuffer<T> {
             && self
                 .iter()
                 .zip(other.iter())
-                .fold(true, |p, (a, b)| p && a == b)
+                .all(|(a, b)| a == b)
     }
 }
 
