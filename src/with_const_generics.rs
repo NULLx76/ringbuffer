@@ -122,7 +122,7 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
         let iter = iter.into_iter();
 
         for i in iter {
-            self.push(i)
+            self.push(i);
         }
     }
 }
@@ -201,7 +201,7 @@ impl<RB, const CAP: usize> FromIterator<RB> for ConstGenericRingBuffer<RB, CAP> 
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
-            res.push(i)
+            res.push(i);
         }
 
         res
