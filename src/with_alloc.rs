@@ -60,10 +60,7 @@ impl<T: PartialEq> PartialEq for AllocRingBuffer<T> {
     fn eq(&self, other: &Self) -> bool {
         self.capacity == other.capacity
             && self.len() == other.len()
-            && self
-                .iter()
-                .zip(other.iter())
-                .all(|(a, b)| a == b)
+            && self.iter().zip(other.iter()).all(|(a, b)| a == b)
     }
 }
 
@@ -119,7 +116,7 @@ impl<T> Extend<T> for AllocRingBuffer<T> {
         let iter = iter.into_iter();
 
         for i in iter {
-            self.push(i)
+            self.push(i);
         }
     }
 }
@@ -229,7 +226,7 @@ impl<RB> FromIterator<RB> for AllocRingBuffer<RB> {
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
-            res.push(i)
+            res.push(i);
         }
 
         res

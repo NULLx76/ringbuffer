@@ -98,7 +98,7 @@ pub trait RingBufferExt<T>:
     where
         T: Default,
     {
-        self.fill_with(Default::default)
+        self.fill_with(Default::default);
     }
 
     /// Sets every element in the ringbuffer to `value`
@@ -106,7 +106,7 @@ pub trait RingBufferExt<T>:
     where
         T: Clone,
     {
-        self.fill_with(|| value.clone())
+        self.fill_with(|| value.clone());
     }
 
     /// Empties the buffer entirely. Sets the length to 0 but keeps the capacity allocated.
@@ -320,7 +320,7 @@ mod iter {
 
 pub use iter::{RingBufferDrainingIterator, RingBufferIterator, RingBufferMutIterator};
 
-/// Implement various functions on implementors of RingBufferRead.
+/// Implement various functions on implementors of [`RingBufferRead`].
 /// This is to avoid duplicate code.
 macro_rules! impl_ringbuffer_read {
     () => {
@@ -331,7 +331,7 @@ macro_rules! impl_ringbuffer_read {
     };
 }
 
-/// Implement various functions on implementors of RingBuffer.
+/// Implement various functions on implementors of [`RingBuffer`].
 /// This is to avoid duplicate code.
 macro_rules! impl_ringbuffer {
     ($readptr: ident, $writeptr: ident) => {
@@ -342,7 +342,7 @@ macro_rules! impl_ringbuffer {
     };
 }
 
-/// Implement various functions on implementors of RingBufferExt.
+/// Implement various functions on implementors of [`RingBufferExt`].
 /// This is to avoid duplicate code.
 macro_rules! impl_ringbuffer_ext {
     ($get_unchecked: ident, $get_unchecked_mut: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
