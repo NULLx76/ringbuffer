@@ -852,6 +852,8 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
+    // this test takes far too long with Miri enabled
     fn run_test_push_dequeue_push_full_get_rep() {
         fn test_push_dequeue_push_full_get_rep(mut rb: impl RingBufferExt<i32>) {
             for _ in 0..100_000 {
@@ -973,24 +975,30 @@ mod tests {
         }
 
         macro_rules! test_dropped {
-            ($constructor: block) => {
+            ($constructor: block) => {{
+                let dt = Box::into_raw(Box::new(RefCell::new(DropTest { flag: false })));
                 {
-                    let dt = Box::leak(Box::new(RefCell::new(DropTest { flag: false })));
-                    {
-                        let d = Dropee { parent: Some(dt.borrow_mut()) };
-                        let mut rb = { $constructor };
-                        rb.push(d);
-                        rb.push(Dropee { parent: None });
-                    }
-                    assert!(dt.borrow_mut().flag);
-                    unsafe {
-                        // SAFETY: we know Dropee, which needed the static lifetime, has been dropped (by the assert)
-                        // we could probably skip this, but this makes sure we don't leak any memory
-                        let ptr: *mut RefCell<DropTest> = std::mem::transmute::<&RefCell<DropTest>, _>(dt);
-                        drop(Box::from_raw(ptr));
-                    }
+                    let d = Dropee {
+                        // Safety:
+                        // We know the pointer is initialized as it was created just above.
+                        // Also no other mutable borrow can exist at this time
+                        parent: Some(unsafe { dt.as_ref() }.unwrap().borrow_mut()),
+                    };
+                    let mut rb = { $constructor };
+                    rb.push(d);
+                    rb.push(Dropee { parent: None });
                 }
-            };
+                {
+                    // Safety:
+                    // We know the pointer exists and is no longer borrowed as the block above limited it
+                    assert!(unsafe { dt.as_ref() }.unwrap().borrow().flag);
+                }
+                // Safety:
+                // No other references exist to box so we can safely drop it
+                unsafe {
+                    drop(Box::from_raw(dt));
+                }
+            }};
         }
 
         #[test]
