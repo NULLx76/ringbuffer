@@ -55,7 +55,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install nightly toolchain
+    - name: Install beta toolchain
       uses: actions-rs/toolchain@v1
       with:
         profile: minimal
@@ -84,7 +84,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install stable toolchain
+    - name: Install nightly toolchain
       uses: actions-rs/toolchain@v1
       with:
         toolchain: nightly
@@ -95,6 +95,19 @@ jobs:
       with:
         command: test
         args: --all-features
+
+  test-miri:
+    name: Test Miri
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Miri
+      run: |
+        rustup toolchain install nightly --component miri
+        rustup override set nightly
+        cargo miri setup
+    - name: Test with Miri
+      run: cargo miri test
 
   build-no-std:
     name: Build no-std
