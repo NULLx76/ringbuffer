@@ -853,7 +853,7 @@ mod tests {
 
     #[test]
     #[cfg_attr(miri, ignore)]
-    // this test takes far too long with Miri enabled (30+ min)
+    // this test takes far too long with Miri enabled
     fn run_test_push_dequeue_push_full_get_rep() {
         fn test_push_dequeue_push_full_get_rep(mut rb: impl RingBufferExt<i32>) {
             for _ in 0..100_000 {
