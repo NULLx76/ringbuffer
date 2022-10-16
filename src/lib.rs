@@ -196,7 +196,7 @@ mod tests {
             b.push(1);
             b.push(2);
             b.push(3);
-            assert_ne!(b.is_empty(), true);
+            assert!(!b.is_empty());
 
             b.clear();
             assert!(b.is_empty());
