@@ -796,6 +796,28 @@ mod tests {
     }
 
     #[test]
+    fn run_test_enqueue_dequeue_push() {
+        fn test_enqueue_dequeue_push(mut b: impl RingBufferExt<i32>) {
+            b.enqueue(0);
+            b.enqueue(1);
+
+            assert_eq!(b.dequeue(), Some(0));
+            assert_eq!(b.dequeue(), Some(1));
+            assert_eq!(b.dequeue(), None);
+
+            b.enqueue(0);
+            b.enqueue(1);
+
+            assert_eq!(b.dequeue(), Some(0));
+            assert_eq!(b.dequeue(), Some(1));
+            assert_eq!(b.dequeue(), None);
+        }
+
+        test_enqueue_dequeue_push(AllocRingBuffer::with_capacity(8));
+        test_enqueue_dequeue_push(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
+    #[test]
     fn run_test_push_dequeue_push_full() {
         fn test_push_dequeue_push_full(mut b: impl RingBufferExt<i32>) {
             b.push(0);
