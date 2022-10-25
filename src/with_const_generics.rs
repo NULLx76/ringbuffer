@@ -187,7 +187,7 @@ impl<T, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
         assert_ne!(CAP, 0, "Capacity must be greater than 0");
         assert!(CAP.is_power_of_two(), "Capacity must be a power of two");
 
-        let arr = array_init::array_init(|_| MaybeUninit::uninit());
+        let arr = [(); CAP].map(|_| MaybeUninit::uninit());
 
         Self {
             buf: arr,
