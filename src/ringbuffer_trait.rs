@@ -41,6 +41,11 @@ pub trait RingBuffer<T>: Sized {
 pub trait RingBufferWrite<T>: RingBuffer<T> + Extend<T> {
     /// Pushes a value onto the buffer. Cycles around if capacity is reached.
     fn push(&mut self, value: T);
+
+    /// alias for [`push`](RingBufferWrite::push), forming a more natural counterpart to [`dequeue`](RingBufferRead::dequeue)
+    fn enqueue(&mut self, value: T) {
+        self.push(value)
+    }
 }
 
 /// Defines behaviour for ringbuffers which allow for reading from the start of them (as a queue).
