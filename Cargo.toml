@@ -12,9 +12,6 @@ keywords = ["ring", "cyclic", "circular", "buffer", "no-std"]
 categories = ["data-structures"]
 license = "MIT"
 
-[dependencies]
-array-init = "2.0"
-
 [dev-dependencies]
 criterion = "0.1.2"
 
