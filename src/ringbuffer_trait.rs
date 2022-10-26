@@ -273,39 +273,6 @@ mod iter {
         }
     }
 
-    // /// `RingBufferMutIterator` holds a reference to a `RingBufferExt` and iterates over it. `index` is the
-    // /// current iterator position.
-    // ///
-    // /// WARNING: NEVER ACCESS THE `obj` FIELD. it's private on purpose, and can technically be accessed
-    // /// in the same module. However, this breaks the safety of `next()`
-    // pub struct RingBufferMutIterator<'rb, T, RB: RingBufferExt<T>> {
-    //     obj: &'rb mut RB,
-    //     index: usize,
-    //     phantom: PhantomData<T>,
-    // }
-    //
-    // impl<'rb, T, RB: RingBufferExt<T>> RingBufferMutIterator<'rb, T, RB> {
-    //     #[inline]
-    //     pub fn new(obj: &'rb mut RB) -> Self {
-    //         Self {
-    //             obj,
-    //             index: 0,
-    //             phantom: PhantomData::default(),
-    //         }
-    //     }
-    //
-    //     pub fn next(&mut self) -> Option<&mut T> {
-    //         if self.index < self.obj.len() {
-    //             let res = self.obj.get_mut(self.index as isize);
-    //             self.index += 1;
-    //
-    //             res
-    //         } else {
-    //             None
-    //         }
-    //     }
-    // }
-
     /// `RingBufferMutIterator` holds a reference to a `RingBufferExt` and iterates over it. `index` is the
     /// current iterator position.
     ///
