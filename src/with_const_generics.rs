@@ -72,33 +72,12 @@ impl<T: PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuffer<T, CAP
 impl<T: PartialEq, const CAP: usize> Eq for ConstGenericRingBuffer<T, CAP> {}
 
 impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
-    /// Creates a new `RingBuffer`. This method simply creates a default ringbuffer. The capacity is given as a
-    /// type parameter.
+
+    /// Creates a const generic ringbuffer, size is passed as a const generic.
     #[inline]
-    pub fn new() -> Self {
-        assert_ne!(CAP, 0, "Capacity must be greater than 0");
+    pub const fn new() -> Self {
+        assert!(CAP != 0, "Capacity is not allowed to be zero");
         assert!(CAP.is_power_of_two(), "Capacity must be a power of two");
-
-        Self {
-            buf: unsafe { MaybeUninit::uninit().assume_init() },
-            writeptr: 0,
-            readptr: 0,
-        }
-    }
-
-    /// Creates a ringbuffer as a const fn. This function uses unsafe (but sound) code
-    /// and gives less nice error messages due to const fn limitations
-    #[cfg(feature = "const-fn")]
-    #[inline]
-    pub const fn new_const() -> Self {
-        // no const assert messages
-        if CAP == 0 {
-            panic!()
-        }
-
-        if !CAP.is_power_of_two() {
-            panic!()
-        }
 
         Self {
             buf: unsafe { MaybeUninit::uninit().assume_init() },

@@ -12,6 +12,9 @@ keywords = ["ring", "cyclic", "circular", "buffer", "no-std"]
 categories = ["data-structures"]
 license = "MIT"
 
+[dependencies]
+const_panic = "0.2"
+
 [dev-dependencies]
 criterion = "0.1.2"
 
@@ -19,7 +22,6 @@ criterion = "0.1.2"
 default = ["alloc"]
 # disable the alloc based ringbuffer, to make RingBuffers work in no_alloc environments
 alloc = []
-const-fn = []
 
 [[bench]]
 name = "bench"
