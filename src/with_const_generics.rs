@@ -72,7 +72,6 @@ impl<T: PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuffer<T, CAP
 impl<T: PartialEq, const CAP: usize> Eq for ConstGenericRingBuffer<T, CAP> {}
 
 impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
-
     /// Creates a const generic ringbuffer, size is passed as a const generic.
     #[inline]
     pub const fn new() -> Self {
