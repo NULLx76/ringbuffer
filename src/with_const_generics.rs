@@ -150,7 +150,7 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
     }
 }
 
-impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
+unsafe impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
     impl_ringbuffer_ext!(
         get_unchecked,
         get_unchecked_mut,
