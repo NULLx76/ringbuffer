@@ -1,19 +1,16 @@
 [package]
 name = "ringbuffer"
-version = "0.8.5"
+version = "0.10.0"
 authors = [
     "Victor Roest <victor@xirion.net>",
     "Jonathan Dönszelmann <jonabent@gmail.com>",
 ]
-edition = "2018"
+edition = "2021"
 description = "A fixed-size circular buffer"
 repository = "https://github.com/NULLx76/ringbuffer/"
 keywords = ["ring", "cyclic", "circular", "buffer", "no-std"]
 categories = ["data-structures"]
-license = "LGPL-3.0"
-
-[dependencies]
-array-init = "2.0"
+license = "MIT"
 
 [dev-dependencies]
 criterion = "0.1.2"
