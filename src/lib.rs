@@ -86,6 +86,8 @@ const fn mask(cap: usize, index: usize) -> usize {
 #[allow(non_upper_case_globals)]
 mod tests {
     extern crate std;
+
+    use alloc::vec::Vec;
     use std::vec;
 
     use crate::{
@@ -315,22 +317,41 @@ mod tests {
     }
 
     #[test]
-    fn run_test_iter_mut_wrap() {
-        fn test_iter_mut_wrap(mut b: impl RingBufferExt<i32>) {
+    fn test_iter_mut_wrap() {
+        fn run_test_iter_mut_wrap(mut b: impl RingBufferExt<i32>) {
             b.push(1);
             b.push(2);
             b.push(3);
 
-            let mut i = b.iter_mut();
-            while let Some(el) = i.next() {
-                *el += 1;
+            for i in b.iter_mut() {
+                *i += 1;
             }
 
             assert_eq!(vec![3, 4], b.to_vec())
         }
 
-        test_iter_mut_wrap(AllocRingBuffer::with_capacity(2));
-        test_iter_mut_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+        run_test_iter_mut_wrap(AllocRingBuffer::with_capacity(2));
+        run_test_iter_mut_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+    }
+
+    #[test]
+    fn test_iter_mut_miri_fail() {
+        fn run_test_iter_mut_wrap(mut b: impl RingBufferExt<i32>) {
+            b.push(1);
+            b.push(2);
+            b.push(3);
+
+            let buf = b.iter_mut().collect::<Vec<_>>();
+
+            for i in buf {
+                *i += 1;
+            }
+
+            assert_eq!(vec![3, 4], b.to_vec())
+        }
+
+        run_test_iter_mut_wrap(AllocRingBuffer::with_capacity(2));
+        run_test_iter_mut_wrap(ConstGenericRingBuffer::<i32, 2>::new());
     }
 
     #[test]
