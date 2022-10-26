@@ -58,6 +58,8 @@
 //!
 //! Licensed under GNU Lesser General Public License v3.0
 
+extern crate alloc;
+
 #[macro_use]
 pub(crate) mod ringbuffer_trait;
 use core::usize;
@@ -301,8 +303,7 @@ mod tests {
             b.push(2);
             b.push(3);
 
-            let mut i = b.iter_mut();
-            while let Some(el) = i.next() {
+            for el in b.iter_mut() {
                 *el += 1;
             }
 

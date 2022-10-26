@@ -87,7 +87,15 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
 
 /// Defines behaviour for ringbuffers which allow them to be used as a general purpose buffer.
 /// With this trait, arbitrary access of elements in the buffer is possible.
-pub trait RingBufferExt<T>:
+///
+/// # Safety
+/// Implementing this implies that the ringbuffer upholds some safety
+/// guarantees, such as returning a different value from get_mut any
+/// for every different index passed in. See the exact requirements
+/// in the safety comment on the next function of the mutable Iterator
+/// implementation, since these safety guarantees are necessary for
+/// [`iter_mut`] to work
+pub unsafe trait RingBufferExt<T>:
     RingBuffer<T>
     + RingBufferRead<T>
     + RingBufferWrite<T>
@@ -206,6 +214,7 @@ mod iter {
     use crate::{RingBufferExt, RingBufferRead};
     use core::iter::FusedIterator;
     use core::marker::PhantomData;
+    use core::mem;
 
     /// RingBufferIterator holds a reference to a `RingBufferExt` and iterates over it. `index` is the
     /// current iterator position.
@@ -264,19 +273,51 @@ mod iter {
         }
     }
 
+    // /// `RingBufferMutIterator` holds a reference to a `RingBufferExt` and iterates over it. `index` is the
+    // /// current iterator position.
+    // ///
+    // /// WARNING: NEVER ACCESS THE `obj` FIELD. it's private on purpose, and can technically be accessed
+    // /// in the same module. However, this breaks the safety of `next()`
+    // pub struct RingBufferMutIterator<'rb, T, RB: RingBufferExt<T>> {
+    //     obj: &'rb mut RB,
+    //     index: usize,
+    //     phantom: PhantomData<T>,
+    // }
+    //
+    // impl<'rb, T, RB: RingBufferExt<T>> RingBufferMutIterator<'rb, T, RB> {
+    //     #[inline]
+    //     pub fn new(obj: &'rb mut RB) -> Self {
+    //         Self {
+    //             obj,
+    //             index: 0,
+    //             phantom: PhantomData::default(),
+    //         }
+    //     }
+    //
+    //     pub fn next(&mut self) -> Option<&mut T> {
+    //         if self.index < self.obj.len() {
+    //             let res = self.obj.get_mut(self.index as isize);
+    //             self.index += 1;
+    //
+    //             res
+    //         } else {
+    //             None
+    //         }
+    //     }
+    // }
+
     /// `RingBufferMutIterator` holds a reference to a `RingBufferExt` and iterates over it. `index` is the
     /// current iterator position.
     ///
-    /// WARNING: NEVER ACCESS THE `obj` FIELD. it's private on purpose, and can technically be accessed
-    /// in the same module. However, this breaks the safety of `next()`
+    /// WARNING: NEVER ACCESS THE `obj` FIELD OUTSIDE OF NEXT. It's private on purpose, and
+    /// can technically be accessed in the same module. However, this breaks the safety of `next()`
     pub struct RingBufferMutIterator<'rb, T, RB: RingBufferExt<T>> {
         obj: &'rb mut RB,
         index: usize,
-        phantom: PhantomData<T>,
+        phantom: PhantomData<&'rb mut T>,
     }
 
     impl<'rb, T, RB: RingBufferExt<T>> RingBufferMutIterator<'rb, T, RB> {
-        #[inline]
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {
                 obj,
@@ -284,13 +325,30 @@ mod iter {
                 phantom: PhantomData::default(),
             }
         }
+    }
 
-        pub fn next(&mut self) -> Option<&mut T> {
+    impl<'rb, T: 'rb, RB: RingBufferExt<T>> Iterator for RingBufferMutIterator<'rb, T, RB> {
+        type Item = &'rb mut T;
+
+        fn next(&mut self) -> Option<Self::Item> {
             if self.index < self.obj.len() {
                 let res = self.obj.get_mut(self.index as isize);
                 self.index += 1;
 
-                res
+                // SAFETY:
+                // * here we extend the lifetime of the reference 'rb.
+                // * 'rb is as long as the mutable iterator exists
+                // * rust cannot prove that all the mutable references can live 'rb since they all overlap
+                // the same buffer
+                // * the only way this is safe, is when every get_mut above returns a different reference
+                // every time the next function is called
+                // * Since the index is constantly updated, this is true locally
+                // * However, anyone can implement RingBufferExt and not uphold these guarantees.
+                // * But, allowing iter_mut to exist, also requires users to implement the unsafe trait
+                // IterMutSafe, which is sealed (ie. external users can never get iter_mut on their ringbuffers).
+                unsafe {
+                    mem::transmute::<Option<&mut T>, Option<&'rb mut T>>(res)
+                }
             } else {
                 None
             }

@@ -70,7 +70,7 @@ impl<T: Eq + PartialEq> Eq for AllocRingBuffer<T> {}
 // must be a power of 2
 pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
-impl<T> RingBufferExt<T> for AllocRingBuffer<T> {
+unsafe impl<T> RingBufferExt<T> for AllocRingBuffer<T> {
     impl_ringbuffer_ext!(
         get_unchecked,
         get_unchecked_mut,
