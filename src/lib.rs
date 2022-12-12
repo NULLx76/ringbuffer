@@ -58,8 +58,6 @@
 //!
 //! Licensed under GNU Lesser General Public License v3.0
 
-extern crate alloc;
-
 #[macro_use]
 pub(crate) mod ringbuffer_trait;
 use core::usize;
@@ -87,8 +85,8 @@ const fn mask(cap: usize, index: usize) -> usize {
 mod tests {
     extern crate std;
 
-    use alloc::vec::Vec;
     use std::vec;
+    use std::vec::Vec;
 
     use crate::{
         AllocRingBuffer, ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite,
