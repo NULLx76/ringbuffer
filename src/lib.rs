@@ -56,7 +56,7 @@
 //!
 //! # License
 //!
-//! Licensed under GNU Lesser General Public License v3.0
+//! Licensed under the MIT License
 
 #[macro_use]
 pub(crate) mod ringbuffer_trait;
