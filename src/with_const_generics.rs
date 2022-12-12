@@ -84,24 +84,30 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
             readptr: 0,
         }
     }
+}
 
-    /// Get a reference from the buffer without checking it is initialized
-    /// Caller MUST be sure this index is initialized, or undefined behavior will happen
-    unsafe fn get_unchecked(&self, index: usize) -> &T {
-        self.buf[index]
-            .as_ptr()
-            .as_ref()
-            .expect("const array ptr shouldn't be null!")
-    }
+/// Get a reference from the buffer without checking it is initialized
+/// Caller MUST be sure this index is initialized, or undefined behavior will happen
+unsafe fn get_unchecked<'a, T, const N: usize>(
+    rb: *const ConstGenericRingBuffer<T, N>,
+    index: usize,
+) -> &'a T {
+    (*rb).buf[index]
+        .as_ptr()
+        .as_ref()
+        .expect("const array ptr shouldn't be null!")
+}
 
-    /// Get a mutable reference from the buffer without checking it is initialized
-    /// Caller MUST be sure this index is initialized, or undefined behavior will happen
-    unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
-        self.buf[index]
-            .as_mut_ptr()
-            .as_mut()
-            .expect("const array ptr shouldn't be null!")
-    }
+/// Get a mutable reference from the buffer without checking it is initialized
+/// Caller MUST be sure this index is initialized, or undefined behavior will happen
+unsafe fn get_unchecked_mut<T, const N: usize>(
+    rb: *mut ConstGenericRingBuffer<T, N>,
+    index: usize,
+) -> *mut T {
+    (*rb).buf[index]
+        .as_mut_ptr()
+        .as_mut()
+        .expect("const array ptr shouldn't be null!")
 }
 
 impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
@@ -156,7 +162,7 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
     }
 }
 
-impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
+unsafe impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
     impl_ringbuffer_ext!(
         get_unchecked,
         get_unchecked_mut,
@@ -177,7 +183,7 @@ impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
 impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
     #[cfg(not(tarpaulin_include))]
-    fn capacity(&self) -> usize {
+    unsafe fn ptr_capacity(_: *const Self) -> usize {
         CAP
     }
 
