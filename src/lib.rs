@@ -88,6 +88,7 @@ mod tests {
     extern crate std;
 
     use alloc::vec::Vec;
+    use core::fmt::Debug;
     use std::vec;
 
     use crate::{
@@ -927,8 +928,7 @@ mod tests {
 
     #[test]
     fn run_test_clone() {
-        use std::fmt;
-        fn test_clone(mut rb: impl RingBufferExt<i32> + Clone + Eq + fmt::Debug) {
+        fn test_clone(mut rb: impl RingBufferExt<i32> + Clone + Eq + Debug) {
             rb.push(42);
             rb.push(32);
             rb.push(22);
@@ -973,6 +973,43 @@ mod tests {
         test_default_fill(ConstGenericRingBuffer::<i32, 4>::new());
     }
 
+    #[test]
+    fn run_next_back_test() {
+        fn next_back_test(mut rb: impl RingBufferExt<i32> + Debug) {
+            for i in 1..=4 {
+                rb.push(i);
+            }
+
+            let mut it = rb.iter();
+            assert_eq!(Some(&4), it.next_back());
+            assert_eq!(Some(&3), it.next_back());
+            assert_eq!(Some(&1), it.next());
+            assert_eq!(Some(&2), it.next_back());
+            assert_eq!(None, it.next_back());
+        }
+
+        next_back_test(ConstGenericRingBuffer::<i32, 8>::new());
+        next_back_test(AllocRingBuffer::with_capacity(8));
+    }
+
+    #[test]
+    fn run_next_back_test_mut() {
+        fn next_back_test_mut(mut rb: impl RingBufferExt<i32> + Debug) {
+            for i in 1..=4 {
+                rb.push(i);
+            }
+
+            let mut it = rb.iter_mut();
+            assert_eq!(Some(&mut 4), it.next_back());
+            assert_eq!(Some(&mut 3), it.next_back());
+            assert_eq!(Some(&mut 1), it.next());
+            assert_eq!(Some(&mut 2), it.next_back());
+            assert_eq!(None, it.next_back());
+        }
+
+        next_back_test_mut(ConstGenericRingBuffer::<i32, 8>::new());
+        next_back_test_mut(AllocRingBuffer::with_capacity(8));
+    }
     #[test]
     fn run_test_fill() {
         fn test_fill(mut rb: impl RingBufferExt<i32>) {
