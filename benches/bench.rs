@@ -1,7 +1,5 @@
-#[macro_use]
-extern crate criterion;
-
-use criterion::{black_box, Bencher, Criterion};
+#![cfg(not(tarpaulin))]
+use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion};
 use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBufferExt};
 
 fn benchmark_push<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
