@@ -334,8 +334,8 @@ mod iter {
         #[inline]
         fn next_back(&mut self) -> Option<Self::Item> {
             if self.len > 0 && self.index < self.len {
-                let res = unsafe { RB::ptr_get_mut(self.obj.as_ptr(), self.index as isize) };
                 self.len -= 1;
+                let res = unsafe { RB::ptr_get_mut(self.obj.as_ptr(), self.len as isize) };
                 res.map(|i| unsafe { &mut *i })
             } else {
                 None
