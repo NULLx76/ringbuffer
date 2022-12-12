@@ -17,7 +17,15 @@ pub trait RingBuffer<T>: Sized {
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.
     /// This is because when the length is reached, new items are appended at the start.
-    fn len(&self) -> usize;
+    fn len(&self) -> usize {
+        // Safety: self is a RingBuffer
+        unsafe { Self::ptr_len(self) }
+    }
+
+    /// Raw pointer version of len
+    /// Safety: ONLY SAFE WHEN self is a *mut to to an implementor of RingBuffer
+    #[doc(hidden)]
+    unsafe fn ptr_len(rb: *const Self) -> usize;
 
     /// Returns true if the buffer is entirely empty.
     #[inline]
@@ -33,7 +41,15 @@ pub trait RingBuffer<T>: Sized {
     }
 
     /// Returns the capacity of the buffer.
-    fn capacity(&self) -> usize;
+    fn capacity(&self) -> usize {
+        // Safety: self is a RingBuffer
+        unsafe { Self::ptr_capacity(self) }
+    }
+
+    /// Raw pointer version of capacity.
+    /// Safety: ONLY SAFE WHEN self is a *mut to to an implementor of RingBuffer
+    #[doc(hidden)]
+    unsafe fn ptr_capacity(rb: *const Self) -> usize;
 }
 
 /// Defines behaviour for ringbuffers which allow for writing to the end of them (as a queue).
@@ -131,7 +147,16 @@ pub unsafe trait RingBufferExt<T>:
 
     /// Gets a value relative to the current index mutably. 0 is the next index to be written to with push.
     /// -1 and down are the last elements pushed and 0 and up are the items that were pushed the longest ago.
-    fn get_mut(&mut self, index: isize) -> Option<&mut T>;
+    #[inline]
+    fn get_mut(&mut self, index: isize) -> Option<&mut T> {
+        // Safety: self is a RingBuffer
+        unsafe { Self::ptr_get_mut(self, index).map(|i| &mut *i) }
+    }
+
+    /// same as [`get_mut`](RingBufferExt::get_mut) but on raw pointers.
+    /// Safety: ONLY SAFE WHEN self is a *mut to to an implementor of RingBufferExt
+    #[doc(hidden)]
+    unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T>;
 
     /// Gets a value relative to the start of the array (rarely useful, usually you want [`Self::get`])
     fn get_absolute(&self, index: usize) -> Option<&T>;
@@ -214,7 +239,7 @@ mod iter {
     use crate::{RingBufferExt, RingBufferRead};
     use core::iter::FusedIterator;
     use core::marker::PhantomData;
-    use core::mem;
+    use core::ptr::NonNull;
 
     /// RingBufferIterator holds a reference to a `RingBufferExt` and iterates over it. `index` is the
     /// current iterator position.
@@ -279,46 +304,61 @@ mod iter {
     /// WARNING: NEVER ACCESS THE `obj` FIELD OUTSIDE OF NEXT. It's private on purpose, and
     /// can technically be accessed in the same module. However, this breaks the safety of `next()`
     pub struct RingBufferMutIterator<'rb, T, RB: RingBufferExt<T>> {
-        obj: &'rb mut RB,
+        obj: NonNull<RB>,
         index: usize,
+        len: usize,
         phantom: PhantomData<&'rb mut T>,
     }
 
     impl<'rb, T, RB: RingBufferExt<T>> RingBufferMutIterator<'rb, T, RB> {
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {
-                obj,
+                len: obj.len(),
+                obj: NonNull::from(obj),
                 index: 0,
                 phantom: PhantomData::default(),
             }
         }
     }
 
-    impl<'rb, T: 'rb, RB: RingBufferExt<T>> Iterator for RingBufferMutIterator<'rb, T, RB> {
-        type Item = &'rb mut T;
+    impl<'rb, T: 'rb, RB: RingBufferExt<T> + 'rb> FusedIterator for RingBufferMutIterator<'rb, T, RB> {}
 
-        fn next(&mut self) -> Option<Self::Item> {
-            if self.index < self.obj.len() {
-                let res = self.obj.get_mut(self.index as isize);
-                self.index += 1;
+    impl<'rb, T: 'rb, RB: RingBufferExt<T> + 'rb> ExactSizeIterator
+        for RingBufferMutIterator<'rb, T, RB>
+    {
+    }
 
-                // SAFETY:
-                // * here we extend the lifetime of the reference 'rb.
-                // * 'rb is as long as the mutable iterator exists
-                // * rust cannot prove that all the mutable references can live 'rb since they all overlap
-                // the same buffer
-                // * the only way this is safe, is when every get_mut above returns a different reference
-                // every time the next function is called
-                // * Since the index is constantly updated, this is true locally
-                // * However, anyone can implement RingBufferExt and not uphold these guarantees.
-                // * But, allowing iter_mut to exist, also requires users to implement the unsafe trait
-                // IterMutSafe, which is sealed (ie. external users can never get iter_mut on their ringbuffers).
-                unsafe {
-                    mem::transmute::<Option<&mut T>, Option<&'rb mut T>>(res)
-                }
+    impl<'rb, T: 'rb, RB: RingBufferExt<T> + 'rb> DoubleEndedIterator
+        for RingBufferMutIterator<'rb, T, RB>
+    {
+        #[inline]
+        fn next_back(&mut self) -> Option<Self::Item> {
+            if self.len > 0 && self.index < self.len {
+                let res = unsafe { RB::ptr_get_mut(self.obj.as_ptr(), self.index as isize) };
+                self.len -= 1;
+                res.map(|i| unsafe { &mut *i })
             } else {
                 None
             }
+        }
+    }
+
+    impl<'rb, T, RB: RingBufferExt<T> + 'rb> Iterator for RingBufferMutIterator<'rb, T, RB> {
+        type Item = &'rb mut T;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.index < self.len {
+                let res = unsafe { RB::ptr_get_mut(self.obj.as_ptr(), self.index as isize) };
+                self.index += 1;
+                // Safety: ptr_get_mut always returns a valid pointer
+                res.map(|i| unsafe { &mut *i })
+            } else {
+                None
+            }
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.len, Some(self.len))
         }
     }
 
@@ -366,8 +406,8 @@ macro_rules! impl_ringbuffer_read {
 macro_rules! impl_ringbuffer {
     ($readptr: ident, $writeptr: ident) => {
         #[inline]
-        fn len(&self) -> usize {
-            self.$writeptr - self.$readptr
+        unsafe fn ptr_len(rb: *const Self) -> usize {
+            (*rb).$writeptr - (*rb).$readptr
         }
     };
 }
@@ -387,36 +427,38 @@ macro_rules! impl_ringbuffer_ext {
                 };
 
                 let normalized_index =
-                    self.readptr as isize + index_from_readptr.rem_euclid(self.len() as isize);
+                    self.$readptr as isize + index_from_readptr.rem_euclid(self.len() as isize);
 
                 unsafe {
                     // SAFETY: index has been modulo-ed to be within range
                     // to be within bounds
-                    self.$get_unchecked($crate::mask(self.capacity(), normalized_index as usize))
+                    $get_unchecked(
+                        self,
+                        $crate::mask(self.capacity(), normalized_index as usize),
+                    )
                 }
             })
         }
 
         #[inline]
-        fn get_mut(&mut self, index: isize) -> Option<&mut T> {
-            use core::ops::Not;
-            self.is_empty().not().then(move || {
+        unsafe fn ptr_get_mut<'a>(rb: *mut Self, index: isize) -> Option<*mut T> {
+            (Self::ptr_len(rb) != 0).then(move || {
                 let index_from_readptr = if index >= 0 {
                     index
                 } else {
-                    self.len() as isize + index
+                    Self::ptr_len(rb) as isize + index
                 };
 
-                let normalized_index =
-                    self.readptr as isize + index_from_readptr.rem_euclid(self.len() as isize);
+                let normalized_index = (*rb).$readptr as isize
+                    + index_from_readptr.rem_euclid(Self::ptr_len(rb) as isize);
 
                 unsafe {
                     // SAFETY: index has been modulo-ed to be within range
                     // to be within bounds
-                    self.$get_unchecked_mut($crate::mask(
-                        self.capacity(),
-                        normalized_index as usize,
-                    ))
+                    $get_unchecked_mut(
+                        rb,
+                        $crate::mask(Self::ptr_capacity(rb), normalized_index as usize),
+                    )
                 }
             })
         }
@@ -427,7 +469,7 @@ macro_rules! impl_ringbuffer_ext {
             let write = $mask(self.capacity(), self.$writeptr);
             (index >= read && index < write).then(|| unsafe {
                 // SAFETY: index has been checked against $mask to be within bounds
-                self.$get_unchecked(index)
+                $get_unchecked(self, index)
             })
         }
 
@@ -437,7 +479,7 @@ macro_rules! impl_ringbuffer_ext {
                 && index < $mask(self.capacity(), self.$writeptr))
             .then(move || unsafe {
                 // SAFETY: index has been checked against $mask to be within bounds
-                self.$get_unchecked_mut(index)
+                &mut *$get_unchecked_mut(self, index)
             })
         }
 
