@@ -6,6 +6,7 @@
 #![deny(trivial_casts)]
 #![deny(trivial_numeric_casts)]
 #![deny(unused_qualifications)]
+#![allow(unused_unsafe)] // to support older rust versions
 //! # Ringbuffer
 //! ![Github Workflows](https://img.shields.io/github/workflow/status/NULLx76/ringbuffer/Rust?logo=github&style=for-the-badge)
 //! [![Codecov](https://img.shields.io/codecov/c/github/NULLx76/ringbuffer?logo=codecov&style=for-the-badge)](https://codecov.io/gh/NULLx76/ringbuffer)

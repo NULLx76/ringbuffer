@@ -6,6 +6,7 @@ authors = [
     "Jonathan Dönszelmann <jonabent@gmail.com>",
 ]
 edition = "2021"
+rust-version = "1.59"
 description = "A fixed-size circular buffer"
 repository = "https://github.com/NULLx76/ringbuffer/"
 keywords = ["ring", "cyclic", "circular", "buffer", "no-std"]
