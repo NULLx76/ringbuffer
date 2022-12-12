@@ -84,7 +84,10 @@ const fn mask(cap: usize, index: usize) -> usize {
 #[allow(non_upper_case_globals)]
 mod tests {
     extern crate std;
+
+    use core::fmt::Debug;
     use std::vec;
+    use std::vec::Vec;
 
     use crate::{
         AllocRingBuffer, ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite,
@@ -301,8 +304,7 @@ mod tests {
             b.push(2);
             b.push(3);
 
-            let mut i = b.iter_mut();
-            while let Some(el) = i.next() {
+            for el in b.iter_mut() {
                 *el += 1;
             }
 
@@ -314,22 +316,41 @@ mod tests {
     }
 
     #[test]
-    fn run_test_iter_mut_wrap() {
-        fn test_iter_mut_wrap(mut b: impl RingBufferExt<i32>) {
+    fn test_iter_mut_wrap() {
+        fn run_test_iter_mut_wrap(mut b: impl RingBufferExt<i32>) {
             b.push(1);
             b.push(2);
             b.push(3);
 
-            let mut i = b.iter_mut();
-            while let Some(el) = i.next() {
-                *el += 1;
+            for i in b.iter_mut() {
+                *i += 1;
             }
 
             assert_eq!(vec![3, 4], b.to_vec())
         }
 
-        test_iter_mut_wrap(AllocRingBuffer::with_capacity(2));
-        test_iter_mut_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+        run_test_iter_mut_wrap(AllocRingBuffer::with_capacity(2));
+        run_test_iter_mut_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+    }
+
+    #[test]
+    fn test_iter_mut_miri_fail() {
+        fn run_test_iter_mut_wrap(mut b: impl RingBufferExt<i32>) {
+            b.push(1);
+            b.push(2);
+            b.push(3);
+
+            let buf = b.iter_mut().collect::<Vec<_>>();
+
+            for i in buf {
+                *i += 1;
+            }
+
+            assert_eq!(vec![3, 4], b.to_vec())
+        }
+
+        run_test_iter_mut_wrap(AllocRingBuffer::with_capacity(2));
+        run_test_iter_mut_wrap(ConstGenericRingBuffer::<i32, 2>::new());
     }
 
     #[test]
@@ -905,8 +926,7 @@ mod tests {
 
     #[test]
     fn run_test_clone() {
-        use std::fmt;
-        fn test_clone(mut rb: impl RingBufferExt<i32> + Clone + Eq + fmt::Debug) {
+        fn test_clone(mut rb: impl RingBufferExt<i32> + Clone + Eq + Debug) {
             rb.push(42);
             rb.push(32);
             rb.push(22);
@@ -951,6 +971,58 @@ mod tests {
         test_default_fill(ConstGenericRingBuffer::<i32, 4>::new());
     }
 
+    #[test]
+    fn run_test_eq() {
+        let mut alloc_a = ConstGenericRingBuffer::<i32, 4>::new();
+        let mut alloc_b = ConstGenericRingBuffer::<i32, 4>::new();
+
+        assert!(alloc_a.eq(&alloc_b));
+        alloc_a.push(1);
+        assert!(!alloc_b.eq(&alloc_a));
+        alloc_b.push(1);
+        assert!(alloc_a.eq(&alloc_b));
+        alloc_a.push(4);
+        alloc_b.push(2);
+        assert!(!alloc_b.eq(&alloc_a));
+    }
+
+    #[test]
+    fn run_next_back_test() {
+        fn next_back_test(mut rb: impl RingBufferExt<i32>) {
+            for i in 1..=4 {
+                rb.push(i);
+            }
+
+            let mut it = rb.iter();
+            assert_eq!(Some(&4), it.next_back());
+            assert_eq!(Some(&3), it.next_back());
+            assert_eq!(Some(&1), it.next());
+            assert_eq!(Some(&2), it.next_back());
+            assert_eq!(None, it.next_back());
+        }
+
+        next_back_test(ConstGenericRingBuffer::<i32, 8>::new());
+        next_back_test(AllocRingBuffer::with_capacity(8));
+    }
+
+    #[test]
+    fn run_next_back_test_mut() {
+        fn next_back_test_mut(mut rb: impl RingBufferExt<i32>) {
+            for i in 1..=4 {
+                rb.push(i);
+            }
+
+            let mut it = rb.iter_mut();
+            assert_eq!(Some(&mut 4), it.next_back());
+            assert_eq!(Some(&mut 3), it.next_back());
+            assert_eq!(Some(&mut 1), it.next());
+            assert_eq!(Some(&mut 2), it.next_back());
+            assert_eq!(None, it.next_back());
+        }
+
+        next_back_test_mut(ConstGenericRingBuffer::<i32, 8>::new());
+        next_back_test_mut(AllocRingBuffer::with_capacity(8));
+    }
     #[test]
     fn run_test_fill() {
         fn test_fill(mut rb: impl RingBufferExt<i32>) {

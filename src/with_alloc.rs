@@ -70,7 +70,7 @@ impl<T: Eq + PartialEq> Eq for AllocRingBuffer<T> {}
 // must be a power of 2
 pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
-impl<T> RingBufferExt<T> for AllocRingBuffer<T> {
+unsafe impl<T> RingBufferExt<T> for AllocRingBuffer<T> {
     impl_ringbuffer_ext!(
         get_unchecked,
         get_unchecked_mut,
@@ -156,8 +156,8 @@ impl<T> RingBufferWrite<T> for AllocRingBuffer<T> {
 
 impl<T> RingBuffer<T> for AllocRingBuffer<T> {
     #[inline]
-    fn capacity(&self) -> usize {
-        self.capacity
+    unsafe fn ptr_capacity(rb: *const Self) -> usize {
+        (*rb).capacity
     }
 
     impl_ringbuffer!(readptr, writeptr);
@@ -199,27 +199,27 @@ impl<T> AllocRingBuffer<T> {
     pub fn new() -> Self {
         Self::default()
     }
+}
 
-    /// Get a reference from the buffer without checking it is initialized.
-    /// Caller must be sure the index is in bounds, or this will panic.
-    #[inline]
-    unsafe fn get_unchecked(&self, index: usize) -> &T {
-        let p = &self.buf[index];
-        // Safety: caller makes sure the index is in bounds for the ringbuffer.
-        // All in bounds values in the ringbuffer are initialized
-        p.assume_init_ref()
-    }
+/// Get a reference from the buffer without checking it is initialized.
+/// Caller must be sure the index is in bounds, or this will panic.
+#[inline]
+unsafe fn get_unchecked<'a, T>(rb: *const AllocRingBuffer<T>, index: usize) -> &'a T {
+    let p = &(*rb).buf[index];
+    // Safety: caller makes sure the index is in bounds for the ringbuffer.
+    // All in bounds values in the ringbuffer are initialized
+    p.assume_init_ref()
+}
 
-    /// Get a mut reference from the buffer without checking it is initialized.
-    /// Caller must be sure the index is in bounds, or this will panic.
-    #[inline]
-    unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
-        let p = &mut self.buf[index];
+/// Get a mut reference from the buffer without checking it is initialized.
+/// Caller must be sure the index is in bounds, or this will panic.
+#[inline]
+unsafe fn get_unchecked_mut<T>(rb: *mut AllocRingBuffer<T>, index: usize) -> *mut T {
+    let p = (*rb).buf.as_mut_ptr().add(index);
 
-        // Safety: caller makes sure the index is in bounds for the ringbuffer.
-        // All in bounds values in the ringbuffer are initialized
-        p.assume_init_mut()
-    }
+    // Safety: caller makes sure the index is in bounds for the ringbuffer.
+    // All in bounds values in the ringbuffer are initialized
+    p.cast()
 }
 
 impl<RB> FromIterator<RB> for AllocRingBuffer<RB> {
