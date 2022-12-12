@@ -6,7 +6,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::iter::FromIterator;
 
-/// `RingBuffer` is a trait defining the standard interface for all RingBuffer
+/// `RingBuffer` is a trait defining the standard interface for all `RingBuffer`
 /// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
 ///
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
@@ -106,7 +106,7 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
 ///
 /// # Safety
 /// Implementing this implies that the ringbuffer upholds some safety
-/// guarantees, such as returning a different value from get_mut any
+/// guarantees, such as returning a different value from `get_mut` any
 /// for every different index passed in. See the exact requirements
 /// in the safety comment on the next function of the mutable Iterator
 /// implementation, since these safety guarantees are necessary for
@@ -241,7 +241,7 @@ mod iter {
     use core::marker::PhantomData;
     use core::ptr::NonNull;
 
-    /// RingBufferIterator holds a reference to a `RingBufferExt` and iterates over it. `index` is the
+    /// `RingBufferIterator` holds a reference to a `RingBufferExt` and iterates over it. `index` is the
     /// current iterator position.
     pub struct RingBufferIterator<'rb, T, RB: RingBufferExt<T>> {
         obj: &'rb RB,

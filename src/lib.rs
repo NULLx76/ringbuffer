@@ -972,6 +972,21 @@ mod tests {
     }
 
     #[test]
+    fn run_test_eq() {
+        let mut alloc_a = ConstGenericRingBuffer::<i32, 4>::new();
+        let mut alloc_b = ConstGenericRingBuffer::<i32, 4>::new();
+
+        assert!(alloc_a.eq(&alloc_b));
+        alloc_a.push(1);
+        assert!(!alloc_b.eq(&alloc_a));
+        alloc_b.push(1);
+        assert!(alloc_a.eq(&alloc_b));
+        alloc_a.push(4);
+        alloc_b.push(2);
+        assert!(!alloc_b.eq(&alloc_a));
+    }
+
+    #[test]
     fn run_next_back_test() {
         fn next_back_test(mut rb: impl RingBufferExt<i32>) {
             for i in 1..=4 {
