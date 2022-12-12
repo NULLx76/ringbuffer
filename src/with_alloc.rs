@@ -219,7 +219,7 @@ unsafe fn get_unchecked_mut<T>(rb: *mut AllocRingBuffer<T>, index: usize) -> *mu
 
     // Safety: caller makes sure the index is in bounds for the ringbuffer.
     // All in bounds values in the ringbuffer are initialized
-    p as *mut T
+    p.cast()
 }
 
 impl<RB> FromIterator<RB> for AllocRingBuffer<RB> {
