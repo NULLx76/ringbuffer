@@ -110,7 +110,7 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
 /// for every different index passed in. See the exact requirements
 /// in the safety comment on the next function of the mutable Iterator
 /// implementation, since these safety guarantees are necessary for
-/// [`iter_mut`] to work
+/// iter_mut to work
 pub unsafe trait RingBufferExt<T>:
     RingBuffer<T>
     + RingBufferRead<T>
