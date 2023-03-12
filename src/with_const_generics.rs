@@ -72,11 +72,13 @@ impl<T: PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuffer<T, CAP
 impl<T: PartialEq, const CAP: usize> Eq for ConstGenericRingBuffer<T, CAP> {}
 
 impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
+    const NOT_ZERO: () = assert!(CAP != 0, "Capacity is not allowed to be zero");
+    const POWER_OF_TWO: () = assert!(CAP & (CAP - 1) == 0, "Capacity must be a power of two");
     /// Creates a const generic ringbuffer, size is passed as a const generic.
     #[inline]
     pub const fn new() -> Self {
-        assert!(CAP != 0, "Capacity is not allowed to be zero");
-        assert!(CAP.is_power_of_two(), "Capacity must be a power of two");
+        let _ = Self::NOT_ZERO;
+        let _ = Self::POWER_OF_TWO;
 
         Self {
             buf: unsafe { MaybeUninit::uninit().assume_init() },
