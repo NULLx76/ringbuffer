@@ -17,6 +17,7 @@ const_panic = "0.2"
 
 [dev-dependencies]
 criterion = "0.1.2"
+compiletest_rs = "0.9.0"
 
 [features]
 default = ["alloc"]

@@ -72,10 +72,14 @@ impl<T: PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuffer<T, CAP
 impl<T: PartialEq, const CAP: usize> Eq for ConstGenericRingBuffer<T, CAP> {}
 
 impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
+    const ERROR_CAPACITY_IS_NOT_ALLOWED_TO_BE_ZERO: () =
+        assert!(CAP != 0, "Capacity is not allowed to be zero");
+
     /// Creates a const generic ringbuffer, size is passed as a const generic.
     #[inline]
     pub const fn new() -> Self {
-        assert!(CAP != 0, "Capacity is not allowed to be zero");
+        #[allow(clippy::let_unit_value)]
+        let _ = Self::ERROR_CAPACITY_IS_NOT_ALLOWED_TO_BE_ZERO;
 
         // allow here since we are constructing an array of MaybeUninit<T>
         // which explicitly *is* defined behavior
@@ -231,12 +235,6 @@ impl<T, const CAP: usize> IndexMut<isize> for ConstGenericRingBuffer<T, CAP> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    #[should_panic]
-    fn test_no_empty() {
-        let _ = ConstGenericRingBuffer::<u32, 0>::new();
-    }
 
     #[test]
     fn test_not_power_of_two() {
