@@ -98,8 +98,6 @@ fn benchmark_power_of_two<const L: usize>(b: &mut Bencher) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    c.with_plots();
-
     // TODO: Improve benchmarks
     // * What are representative operations
     // * Make sure it's accurate
