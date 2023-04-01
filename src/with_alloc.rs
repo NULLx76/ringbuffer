@@ -23,17 +23,26 @@ mod private {
 }
 pub trait RingbufferMode: private::Sealed {
     fn mask(cap: usize, index: usize) -> usize;
+    fn must_be_power_of_two() -> bool;
 }
 impl RingbufferMode for PowerOfTwo {
     #[inline]
     fn mask(cap: usize, index: usize) -> usize {
         crate::mask(cap, index)
     }
+
+    fn must_be_power_of_two() -> bool {
+        true
+    }
 }
 impl RingbufferMode for NonPowerOfTwo {
     #[inline]
     fn mask(cap: usize, index: usize) -> usize {
         crate::mask_modulo(cap, index)
+    }
+
+    fn must_be_power_of_two() -> bool {
+        false
     }
 }
 
@@ -78,17 +87,14 @@ impl<T, MODE: RingbufferMode> Drop for AllocRingBuffer<T, MODE> {
     }
 }
 
-impl<T: Clone> Clone for AllocRingBuffer<T, PowerOfTwo> {
+impl<T: Clone, MODE: RingbufferMode> Clone for AllocRingBuffer<T, MODE> {
     fn clone(&self) -> Self {
-        let mut new = Self::with_capacity(self.capacity);
-        self.iter().cloned().for_each(|i| new.push(i));
-        new
-    }
-}
+        debug_assert_ne!(self.capacity, 0);
+        debug_assert!(!MODE::must_be_power_of_two() || self.capacity.is_power_of_two());
 
-impl<T: Clone> Clone for AllocRingBuffer<T, NonPowerOfTwo> {
-    fn clone(&self) -> Self {
-        let mut new = Self::with_capacity_non_power_of_two(self.capacity);
+        // whatever the previous capacity was, we can just use the same one again.
+        // It should be valid.
+        let mut new = unsafe { Self::with_capacity_unchecked(self.capacity) };
         self.iter().cloned().for_each(|i| new.push(i));
         new
     }
@@ -338,11 +344,24 @@ impl<T, MODE: RingbufferMode> IndexMut<isize> for AllocRingBuffer<T, MODE> {
 #[cfg(test)]
 mod tests {
     use super::alloc::vec::Vec;
+    use crate::with_alloc::RingbufferMode;
     use crate::{
         AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite,
         RINGBUFFER_DEFAULT_CAPACITY,
     };
 
+    // just test that this compiles
+    #[test]
+    fn test_generic_clone() {
+        fn helper<MODE: RingbufferMode>(
+            a: &AllocRingBuffer<i32, MODE>,
+        ) -> AllocRingBuffer<i32, MODE> {
+            a.clone()
+        }
+
+        _ = helper(&AllocRingBuffer::with_capacity(2));
+        _ = helper(&AllocRingBuffer::with_capacity_non_power_of_two(5));
+    }
     #[test]
     fn test_not_power_of_two() {
         let mut rb = AllocRingBuffer::with_capacity_non_power_of_two(10);
