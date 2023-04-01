@@ -222,7 +222,17 @@ impl<T, MODE: RingbufferMode> AllocRingBuffer<T, MODE> {
 
 impl<T> AllocRingBuffer<T, NonPowerOfTwo> {
     /// Creates a `AllocRingBuffer` with a certain capacity. This capacity is fixed.
-    /// for this ringbuffer to work, cap must be a power of two and greater than zero.
+    /// for this ringbuffer to work, and must not be zero.
+    ///
+    /// Note, that not using a power of two means some operations can't be optimized as well.
+    /// For example, bitwise ands might become modulos.
+    ///
+    /// For example, on push operations, benchmarks have shown that a ringbuffer with a power-of-two
+    /// capacity constructed with `with_capacity_non_power_of_two` (so which don't get the same optimization
+    /// as the ones constructed with `with_capacity`) can be up to 3x slower
+    ///
+    /// # Panics
+    /// if the capacity is zeroa
     #[inline]
     pub fn with_capacity_non_power_of_two(cap: usize) -> Self {
         assert_ne!(cap, 0, "Capacity must be greater than 0");
