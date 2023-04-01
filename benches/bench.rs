@@ -1,6 +1,6 @@
 #![cfg(not(tarpaulin))]
 use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion};
-use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBufferExt};
+use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBufferExt, RingBufferWrite};
 
 fn benchmark_push<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
@@ -71,6 +71,30 @@ macro_rules! generate_benches {
             }));
         )*
     };
+}
+
+fn benchmark_non_power_of_two<const L: usize>(b: &mut Bencher) {
+    b.iter(|| {
+        let mut rb = AllocRingBuffer::with_capacity_non_power_of_two(L);
+
+        for i in 0..1_000_000 {
+            rb.push(i)
+        }
+
+        rb
+    })
+}
+
+fn benchmark_power_of_two<const L: usize>(b: &mut Bencher) {
+    b.iter(|| {
+        let mut rb = AllocRingBuffer::with_capacity(L);
+
+        for i in 0..1_000_000 {
+            rb.push(i)
+        }
+
+        rb
+    })
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
@@ -153,6 +177,12 @@ fn criterion_benchmark(c: &mut Criterion) {
         4096,
         8192
     ];
+
+    c.bench_function("power of two 16", benchmark_power_of_two::<16>);
+    c.bench_function("non power of two 16", benchmark_non_power_of_two::<16>);
+
+    c.bench_function("power of two 1024", benchmark_power_of_two::<1024>);
+    c.bench_function("non power of two 1024", benchmark_non_power_of_two::<1024>);
 }
 
 criterion_group!(benches, criterion_benchmark);

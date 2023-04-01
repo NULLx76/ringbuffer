@@ -76,6 +76,9 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
         assert!(CAP != 0, "Capacity is not allowed to be zero");
 
     /// Creates a const generic ringbuffer, size is passed as a const generic.
+    ///
+    /// Note that the size does not have to be a power of two, but that not using a power
+    /// of two might be significantly (up to 3 times) slower.
     #[inline]
     pub const fn new() -> Self {
         #[allow(clippy::let_unit_value)]
