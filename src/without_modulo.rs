@@ -21,11 +21,7 @@ pub struct ModFreeRingBuffer<T> {
     /// The length of this slice is the capacity of the ring buffer.  It stores
     /// the individual elements of the buffer, and uninitialized data for slots
     /// that do not contain elements.
-    ///
-    /// The number of initialized elements in the data buffer is computed as
-    /// `dsti - srci`.  As such, if `dsti - srci == capacity`, then the buffer
-    /// is full.
-    data: Box<[MaybeUninit<T>]>,
+    buf: Box<[MaybeUninit<T>]>,
 
     /// The source index.
     ///
@@ -33,25 +29,20 @@ pub struct ModFreeRingBuffer<T> {
     /// if the buffer is not empty.  This field is maintained within the range
     /// `0 .. capacity`; as such, it can be used to directly index into the data
     /// buffer.
-    srci: usize,
+    src: usize,
 
-    /// The destination index.
+    /// The length of the buffer.
     ///
-    /// This is the index in the data buffer where new elements will be added.
-    /// Note that this index may already contain an initialized element.  This
-    /// field is maintained within the range `srci ..= srci+capacity` (in more
-    /// absolute terms, `0 .. 2*capacity`); it is at most one subtraction away
-    /// from being a valid index into the data buffer.
-    ///
-    /// If the buffer is full, then this field is `srci + capacity`.  If this
-    /// field is strictly greater than `capacity`, then some elements lie at the
-    /// beginning of the data buffer, at positions less than the source index.
-    dsti: usize,
+    /// This is a count of the number of initialized elements in the buffer.  If
+    /// it is equal to the capacity, then the buffer is full.  This field is in
+    /// the range `0 ..= capacity`; once added to the source index, it may need
+    /// to be conditionally subtracted by `capacity` to point to a valid index
+    /// in the data buffer.
+    len: usize,
 }
 
 impl<T> ModFreeRingBuffer<T> {
     /// Construct a new [`ModFreeRingBuffer`] with the given capacity.
-    #[inline]
     pub fn new(capacity: NonZeroUsize) -> Self {
         // SAFETY: [`NonZeroUsize`] guarantees that the value is non-zero.
         unsafe { Self::new_unchecked(capacity.get()) }
@@ -59,63 +50,57 @@ impl<T> ModFreeRingBuffer<T> {
 
     /// Construct a new [`ModFreeRingBuffer`] with the given capacity, without
     /// checking that it is non-zero.
-    #[inline]
     pub unsafe fn new_unchecked(capacity: usize) -> Self {
         // NOTE: Use Box::new_uninit() when it stabilizes.
-        let mut data = Vec::with_capacity(capacity);
+        let mut buf = Vec::with_capacity(capacity);
         // SAFETY: `MaybeUninit` is is never uninitialized.
-        unsafe { data.set_len(capacity); }
+        unsafe { buf.set_len(capacity); }
 
-        Self { data: data.into_boxed_slice(), srci: 0, dsti: 0 }
+        Self { buf: buf.into_boxed_slice(), src: 0, len: 0 }
     }
 }
 
 impl<T> RingBuffer<T> for ModFreeRingBuffer<T> {
     #[inline]
     unsafe fn ptr_len(this: *const Self) -> usize {
-        (*this).dsti - (*this).srci
+        (*this).len
     }
 
     #[inline]
     unsafe fn ptr_capacity(this: *const Self) -> usize {
-        (*this).data.len()
+        (*this).buf.len()
     }
 }
 
 impl<T> RingBufferRead<T> for ModFreeRingBuffer<T> {
     #[inline]
     fn dequeue(&mut self) -> Option<T> {
-        if self.srci < self.dsti {
-            // SAFETY: `srci` is in range and `len` is non-zero, and `srci` will
+        if self.len != 0 {
+            // SAFETY: `src` is in range and `len` is non-zero, and `src` will
             // be incremented so that the slot is marked dead for future reads.
-            let slot = unsafe { self.data.get_unchecked_mut(self.srci) };
+            let slot = unsafe { self.buf.get_unchecked_mut(self.src) };
             let item = unsafe { slot.assume_init_read() };
 
-            if self.srci + 1 == self.data.len() {
-                // NOTE: We need to wrap `dsti` because:
-                // - srci < dsti
-                // - srci == capacity - 1
-                // - capacity - 1 < dsti
-                // - capacity <= dsti
-                // So the new length (`dsti - srci`) would change incorrectly.
-                self.srci = 0;
-                self.dsti -= self.data.len();
-            } else { self.srci += 1; }
+            self.len -= 1;
+            if self.src + 1 == self.buf.len() {
+                self.src = 0;
+            } else { self.src += 1; }
 
             Some(item)
         } else { None }
     }
 
     fn skip(&mut self) {
-        if self.srci < self.dsti {
-            // SAFETY: `srci` is in range and `len` is non-zero, and `srci` will
+        if self.len != 0 {
+            // SAFETY: `src` is in range and `len` is non-zero, and `src` will
             // be incremented so that the slot is marked dead for future reads.
-            let slot = unsafe { self.data.get_unchecked_mut(self.srci) };
+            let slot = unsafe { self.buf.get_unchecked_mut(self.src) };
             unsafe { slot.assume_init_drop() };
 
-            if self.srci + 1 == self.data.len() {
-                self.srci = 0;
-            } else { self.srci += 1; }
+            self.len -= 1;
+            if self.src + 1 == self.buf.len() {
+                self.src = 0;
+            } else { self.src += 1; }
         }
     }
 }
@@ -123,32 +108,25 @@ impl<T> RingBufferRead<T> for ModFreeRingBuffer<T> {
 impl<T> RingBufferWrite<T> for ModFreeRingBuffer<T> {
     #[inline]
     fn push(&mut self, value: T) {
-        let dsti = if self.dsti >= self.data.len() {
-            self.dsti - self.data.len()
-        } else { self.dsti };
+        let dst = if self.src + self.len >= self.buf.len() {
+            self.src + self.len - self.buf.len()
+        } else { self.src + self.len };
 
-        // SAFETY: `dsti` has been conditionally subtracted into range.
-        let slot = unsafe { self.data.get_unchecked_mut(dsti) };
+        // SAFETY: `dst` has been conditionally subtracted into range.
+        let slot = unsafe { self.buf.get_unchecked_mut(dst) };
         let mut prev = mem::replace(slot, MaybeUninit::new(value));
 
-        if self.dsti == self.srci + self.data.len() {
+        if self.len == self.buf.len() {
             // SAFETY: The buffer is full, so `prev` must be initialized.
             unsafe { prev.assume_init_drop() };
 
-            self.dsti += 1;
-            if self.dsti == 2 * self.data.len() {
-                self.srci = 0;
-                self.dsti = self.data.len();
+            if self.src + 1 == self.buf.len() {
+                self.src = 0;
             } else {
-                self.srci += 1;
+                self.src += 1;
             }
         } else {
-            // NOTE: The buffer is not full, so:
-            // - dsti < srci + capacity
-            // - dsti + 1 < 1 + srci + capacity
-            // - dsti + 1 < 1 + capacity-1 + capacity
-            // - dsti + 1 < 2*capacity
-            self.dsti += 1;
+            self.len += 1;
         }
     }
 }
@@ -157,12 +135,12 @@ unsafe impl<T> RingBufferExt<T> for ModFreeRingBuffer<T> {
     fn fill_with<F: FnMut() -> T>(&mut self, mut f: F) {
         self.clear();
 
-        for slot in self.data.iter_mut() {
+        for slot in self.buf.iter_mut() {
             *slot = MaybeUninit::new((f)());
         }
 
-        self.srci = 0;
-        self.dsti = self.data.len();
+        self.src = 0;
+        self.len = self.buf.len();
     }
 
     fn clear(&mut self) {
@@ -172,7 +150,7 @@ unsafe impl<T> RingBufferExt<T> for ModFreeRingBuffer<T> {
     }
 
     fn get(&self, index: isize) -> Option<&T> {
-        let len_s = self.len() as isize;
+        let len_s = self.len as isize;
         let index = if len_s != 0 && (index <= -len_s || len_s < index) {
             // We are forced to perform an expensive modulo, so we try to hide
             // it behind a probably-unlikely branch.
@@ -183,20 +161,20 @@ unsafe impl<T> RingBufferExt<T> for ModFreeRingBuffer<T> {
             index as usize
         } else { return None };
 
-        // NOTE: We know that `index` is now within `self.len()`, so it must be
+        // NOTE: We know that `index` is now within `self.len`, so it must be
         // within `self.capacity()`.
 
-        let index = if self.srci + index >= self.data.len() {
-            self.srci + index - self.data.len()
-        } else { self.srci + index };
+        let index = if self.src + index >= self.buf.len() {
+            self.src + index - self.buf.len()
+        } else { self.src + index };
 
-        // SAFETY: We have confirmed that `index` is in `srci .. dsti`, so we
+        // SAFETY: We have confirmed that `index` is in `src .. dst`, so we
         // are definitely referring to an element that is initialized.
-        Some(unsafe { self.data[index].assume_init_ref() })
+        Some(unsafe { self.buf[index].assume_init_ref() })
     }
 
     unsafe fn ptr_get_mut(this: *mut Self, index: isize) -> Option<*mut T> {
-        let len_s = (*this).len() as isize;
+        let len_s = (*this).len as isize;
         let index = if len_s != 0 && (index <= -len_s || len_s < index) {
             // We are forced to perform an expensive modulo, so we try to hide
             // it behind a probably-unlikely branch.
@@ -210,51 +188,43 @@ unsafe impl<T> RingBufferExt<T> for ModFreeRingBuffer<T> {
         // NOTE: We know that `index` is now within `self.len()`, so it must be
         // within `self.capacity()`.
 
-        let index = if (*this).srci + index >= (*this).data.len() {
-            (*this).srci + index - (*this).data.len()
-        } else { (*this).srci + index };
+        let index = if (*this).src + index >= (*this).buf.len() {
+            (*this).src + index - (*this).buf.len()
+        } else { (*this).src + index };
 
-        // SAFETY: We have confirmed that `index` is in `srci .. dsti`, so we
+        // SAFETY: We have confirmed that `index` is in `src .. dst`, so we
         // are definitely referring to an element that is initialized.
-        Some(unsafe { (*this).data[index].assume_init_mut() })
+        Some(unsafe { (*this).buf[index].assume_init_mut() })
     }
 
     fn get_absolute(&self, index: usize) -> Option<&T> {
-        let capacity = self.data.len();
-        if self.dsti > capacity {
+        let (src, dst, cap) = (self.src, self.src + self.len, self.buf.len());
+        if dst > cap {
             // The data buffer contains a single uninitialized part.
-            if self.dsti - capacity <= index && index < self.srci {
-                return None;
-            }
+            if dst - cap <= index && index < src { return None; }
         } else {
             // The data buffer contains two uninitialized parts.
-            if index < self.srci || self.dsti <= index {
-                return None;
-            }
+            if index < src || dst <= index { return None; }
         }
 
-        // SAFETY: We have confirmed that `index` is in `srci .. dsti`, so we
+        // SAFETY: We have confirmed that `index` is in `src .. dst`, so we
         // are definitely referring to an element that is initialized.
-        Some(unsafe { self.data[index].assume_init_ref() })
+        Some(unsafe { self.buf[index].assume_init_ref() })
     }
 
     fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T> {
-        let capacity = self.data.len();
-        if self.dsti > capacity {
+        let (src, dst, cap) = (self.src, self.src + self.len, self.buf.len());
+        if dst > cap {
             // The data buffer contains a single uninitialized part.
-            if self.dsti - capacity <= index && index < self.srci {
-                return None;
-            }
+            if dst - cap <= index && index < src { return None; }
         } else {
             // The data buffer contains two uninitialized parts.
-            if index < self.srci || self.dsti <= index {
-                return None;
-            }
+            if index < src || dst <= index { return None; }
         }
 
-        // SAFETY: We have confirmed that `index` is in `srci .. dsti`, so we
+        // SAFETY: We have confirmed that `index` is in `src .. dst`, so we
         // are definitely referring to an element that is initialized.
-        Some(unsafe { self.data[index].assume_init_mut() })
+        Some(unsafe { self.buf[index].assume_init_mut() })
     }
 }
 
@@ -297,7 +267,7 @@ impl<T> Drop for ModFreeRingBuffer<T> {
 impl<T: Clone> Clone for ModFreeRingBuffer<T> {
     fn clone(&self) -> Self {
         // SAFETY: We know that our capacity is non-zero.
-        let mut clone = unsafe { Self::new_unchecked(self.data.len()) };
+        let mut clone = unsafe { Self::new_unchecked(self.buf.len()) };
         clone.extend(self.iter().cloned());
         clone
     }
@@ -322,7 +292,7 @@ impl<T: Debug> Debug for ModFreeRingBuffer<T> {
         }
 
         f.debug_struct("ModFreeRingBuffer")
-            .field("srci", &self.srci).field("dsti", &self.dsti)
+            .field("src", &self.src).field("len", &self.len)
             .field("data", &Wrapper { this: self })
             .finish()
     }
