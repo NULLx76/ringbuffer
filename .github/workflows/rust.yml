@@ -10,120 +10,110 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Install nightly toolchain with lint tools available
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          components: clippy, rustfmt
 
-    - name: Install nightly toolchain with lint tools available
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: nightly
-        override: true
-        components: clippy, rustfmt
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
 
-    - name: Run cargo fmt
-      uses: actions-rs/cargo@v1
-      with:
-        command: fmt
-        args: --all -- --check
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
 
-    - uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --all-features
+      - name: msrv
+        run: |
+          cargo install cargo-msrv --force
+          cargo msrv verify
 
   test:
     name: Test Stable
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
 
-    - name: Install stable toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-
-    - name: Run cargo test
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
 
   test-beta:
-    name: Test Beta + Coverage
+    name: Test Beta
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Install beta toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: beta
+          override: true
 
-    - name: Install beta toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: beta
-        override: true
-
-    - name: rust-tarpaulin
-      uses: actions-rs/tarpaulin@v0.1.3
-      with:
-        args: --all-features --out Xml
-
-    - name: Upload to codecov.io
-      uses: codecov/codecov-action@v1.0.2
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-
-    - name: Archive code coverage results
-      uses: actions/upload-artifact@v1
-      with:
-        name: code-coverage-report
-        path: cobertura.xml
-
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
   test-nightly:
     name: Test Nightly
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-    - name: Install nightly toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly
-        override: true
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
 
-    - name: Run cargo test
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --all-features
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features
 
   test-miri:
     name: Test Miri
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Install Miri
-      run: |
-        rustup toolchain install nightly --component miri
-        rustup override set nightly
-        cargo miri setup
-    - name: Test with Miri
-      run: cargo miri test
+      - uses: actions/checkout@v3
+      - name: Install Miri
+        run: |
+          rustup toolchain install nightly --component miri
+          rustup override set nightly
+          cargo miri setup
+      - name: Test with Miri
+        run: cargo miri test
 
   build-no-std:
     name: Build no-std
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Install stable no-std toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: thumbv7em-none-eabihf
-        override: true
+      - name: Install stable no-std toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: thumbv7em-none-eabihf
+          override: true
 
-    - name: Run cargo build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --target thumbv7em-none-eabihf --all-features
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --target thumbv7em-none-eabihf --all-features
