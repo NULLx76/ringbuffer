@@ -1,6 +1,7 @@
 #![cfg(not(tarpaulin))]
 use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion};
-use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBufferExt, RingBufferWrite};
+use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, ModFreeRingBuffer, RingBufferExt, RingBufferWrite};
+use core::num::NonZeroUsize;
 
 fn benchmark_push<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
@@ -97,12 +98,27 @@ fn benchmark_power_of_two<const L: usize>(b: &mut Bencher) {
     })
 }
 
+fn benchmark_mod_free<const L: usize>(b: &mut Bencher) {
+    b.iter(|| {
+        let mut rb = ModFreeRingBuffer::new(NonZeroUsize::new(L).unwrap());
+
+        for i in 0..1_000_000 {
+            rb.push(i)
+        }
+
+        rb
+    })
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     // TODO: Improve benchmarks
     // * What are representative operations
     // * Make sure it's accurate
     // * more general benchmarks but preferably less/quickjer
 
+    let [nz16, nz1024, nz4096, nz8192] =
+        [16, 1024, 4096, 8192].map(|n| NonZeroUsize::new(n).unwrap());
+
     generate_benches![
         called,
         c,
@@ -126,6 +142,18 @@ fn criterion_benchmark(c: &mut Criterion) {
         1024,
         4096,
         8192
+    ];
+    generate_benches![
+        called,
+        c,
+        ModFreeRingBuffer,
+        i32,
+        new,
+        benchmark_push,
+        nz16,
+        nz1024,
+        nz4096,
+        nz8192
     ];
     generate_benches![
         called,
@@ -154,6 +182,18 @@ fn criterion_benchmark(c: &mut Criterion) {
     generate_benches![
         called,
         c,
+        ModFreeRingBuffer,
+        i32,
+        new,
+        benchmark_various,
+        nz16,
+        nz1024,
+        nz4096,
+        nz8192
+    ];
+    generate_benches![
+        called,
+        c,
         AllocRingBuffer,
         i32,
         with_capacity,
@@ -175,12 +215,26 @@ fn criterion_benchmark(c: &mut Criterion) {
         4096,
         8192
     ];
+    generate_benches![
+        called,
+        c,
+        ModFreeRingBuffer,
+        i32,
+        new,
+        benchmark_push_dequeue,
+        nz16,
+        nz1024,
+        nz4096,
+        nz8192
+    ];
 
-    c.bench_function("power of two 16", benchmark_power_of_two::<16>);
-    c.bench_function("non power of two 16", benchmark_non_power_of_two::<16>);
+    c.bench_function("manual: power of two 16", benchmark_power_of_two::<16>);
+    c.bench_function("manual: non power of two 16", benchmark_non_power_of_two::<16>);
+    c.bench_function("manual: mod free 16", benchmark_mod_free::<16>);
 
-    c.bench_function("power of two 1024", benchmark_power_of_two::<1024>);
-    c.bench_function("non power of two 1024", benchmark_non_power_of_two::<1024>);
+    c.bench_function("manual: power of two 1024", benchmark_power_of_two::<1024>);
+    c.bench_function("manual: non power of two 1024", benchmark_non_power_of_two::<1024>);
+    c.bench_function("manual: mod free 1024", benchmark_mod_free::<1024>);
 }
 
 criterion_group!(benches, criterion_benchmark);

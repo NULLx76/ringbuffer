@@ -75,6 +75,9 @@ pub use with_alloc::RINGBUFFER_DEFAULT_CAPACITY;
 mod with_const_generics;
 pub use with_const_generics::ConstGenericRingBuffer;
 
+mod without_modulo;
+pub use without_modulo::ModFreeRingBuffer;
+
 /// Used internally. Computes the bitmask used to properly wrap the ringbuffers.
 #[inline]
 const fn mask(cap: usize, index: usize) -> usize {
@@ -93,11 +96,12 @@ mod tests {
     extern crate std;
 
     use core::fmt::Debug;
+    use core::num::NonZeroUsize;
     use std::vec;
     use std::vec::Vec;
 
     use crate::{
-        AllocRingBuffer, ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite,
+        AllocRingBuffer, ConstGenericRingBuffer, ModFreeRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite,
     };
 
     #[test]
@@ -114,7 +118,10 @@ mod tests {
 
         test_neg_index(AllocRingBuffer::with_capacity(capacity));
         test_neg_index(ConstGenericRingBuffer::<usize, capacity>::new());
+        test_neg_index(ModFreeRingBuffer::new(NonZeroUsize::new(capacity).unwrap()));
     }
+
+    // TODO: The following two tests are exactly identical...
 
     #[test]
     fn run_test_default() {
@@ -125,6 +132,7 @@ mod tests {
 
         test_default(AllocRingBuffer::with_capacity(8));
         test_default(ConstGenericRingBuffer::<i32, 8>::new());
+        test_default(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -136,6 +144,7 @@ mod tests {
 
         test_new(AllocRingBuffer::with_capacity(8));
         test_new(ConstGenericRingBuffer::<i32, 8>::new());
+        test_new(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -162,6 +171,7 @@ mod tests {
 
         test_len(AllocRingBuffer::with_capacity(8));
         test_len(ConstGenericRingBuffer::<i32, 8>::new());
+        test_len(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -181,6 +191,7 @@ mod tests {
 
         test_len_wrap(AllocRingBuffer::with_capacity(2));
         test_len_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+        test_len_wrap(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -197,6 +208,7 @@ mod tests {
 
         test_clear(AllocRingBuffer::with_capacity(8));
         test_clear(ConstGenericRingBuffer::<i32, 8>::new());
+        test_clear(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -215,6 +227,7 @@ mod tests {
 
         test_empty(AllocRingBuffer::with_capacity(8));
         test_empty(ConstGenericRingBuffer::<i32, 8>::new());
+        test_empty(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -241,6 +254,7 @@ mod tests {
 
         test_iter(AllocRingBuffer::with_capacity(8));
         test_iter(ConstGenericRingBuffer::<i32, 8>::new());
+        test_iter(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[cfg(feature = "alloc")]
@@ -263,6 +277,7 @@ mod tests {
 
         test_iter(&string, AllocRingBuffer::with_capacity(8));
         test_iter(&string, ConstGenericRingBuffer::<&str, 8>::new());
+        test_iter(&string, ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -285,6 +300,7 @@ mod tests {
 
         test_double_iter(AllocRingBuffer::with_capacity(8));
         test_double_iter(ConstGenericRingBuffer::<i32, 8>::new());
+        test_double_iter(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -302,6 +318,7 @@ mod tests {
 
         test_iter_wrap(AllocRingBuffer::with_capacity(2));
         test_iter_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+        test_iter_wrap(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -320,6 +337,7 @@ mod tests {
 
         test_iter_mut(AllocRingBuffer::with_capacity(8));
         test_iter_mut(ConstGenericRingBuffer::<i32, 8>::new());
+        test_iter_mut(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -338,6 +356,7 @@ mod tests {
 
         run_test_iter_mut_wrap(AllocRingBuffer::with_capacity(2));
         run_test_iter_mut_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+        run_test_iter_mut_wrap(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -358,6 +377,7 @@ mod tests {
 
         run_test_iter_mut_wrap(AllocRingBuffer::with_capacity(2));
         run_test_iter_mut_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+        run_test_iter_mut_wrap(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -372,6 +392,7 @@ mod tests {
 
         test_to_vec(AllocRingBuffer::with_capacity(8));
         test_to_vec(ConstGenericRingBuffer::<i32, 8>::new());
+        test_to_vec(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -387,6 +408,7 @@ mod tests {
 
         test_to_vec_wrap(AllocRingBuffer::with_capacity(2));
         test_to_vec_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+        test_to_vec_wrap(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -398,6 +420,7 @@ mod tests {
 
         test_index(AllocRingBuffer::with_capacity(8));
         test_index(ConstGenericRingBuffer::<i32, 8>::new());
+        test_index(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -414,6 +437,7 @@ mod tests {
 
         test_index_mut(AllocRingBuffer::with_capacity(8));
         test_index_mut(ConstGenericRingBuffer::<i32, 8>::new());
+        test_index_mut(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -427,6 +451,7 @@ mod tests {
 
         test_peek_some(AllocRingBuffer::with_capacity(2));
         test_peek_some(ConstGenericRingBuffer::<i32, 2>::new());
+        test_peek_some(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -437,6 +462,7 @@ mod tests {
 
         test_peek_none(AllocRingBuffer::with_capacity(8));
         test_peek_none(ConstGenericRingBuffer::<i32, 8>::new());
+        test_peek_none(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -461,6 +487,7 @@ mod tests {
 
         test_get_relative(AllocRingBuffer::with_capacity(8));
         test_get_relative(ConstGenericRingBuffer::<i32, 8>::new());
+        test_get_relative(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -484,6 +511,7 @@ mod tests {
 
         test_wrapping_get_relative(AllocRingBuffer::with_capacity(2));
         test_wrapping_get_relative(ConstGenericRingBuffer::<i32, 2>::new());
+        test_wrapping_get_relative(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -494,6 +522,7 @@ mod tests {
 
         test_get_relative_zero_length(AllocRingBuffer::with_capacity(8));
         test_get_relative_zero_length(ConstGenericRingBuffer::<i32, 8>::new());
+        test_get_relative_zero_length(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -517,6 +546,7 @@ mod tests {
 
         test_get_relative_mut(AllocRingBuffer::with_capacity(8));
         test_get_relative_mut(ConstGenericRingBuffer::<i32, 8>::new());
+        test_get_relative_mut(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -542,6 +572,7 @@ mod tests {
 
         test_wrapping_get_relative_mut(AllocRingBuffer::with_capacity(2));
         test_wrapping_get_relative_mut(ConstGenericRingBuffer::<i32, 2>::new());
+        test_wrapping_get_relative_mut(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -552,6 +583,7 @@ mod tests {
 
         test_get_relative_mut_zero_length(AllocRingBuffer::with_capacity(8));
         test_get_relative_mut_zero_length(ConstGenericRingBuffer::<i32, 8>::new());
+        test_get_relative_mut_zero_length(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -573,6 +605,7 @@ mod tests {
 
         test_get_absolute(AllocRingBuffer::with_capacity(8));
         test_get_absolute(ConstGenericRingBuffer::<i32, 8>::new());
+        test_get_absolute(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -585,6 +618,7 @@ mod tests {
 
         test_from_iterator::<AllocRingBuffer<i32>>();
         test_from_iterator::<ConstGenericRingBuffer<i32, 1024>>();
+        // NOTE: ModFreeRingBuffer does not really implement `FromIterator`.
     }
 
     #[test]
@@ -597,6 +631,7 @@ mod tests {
 
         test_from_iterator_wrap::<AllocRingBuffer<i32>>();
         test_from_iterator_wrap::<ConstGenericRingBuffer<i32, 1024>>();
+        // NOTE: ModFreeRingBuffer does not really implement `FromIterator`.
     }
 
     #[test]
@@ -621,6 +656,7 @@ mod tests {
 
         test_get_relative_negative(AllocRingBuffer::with_capacity(8));
         test_get_relative_negative(ConstGenericRingBuffer::<i32, 8>::new());
+        test_get_relative_negative(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -635,6 +671,7 @@ mod tests {
 
         test_contains(AllocRingBuffer::with_capacity(8));
         test_contains(ConstGenericRingBuffer::<i32, 8>::new());
+        test_contains(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -649,6 +686,7 @@ mod tests {
 
         test_is_full(AllocRingBuffer::with_capacity(2));
         test_is_full(ConstGenericRingBuffer::<i32, 2>::new());
+        test_is_full(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -662,6 +700,7 @@ mod tests {
 
         test_front_some(AllocRingBuffer::with_capacity(2));
         test_front_some(ConstGenericRingBuffer::<i32, 2>::new());
+        test_front_some(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -672,6 +711,7 @@ mod tests {
 
         test_front_none(AllocRingBuffer::with_capacity(8));
         test_front_none(ConstGenericRingBuffer::<i32, 8>::new());
+        test_front_none(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -685,6 +725,7 @@ mod tests {
 
         test_back_some(AllocRingBuffer::with_capacity(2));
         test_back_some(ConstGenericRingBuffer::<i32, 2>::new());
+        test_back_some(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -695,6 +736,7 @@ mod tests {
 
         test_back_none(AllocRingBuffer::with_capacity(8));
         test_back_none(ConstGenericRingBuffer::<i32, 8>::new());
+        test_back_none(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -708,6 +750,7 @@ mod tests {
 
         test_front_some_mut(AllocRingBuffer::with_capacity(2));
         test_front_some_mut(ConstGenericRingBuffer::<i32, 2>::new());
+        test_front_some_mut(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -718,6 +761,7 @@ mod tests {
 
         test_front_none_mut(AllocRingBuffer::with_capacity(8));
         test_front_none_mut(ConstGenericRingBuffer::<i32, 8>::new());
+        test_front_none_mut(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -730,8 +774,8 @@ mod tests {
         }
 
         test_back_some_mut(AllocRingBuffer::with_capacity(2));
-
         test_back_some_mut(ConstGenericRingBuffer::<i32, 2>::new());
+        test_back_some_mut(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -741,8 +785,8 @@ mod tests {
         }
 
         test_back_none_mut(AllocRingBuffer::with_capacity(8));
-
         test_back_none_mut(ConstGenericRingBuffer::<i32, 8>::new());
+        test_back_none_mut(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -763,6 +807,7 @@ mod tests {
 
         run_test_dequeue(AllocRingBuffer::with_capacity(8));
         run_test_dequeue(ConstGenericRingBuffer::<i32, 8>::new());
+        run_test_dequeue(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -780,8 +825,8 @@ mod tests {
         }
 
         test_skip(AllocRingBuffer::with_capacity(8));
-
         test_skip(ConstGenericRingBuffer::<i32, 8>::new());
+        test_skip(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -799,6 +844,7 @@ mod tests {
 
         test_skip2(AllocRingBuffer::with_capacity(2));
         test_skip2(ConstGenericRingBuffer::<i32, 2>::new());
+        test_skip2(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -821,6 +867,7 @@ mod tests {
 
         test_push_dequeue_push(AllocRingBuffer::with_capacity(8));
         test_push_dequeue_push(ConstGenericRingBuffer::<i32, 8>::new());
+        test_push_dequeue_push(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -843,6 +890,7 @@ mod tests {
 
         test_enqueue_dequeue_push(AllocRingBuffer::with_capacity(8));
         test_enqueue_dequeue_push(ConstGenericRingBuffer::<i32, 8>::new());
+        test_enqueue_dequeue_push(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -867,6 +915,7 @@ mod tests {
 
         test_push_dequeue_push_full(AllocRingBuffer::with_capacity(2));
         test_push_dequeue_push_full(ConstGenericRingBuffer::<i32, 2>::new());
+        test_push_dequeue_push_full(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -899,6 +948,7 @@ mod tests {
 
         test_push_dequeue_push_full_get(AllocRingBuffer::with_capacity(2));
         test_push_dequeue_push_full_get(ConstGenericRingBuffer::<i32, 2>::new());
+        test_push_dequeue_push_full_get(ModFreeRingBuffer::new(NonZeroUsize::new(2).unwrap()));
     }
 
     #[test]
@@ -929,6 +979,7 @@ mod tests {
 
         test_push_dequeue_push_full_get_rep(AllocRingBuffer::with_capacity(8));
         test_push_dequeue_push_full_get_rep(ConstGenericRingBuffer::<i32, 8>::new());
+        test_push_dequeue_push_full_get_rep(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -952,6 +1003,7 @@ mod tests {
 
         test_clone(AllocRingBuffer::with_capacity(4));
         test_clone(ConstGenericRingBuffer::<i32, 4>::new());
+        test_clone(ModFreeRingBuffer::new(NonZeroUsize::new(4).unwrap()));
     }
 
     #[test]
@@ -976,10 +1028,13 @@ mod tests {
 
         test_default_fill(AllocRingBuffer::with_capacity(4));
         test_default_fill(ConstGenericRingBuffer::<i32, 4>::new());
+        test_default_fill(ModFreeRingBuffer::new(NonZeroUsize::new(4).unwrap()));
     }
 
     #[test]
     fn run_test_eq() {
+        // TODO: Also test AllocRingBuffer and ModFreeRingBuffer.
+
         let mut alloc_a = ConstGenericRingBuffer::<i32, 4>::new();
         let mut alloc_b = ConstGenericRingBuffer::<i32, 4>::new();
 
@@ -1010,6 +1065,7 @@ mod tests {
 
         next_back_test(ConstGenericRingBuffer::<i32, 8>::new());
         next_back_test(AllocRingBuffer::with_capacity(8));
+        next_back_test(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
 
     #[test]
@@ -1029,6 +1085,7 @@ mod tests {
 
         next_back_test_mut(ConstGenericRingBuffer::<i32, 8>::new());
         next_back_test_mut(AllocRingBuffer::with_capacity(8));
+        next_back_test_mut(ModFreeRingBuffer::new(NonZeroUsize::new(8).unwrap()));
     }
     #[test]
     fn run_test_fill() {
@@ -1052,6 +1109,7 @@ mod tests {
 
         test_fill(AllocRingBuffer::with_capacity(4));
         test_fill(ConstGenericRingBuffer::<i32, 4>::new());
+        test_fill(ModFreeRingBuffer::new(NonZeroUsize::new(4).unwrap()));
     }
 
     mod test_dropping {
@@ -1110,6 +1168,11 @@ mod tests {
         #[test]
         fn run_test_drops_contents_const_generic() {
             test_dropped!({ ConstGenericRingBuffer::<_, 1>::new() });
+        }
+
+        #[test]
+        fn run_test_drops_contents_mod_free() {
+            test_dropped!({ ModFreeRingBuffer::new(NonZeroUsize::new(1).unwrap()) });
         }
     }
 }
