@@ -238,7 +238,7 @@ impl<T> AllocRingBuffer<T, NonPowerOfTwo> {
     /// as the ones constructed with `with_capacity`) can be up to 3x slower
     ///
     /// # Panics
-    /// if the capacity is zeroa
+    /// if the capacity is zero
     #[inline]
     pub fn with_capacity_non_power_of_two(cap: usize) -> Self {
         assert_ne!(cap, 0, "Capacity must be greater than 0");
@@ -253,6 +253,7 @@ impl<T> AllocRingBuffer<T, PowerOfTwo> {
     /// function raised to the power of two (effectively the input is the log2 of the actual capacity)
     #[inline]
     pub fn with_capacity_power_of_2(cap_power_of_two: usize) -> Self {
+        // Safety: 1 << n is always a power of two, and nonzero
         unsafe { Self::with_capacity_unchecked(1 << cap_power_of_two) }
     }
 
@@ -264,7 +265,7 @@ impl<T> AllocRingBuffer<T, PowerOfTwo> {
         assert_ne!(cap, 0, "Capacity must be greater than 0");
         assert!(cap.is_power_of_two(), "Capacity must be a power of two");
 
-        // Safety
+        // Safety: assertions check that cap is a power of two and nonzero
         unsafe { Self::with_capacity_unchecked(cap) }
     }
 
