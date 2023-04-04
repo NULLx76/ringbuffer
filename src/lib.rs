@@ -81,6 +81,12 @@ const fn mask(cap: usize, index: usize) -> usize {
     index & (cap - 1)
 }
 
+/// Used internally. Computes the bitmask used to properly wrap the ringbuffers.
+#[inline]
+const fn mask_modulo(cap: usize, index: usize) -> usize {
+    index % cap
+}
+
 #[cfg(test)]
 #[allow(non_upper_case_globals)]
 mod tests {

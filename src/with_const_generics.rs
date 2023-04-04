@@ -72,12 +72,22 @@ impl<T: PartialEq, const CAP: usize> PartialEq for ConstGenericRingBuffer<T, CAP
 impl<T: PartialEq, const CAP: usize> Eq for ConstGenericRingBuffer<T, CAP> {}
 
 impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
+    const ERROR_CAPACITY_IS_NOT_ALLOWED_TO_BE_ZERO: () =
+        assert!(CAP != 0, "Capacity is not allowed to be zero");
+
     /// Creates a const generic ringbuffer, size is passed as a const generic.
+    ///
+    /// Note that the size does not have to be a power of two, but that not using a power
+    /// of two might be significantly (up to 3 times) slower.
     #[inline]
     pub const fn new() -> Self {
-        assert!(CAP != 0, "Capacity is not allowed to be zero");
-        assert!(CAP.is_power_of_two(), "Capacity must be a power of two");
+        #[allow(clippy::let_unit_value)]
+        let _ = Self::ERROR_CAPACITY_IS_NOT_ALLOWED_TO_BE_ZERO;
 
+        // allow here since we are constructing an array of MaybeUninit<T>
+        // which explicitly *is* defined behavior
+        // https://rust-lang.github.io/rust-clippy/master/index.html#uninit_assumed_init
+        #[allow(clippy::uninit_assumed_init)]
         Self {
             buf: unsafe { MaybeUninit::uninit().assume_init() },
             writeptr: 0,
@@ -115,7 +125,7 @@ impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
         if self.is_empty() {
             None
         } else {
-            let index = crate::mask(CAP, self.readptr);
+            let index = crate::mask_modulo(CAP, self.readptr);
             let res = mem::replace(&mut self.buf[index], MaybeUninit::uninit());
             self.readptr += 1;
 
@@ -144,7 +154,7 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
     fn push(&mut self, value: T) {
         if self.is_full() {
             let previous_value = mem::replace(
-                &mut self.buf[crate::mask(CAP, self.readptr)],
+                &mut self.buf[crate::mask_modulo(CAP, self.readptr)],
                 MaybeUninit::uninit(),
             );
             // make sure we drop whatever is being overwritten
@@ -156,7 +166,7 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
             }
             self.readptr += 1;
         }
-        let index = crate::mask(CAP, self.writeptr);
+        let index = crate::mask_modulo(CAP, self.writeptr);
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
     }
@@ -168,7 +178,7 @@ unsafe impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, 
         get_unchecked_mut,
         readptr,
         writeptr,
-        crate::mask
+        crate::mask_modulo
     );
 
     #[inline]
@@ -230,15 +240,24 @@ mod tests {
     use super::*;
 
     #[test]
-    #[should_panic]
-    fn test_no_empty() {
-        let _ = ConstGenericRingBuffer::<u32, 0>::new();
-    }
+    fn test_not_power_of_two() {
+        let mut rb = ConstGenericRingBuffer::<usize, 10>::new();
+        const NUM_VALS: usize = 1000;
 
-    #[test]
-    #[should_panic]
-    fn test_with_capacity_no_power_of_two() {
-        let _ = ConstGenericRingBuffer::<i32, 10>::new();
+        // recycle the ringbuffer a bunch of time to see if noneof the logic
+        // messes up
+        for _ in 0..100 {
+            for i in 0..NUM_VALS {
+                rb.enqueue(i);
+            }
+            assert!(rb.is_full());
+
+            for i in 0..10 {
+                assert_eq!(Some(i + NUM_VALS - rb.capacity()), rb.dequeue())
+            }
+
+            assert!(rb.is_empty())
+        }
     }
 
     #[test]
