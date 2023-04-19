@@ -283,7 +283,7 @@ unsafe fn get_unchecked<'a, T, MODE: RingbufferMode>(
     rb: *const AllocRingBuffer<T, MODE>,
     index: usize,
 ) -> &'a T {
-    let p = &(*rb).buf[index];
+    let p = &(*rb).buf.get_unchecked(index);
     // Safety: caller makes sure the index is in bounds for the ringbuffer.
     // All in bounds values in the ringbuffer are initialized
     p.assume_init_ref()
