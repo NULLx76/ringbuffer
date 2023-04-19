@@ -69,8 +69,6 @@ pub use ringbuffer_trait::{RingBuffer, RingBufferExt, RingBufferRead, RingBuffer
 mod with_alloc;
 #[cfg(feature = "alloc")]
 pub use with_alloc::AllocRingBuffer;
-#[cfg(feature = "alloc")]
-pub use with_alloc::RINGBUFFER_DEFAULT_CAPACITY;
 
 mod with_const_generics;
 pub use with_const_generics::ConstGenericRingBuffer;
@@ -140,10 +138,6 @@ mod tests {
 
     #[test]
     fn test_default_eq_new() {
-        assert_eq!(
-            AllocRingBuffer::<i32>::default(),
-            AllocRingBuffer::<i32>::new()
-        );
         assert_eq!(
             ConstGenericRingBuffer::<i32, 8>::default(),
             ConstGenericRingBuffer::<i32, 8>::new()
@@ -577,25 +571,23 @@ mod tests {
 
     #[test]
     fn run_test_from_iterator() {
-        fn test_from_iterator<T: RingBufferExt<i32>>() {
+        fn test_from_iterator<T: RingBufferExt<i32> + FromIterator<i32>>() {
             let b: T = std::iter::repeat(1).take(1024).collect();
             assert_eq!(b.len(), 1024);
             assert_eq!(b.to_vec(), vec![1; 1024])
         }
 
-        test_from_iterator::<AllocRingBuffer<i32>>();
         test_from_iterator::<ConstGenericRingBuffer<i32, 1024>>();
     }
 
     #[test]
     fn run_test_from_iterator_wrap() {
-        fn test_from_iterator_wrap<T: RingBufferExt<i32>>() {
+        fn test_from_iterator_wrap<T: RingBufferExt<i32> + FromIterator<i32>>() {
             let b: T = std::iter::repeat(1).take(8000).collect();
             assert_eq!(b.len(), b.capacity());
             assert_eq!(b.to_vec(), vec![1; b.capacity()])
         }
 
-        test_from_iterator_wrap::<AllocRingBuffer<i32>>();
         test_from_iterator_wrap::<ConstGenericRingBuffer<i32, 1024>>();
     }
 

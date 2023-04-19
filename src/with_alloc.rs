@@ -5,7 +5,6 @@ use crate::ringbuffer_trait::{RingBuffer, RingBufferExt, RingBufferRead, RingBuf
 extern crate alloc;
 // We need vecs so depend on alloc
 use alloc::vec::Vec;
-use core::iter::FromIterator;
 use core::marker::PhantomData;
 use core::mem;
 use core::mem::MaybeUninit;
@@ -109,10 +108,6 @@ impl<T: PartialEq, MODE: RingbufferMode> PartialEq for AllocRingBuffer<T, MODE> 
 }
 
 impl<T: Eq + PartialEq, MODE: RingbufferMode> Eq for AllocRingBuffer<T, MODE> {}
-
-/// The capacity of a `RingBuffer` created by new or default (`1024`).
-// must be a power of 2
-pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
 unsafe impl<T, MODE: RingbufferMode> RingBufferExt<T> for AllocRingBuffer<T, MODE> {
     impl_ringbuffer_ext!(
@@ -269,10 +264,12 @@ impl<T> AllocRingBuffer<T, PowerOfTwo> {
         unsafe { Self::with_capacity_unchecked(cap) }
     }
 
-    /// Creates an `AllocRingBuffer` with a capacity of [`RINGBUFFER_DEFAULT_CAPACITY`].
+    /// Alias of [`with_capacity`](AllocRingBuffer::with_capacity). Most people will look for a
+    /// new function to create a ringbuffer, but it does not make sense to construct one without
+    /// a capacity.
     #[inline]
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(cap: usize) -> Self {
+        Self::with_capacity(cap)
     }
 }
 
@@ -303,31 +300,6 @@ unsafe fn get_unchecked_mut<T, MODE: RingbufferMode>(
     p.cast()
 }
 
-impl<RB, MODE: RingbufferMode> FromIterator<RB> for AllocRingBuffer<RB, MODE> {
-    fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
-        let mut res = Self::default();
-        for i in iter {
-            res.push(i);
-        }
-
-        res
-    }
-}
-
-impl<T, MODE: RingbufferMode> Default for AllocRingBuffer<T, MODE> {
-    /// Creates a buffer with a capacity of [`crate::RINGBUFFER_DEFAULT_CAPACITY`].
-    #[inline]
-    fn default() -> Self {
-        Self {
-            buf: Vec::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
-            capacity: RINGBUFFER_DEFAULT_CAPACITY,
-            readptr: 0,
-            writeptr: 0,
-            mode: Default::default(),
-        }
-    }
-}
-
 impl<T, MODE: RingbufferMode> Index<isize> for AllocRingBuffer<T, MODE> {
     type Output = T;
 
@@ -344,12 +316,8 @@ impl<T, MODE: RingbufferMode> IndexMut<isize> for AllocRingBuffer<T, MODE> {
 
 #[cfg(test)]
 mod tests {
-    use super::alloc::vec::Vec;
     use crate::with_alloc::RingbufferMode;
-    use crate::{
-        AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite,
-        RINGBUFFER_DEFAULT_CAPACITY,
-    };
+    use crate::{AllocRingBuffer, RingBuffer, RingBufferRead, RingBufferWrite};
 
     // just test that this compiles
     #[test]
@@ -382,30 +350,6 @@ mod tests {
 
             assert!(rb.is_empty())
         }
-    }
-
-    #[test]
-    fn test_default() {
-        let b: AllocRingBuffer<u32> = AllocRingBuffer::default();
-        assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.capacity());
-        assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.buf.capacity());
-        assert_eq!(b.capacity, b.capacity());
-        assert_eq!(b.buf.len(), b.len());
-        assert_eq!(0, b.writeptr);
-        assert_eq!(0, b.readptr);
-        assert!(b.is_empty());
-        assert!(b.buf.is_empty());
-        assert_eq!(0, b.iter().count());
-        assert_eq!(
-            Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
-            b.to_vec()
-        );
-    }
-
-    #[test]
-    fn test_default_capacity_constant() {
-        // This is to prevent accidentally changing it.
-        assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, 1024)
     }
 
     #[test]
