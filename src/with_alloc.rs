@@ -3,8 +3,9 @@ use core::ops::{Index, IndexMut};
 use crate::ringbuffer_trait::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 
 extern crate alloc;
-// We need vecs so depend on alloc
-use alloc::vec::Vec;
+
+// We need boxes, so depend on alloc
+use alloc::boxed::Box;
 use core::iter::FromIterator;
 use core::marker::PhantomData;
 use core::mem;
@@ -12,19 +13,25 @@ use core::mem::MaybeUninit;
 
 #[derive(Debug, Copy, Clone)]
 pub struct PowerOfTwo;
+
 #[derive(Debug, Copy, Clone)]
 pub struct NonPowerOfTwo;
+
 mod private {
     use crate::with_alloc::{NonPowerOfTwo, PowerOfTwo};
 
     pub trait Sealed {}
+
     impl Sealed for PowerOfTwo {}
+
     impl Sealed for NonPowerOfTwo {}
 }
+
 pub trait RingbufferMode: private::Sealed {
     fn mask(cap: usize, index: usize) -> usize;
     fn must_be_power_of_two() -> bool;
 }
+
 impl RingbufferMode for PowerOfTwo {
     #[inline]
     fn mask(cap: usize, index: usize) -> usize {
@@ -35,6 +42,7 @@ impl RingbufferMode for PowerOfTwo {
         true
     }
 }
+
 impl RingbufferMode for NonPowerOfTwo {
     #[inline]
     fn mask(cap: usize, index: usize) -> usize {
@@ -74,8 +82,7 @@ impl RingbufferMode for NonPowerOfTwo {
 /// ```
 #[derive(Debug)]
 pub struct AllocRingBuffer<T, MODE: RingbufferMode = PowerOfTwo> {
-    buf: Vec<MaybeUninit<T>>,
-    capacity: usize,
+    buf: Box<[MaybeUninit<T>]>,
     readptr: usize,
     writeptr: usize,
     mode: PhantomData<MODE>,
@@ -89,12 +96,12 @@ impl<T, MODE: RingbufferMode> Drop for AllocRingBuffer<T, MODE> {
 
 impl<T: Clone, MODE: RingbufferMode> Clone for AllocRingBuffer<T, MODE> {
     fn clone(&self) -> Self {
-        debug_assert_ne!(self.capacity, 0);
-        debug_assert!(!MODE::must_be_power_of_two() || self.capacity.is_power_of_two());
+        debug_assert_ne!(self.buf.len(), 0);
+        debug_assert!(!MODE::must_be_power_of_two() || self.buf.len().is_power_of_two());
 
         // whatever the previous capacity was, we can just use the same one again.
         // It should be valid.
-        let mut new = unsafe { Self::with_capacity_unchecked(self.capacity) };
+        let mut new = unsafe { Self::with_capacity_unchecked(self.buf.len()) };
         self.iter().cloned().for_each(|i| new.push(i));
         new
     }
@@ -102,7 +109,7 @@ impl<T: Clone, MODE: RingbufferMode> Clone for AllocRingBuffer<T, MODE> {
 
 impl<T: PartialEq, MODE: RingbufferMode> PartialEq for AllocRingBuffer<T, MODE> {
     fn eq(&self, other: &Self) -> bool {
-        self.capacity == other.capacity
+        self.buf.len() == other.buf.len()
             && self.len() == other.len()
             && self.iter().zip(other.iter()).all(|(a, b)| a == b)
     }
@@ -128,11 +135,8 @@ unsafe impl<T, MODE: RingbufferMode> RingBufferExt<T> for AllocRingBuffer<T, MOD
         self.clear();
 
         self.readptr = 0;
-        self.writeptr = self.capacity;
+        self.writeptr = self.buf.len();
         self.buf.fill_with(|| MaybeUninit::new(f()));
-        while self.buf.len() < self.capacity {
-            self.buf.push(MaybeUninit::new(f()));
-        }
     }
 }
 
@@ -141,7 +145,7 @@ impl<T, MODE: RingbufferMode> RingBufferRead<T> for AllocRingBuffer<T, MODE> {
         if self.is_empty() {
             None
         } else {
-            let index = MODE::mask(self.capacity, self.readptr);
+            let index = MODE::mask(self.buf.len(), self.readptr);
             let res = mem::replace(&mut self.buf[index], MaybeUninit::uninit());
             self.readptr += 1;
 
@@ -156,7 +160,7 @@ impl<T, MODE: RingbufferMode> RingBufferRead<T> for AllocRingBuffer<T, MODE> {
 }
 
 impl<T, MODE: RingbufferMode> Extend<T> for AllocRingBuffer<T, MODE> {
-    fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
+    fn extend<A: IntoIterator<Item=T>>(&mut self, iter: A) {
         let iter = iter.into_iter();
 
         for i in iter {
@@ -170,7 +174,7 @@ impl<T, MODE: RingbufferMode> RingBufferWrite<T> for AllocRingBuffer<T, MODE> {
     fn push(&mut self, value: T) {
         if self.is_full() {
             let previous_value = mem::replace(
-                &mut self.buf[MODE::mask(self.capacity, self.readptr)],
+                &mut self.buf[MODE::mask(self.buf.len(), self.readptr)],
                 MaybeUninit::uninit(),
             );
             // make sure we drop whatever is being overwritten
@@ -184,15 +188,10 @@ impl<T, MODE: RingbufferMode> RingBufferWrite<T> for AllocRingBuffer<T, MODE> {
             self.readptr += 1;
         }
 
-        let index = MODE::mask(self.capacity, self.writeptr);
+        let index = MODE::mask(self.buf.len(), self.writeptr);
 
-        if index >= self.buf.len() {
-            // initializing the maybeuninit when values are inserted/pushed
-            self.buf.push(MaybeUninit::new(value));
-        } else {
-            // initializing the maybeuninit when values are inserted/pushed
-            self.buf[index] = MaybeUninit::new(value);
-        }
+        // initializing the maybeuninit when values are inserted/pushed
+        self.buf[index] = MaybeUninit::new(value);
 
         self.writeptr += 1;
     }
@@ -201,7 +200,7 @@ impl<T, MODE: RingbufferMode> RingBufferWrite<T> for AllocRingBuffer<T, MODE> {
 impl<T, MODE: RingbufferMode> RingBuffer<T> for AllocRingBuffer<T, MODE> {
     #[inline]
     unsafe fn ptr_capacity(rb: *const Self) -> usize {
-        (*rb).capacity
+        (*rb).buf.len()
     }
 
     impl_ringbuffer!(readptr, writeptr);
@@ -216,9 +215,13 @@ impl<T, MODE: RingbufferMode> AllocRingBuffer<T, MODE> {
     /// Only if Mode == NonPowerOfTwo can the capacity be not a power of two, in which case this function is also safe.
     #[inline]
     unsafe fn with_capacity_unchecked(cap: usize) -> Self {
+        let layout = alloc::alloc::Layout::array::<MaybeUninit<T>>(cap).unwrap();
+        let ptr = unsafe { alloc::alloc::alloc(layout) as *mut MaybeUninit<T> };
+        let slice_ptr = core::ptr::slice_from_raw_parts_mut(ptr, cap);
+        let buf = unsafe { Box::from_raw(slice_ptr) };
+
         Self {
-            buf: Vec::with_capacity(cap),
-            capacity: cap,
+            buf,
             readptr: 0,
             writeptr: 0,
             mode: Default::default(),
@@ -304,7 +307,7 @@ unsafe fn get_unchecked_mut<T, MODE: RingbufferMode>(
 }
 
 impl<RB, MODE: RingbufferMode> FromIterator<RB> for AllocRingBuffer<RB, MODE> {
-    fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item=RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
             res.push(i);
@@ -315,16 +318,11 @@ impl<RB, MODE: RingbufferMode> FromIterator<RB> for AllocRingBuffer<RB, MODE> {
 }
 
 impl<T, MODE: RingbufferMode> Default for AllocRingBuffer<T, MODE> {
-    /// Creates a buffer with a capacity of [`crate::RINGBUFFER_DEFAULT_CAPACITY`].
+    /// Creates a buffer with a capacity of [`RINGBUFFER_DEFAULT_CAPACITY`].
     #[inline]
     fn default() -> Self {
-        Self {
-            buf: Vec::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
-            capacity: RINGBUFFER_DEFAULT_CAPACITY,
-            readptr: 0,
-            writeptr: 0,
-            mode: Default::default(),
-        }
+        // SAFETY: RINGBUFFER_DEFAULT_CAPACITY is a power of two
+        unsafe{AllocRingBuffer::with_capacity_unchecked(RINGBUFFER_DEFAULT_CAPACITY)}
     }
 }
 
@@ -363,6 +361,7 @@ mod tests {
         _ = helper(&AllocRingBuffer::with_capacity(2));
         _ = helper(&AllocRingBuffer::with_capacity_non_power_of_two(5));
     }
+
     #[test]
     fn test_not_power_of_two() {
         let mut rb = AllocRingBuffer::with_capacity_non_power_of_two(10);
@@ -388,13 +387,11 @@ mod tests {
     fn test_default() {
         let b: AllocRingBuffer<u32> = AllocRingBuffer::default();
         assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.capacity());
-        assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.buf.capacity());
-        assert_eq!(b.capacity, b.capacity());
-        assert_eq!(b.buf.len(), b.len());
+        assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.buf.len());
+        assert_eq!(b.buf.len(), b.capacity());
         assert_eq!(0, b.writeptr);
         assert_eq!(0, b.readptr);
         assert!(b.is_empty());
-        assert!(b.buf.is_empty());
         assert_eq!(0, b.iter().count());
         assert_eq!(
             Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
@@ -411,7 +408,7 @@ mod tests {
     #[test]
     fn test_with_capacity_power_of_two() {
         let b = AllocRingBuffer::<i32>::with_capacity_power_of_2(2);
-        assert_eq!(b.capacity, 4);
+        assert_eq!(b.buf.len(), 4);
     }
 
     #[test]
