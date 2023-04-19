@@ -213,7 +213,7 @@ impl<T, MODE: RingbufferMode> AllocRingBuffer<T, MODE> {
     ///
     /// # Safety
     /// Only safe if the capacity is greater than zero, and a power of two.
-    /// Only if Mode == NonPowerOfTwo can the capacity be not a power of two, in which case this function is also safe.
+    /// Only if `MODE` == [`NonPowerOfTwo`](NonPowerOfTwo) can the capacity be not a power of two, in which case this function is also safe.
     #[inline]
     unsafe fn with_capacity_unchecked(cap: usize) -> Self {
         Self {
@@ -221,7 +221,7 @@ impl<T, MODE: RingbufferMode> AllocRingBuffer<T, MODE> {
             capacity: cap,
             readptr: 0,
             writeptr: 0,
-            mode: Default::default(),
+            mode: PhantomData::default(),
         }
     }
 }
@@ -240,6 +240,7 @@ impl<T> AllocRingBuffer<T, NonPowerOfTwo> {
     /// # Panics
     /// if the capacity is zero
     #[inline]
+    #[must_use]
     pub fn with_capacity_non_power_of_two(cap: usize) -> Self {
         assert_ne!(cap, 0, "Capacity must be greater than 0");
 
@@ -252,6 +253,7 @@ impl<T> AllocRingBuffer<T, PowerOfTwo> {
     /// Creates a `AllocRingBuffer` with a certain capacity. The actual capacity is the input to the
     /// function raised to the power of two (effectively the input is the log2 of the actual capacity)
     #[inline]
+    #[must_use]
     pub fn with_capacity_power_of_2(cap_power_of_two: usize) -> Self {
         // Safety: 1 << n is always a power of two, and nonzero
         unsafe { Self::with_capacity_unchecked(1 << cap_power_of_two) }
@@ -261,6 +263,7 @@ impl<T> AllocRingBuffer<T, PowerOfTwo> {
     /// Creates a `AllocRingBuffer` with a certain capacity. The capacity must be a power of two.
     /// # Panics
     /// Panics when capacity is zero or not a power of two
+    #[must_use]
     pub fn with_capacity(cap: usize) -> Self {
         assert_ne!(cap, 0, "Capacity must be greater than 0");
         assert!(cap.is_power_of_two(), "Capacity must be a power of two");
@@ -271,6 +274,7 @@ impl<T> AllocRingBuffer<T, PowerOfTwo> {
 
     /// Creates an `AllocRingBuffer` with a capacity of [`RINGBUFFER_DEFAULT_CAPACITY`].
     #[inline]
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -323,7 +327,7 @@ impl<T, MODE: RingbufferMode> Default for AllocRingBuffer<T, MODE> {
             capacity: RINGBUFFER_DEFAULT_CAPACITY,
             readptr: 0,
             writeptr: 0,
-            mode: Default::default(),
+            mode: PhantomData::default(),
         }
     }
 }

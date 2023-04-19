@@ -80,6 +80,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     /// Note that the size does not have to be a power of two, but that not using a power
     /// of two might be significantly (up to 3 times) slower.
     #[inline]
+    #[must_use]
     pub const fn new() -> Self {
         #[allow(clippy::let_unit_value)]
         let _ = Self::ERROR_CAPACITY_IS_NOT_ALLOWED_TO_BE_ZERO;
