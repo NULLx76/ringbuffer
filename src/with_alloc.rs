@@ -23,16 +23,15 @@ mod private {
     pub trait Sealed {}
 
     impl Sealed for PowerOfTwo {}
-
     impl Sealed for NonPowerOfTwo {}
 }
 
-pub trait RingbufferMode: private::Sealed {
+pub trait RingbufferSize: private::Sealed {
     fn mask(cap: usize, index: usize) -> usize;
     fn must_be_power_of_two() -> bool;
 }
 
-impl RingbufferMode for PowerOfTwo {
+impl RingbufferSize for PowerOfTwo {
     #[inline]
     fn mask(cap: usize, index: usize) -> usize {
         crate::mask(cap, index)
@@ -43,7 +42,7 @@ impl RingbufferMode for PowerOfTwo {
     }
 }
 
-impl RingbufferMode for NonPowerOfTwo {
+impl RingbufferSize for NonPowerOfTwo {
     #[inline]
     fn mask(cap: usize, index: usize) -> usize {
         crate::mask_modulo(cap, index)
@@ -81,23 +80,23 @@ impl RingbufferMode for NonPowerOfTwo {
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
 #[derive(Debug)]
-pub struct AllocRingBuffer<T, MODE: RingbufferMode = PowerOfTwo> {
+pub struct AllocRingBuffer<T, SIZE: RingbufferSize = PowerOfTwo> {
     buf: Box<[MaybeUninit<T>]>,
     readptr: usize,
     writeptr: usize,
-    mode: PhantomData<MODE>,
+    mode: PhantomData<SIZE>,
 }
 
-impl<T, MODE: RingbufferMode> Drop for AllocRingBuffer<T, MODE> {
+impl<T, SIZE: RingbufferSize> Drop for AllocRingBuffer<T, SIZE> {
     fn drop(&mut self) {
         self.drain().for_each(drop);
     }
 }
 
-impl<T: Clone, MODE: RingbufferMode> Clone for AllocRingBuffer<T, MODE> {
+impl<T: Clone, SIZE: RingbufferSize> Clone for AllocRingBuffer<T, SIZE> {
     fn clone(&self) -> Self {
         debug_assert_ne!(self.buf.len(), 0);
-        debug_assert!(!MODE::must_be_power_of_two() || self.buf.len().is_power_of_two());
+        debug_assert!(!SIZE::must_be_power_of_two() || self.buf.len().is_power_of_two());
 
         // whatever the previous capacity was, we can just use the same one again.
         // It should be valid.
@@ -107,7 +106,7 @@ impl<T: Clone, MODE: RingbufferMode> Clone for AllocRingBuffer<T, MODE> {
     }
 }
 
-impl<T: PartialEq, MODE: RingbufferMode> PartialEq for AllocRingBuffer<T, MODE> {
+impl<T: PartialEq, SIZE: RingbufferSize> PartialEq for AllocRingBuffer<T, SIZE> {
     fn eq(&self, other: &Self) -> bool {
         self.buf.len() == other.buf.len()
             && self.len() == other.len()
@@ -115,19 +114,19 @@ impl<T: PartialEq, MODE: RingbufferMode> PartialEq for AllocRingBuffer<T, MODE> 
     }
 }
 
-impl<T: Eq + PartialEq, MODE: RingbufferMode> Eq for AllocRingBuffer<T, MODE> {}
+impl<T: Eq + PartialEq, SIZE: RingbufferSize> Eq for AllocRingBuffer<T, SIZE> {}
 
 /// The capacity of a `RingBuffer` created by new or default (`1024`).
 // must be a power of 2
 pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
 
-unsafe impl<T, MODE: RingbufferMode> RingBufferExt<T> for AllocRingBuffer<T, MODE> {
+unsafe impl<T, SIZE: RingbufferSize> RingBufferExt<T> for AllocRingBuffer<T, SIZE> {
     impl_ringbuffer_ext!(
         get_unchecked,
         get_unchecked_mut,
         readptr,
         writeptr,
-        MODE::mask
+        SIZE::mask
     );
 
     #[inline]
@@ -140,12 +139,12 @@ unsafe impl<T, MODE: RingbufferMode> RingBufferExt<T> for AllocRingBuffer<T, MOD
     }
 }
 
-impl<T, MODE: RingbufferMode> RingBufferRead<T> for AllocRingBuffer<T, MODE> {
+impl<T, SIZE: RingbufferSize> RingBufferRead<T> for AllocRingBuffer<T, SIZE> {
     fn dequeue(&mut self) -> Option<T> {
         if self.is_empty() {
             None
         } else {
-            let index = MODE::mask(self.buf.len(), self.readptr);
+            let index = SIZE::mask(self.buf.len(), self.readptr);
             let res = mem::replace(&mut self.buf[index], MaybeUninit::uninit());
             self.readptr += 1;
 
@@ -159,8 +158,8 @@ impl<T, MODE: RingbufferMode> RingBufferRead<T> for AllocRingBuffer<T, MODE> {
     impl_ringbuffer_read!();
 }
 
-impl<T, MODE: RingbufferMode> Extend<T> for AllocRingBuffer<T, MODE> {
-    fn extend<A: IntoIterator<Item=T>>(&mut self, iter: A) {
+impl<T, SIZE: RingbufferSize> Extend<T> for AllocRingBuffer<T, SIZE> {
+    fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
         let iter = iter.into_iter();
 
         for i in iter {
@@ -169,12 +168,12 @@ impl<T, MODE: RingbufferMode> Extend<T> for AllocRingBuffer<T, MODE> {
     }
 }
 
-impl<T, MODE: RingbufferMode> RingBufferWrite<T> for AllocRingBuffer<T, MODE> {
+impl<T, SIZE: RingbufferSize> RingBufferWrite<T> for AllocRingBuffer<T, SIZE> {
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
             let previous_value = mem::replace(
-                &mut self.buf[MODE::mask(self.buf.len(), self.readptr)],
+                &mut self.buf[SIZE::mask(self.buf.len(), self.readptr)],
                 MaybeUninit::uninit(),
             );
             // make sure we drop whatever is being overwritten
@@ -188,7 +187,7 @@ impl<T, MODE: RingbufferMode> RingBufferWrite<T> for AllocRingBuffer<T, MODE> {
             self.readptr += 1;
         }
 
-        let index = MODE::mask(self.buf.len(), self.writeptr);
+        let index = SIZE::mask(self.buf.len(), self.writeptr);
 
         // initializing the maybeuninit when values are inserted/pushed
         self.buf[index] = MaybeUninit::new(value);
@@ -197,7 +196,7 @@ impl<T, MODE: RingbufferMode> RingBufferWrite<T> for AllocRingBuffer<T, MODE> {
     }
 }
 
-impl<T, MODE: RingbufferMode> RingBuffer<T> for AllocRingBuffer<T, MODE> {
+impl<T, SIZE: RingbufferSize> RingBuffer<T> for AllocRingBuffer<T, SIZE> {
     #[inline]
     unsafe fn ptr_capacity(rb: *const Self) -> usize {
         (*rb).buf.len()
@@ -206,7 +205,7 @@ impl<T, MODE: RingbufferMode> RingBuffer<T> for AllocRingBuffer<T, MODE> {
     impl_ringbuffer!(readptr, writeptr);
 }
 
-impl<T, MODE: RingbufferMode> AllocRingBuffer<T, MODE> {
+impl<T, SIZE: RingbufferSize> AllocRingBuffer<T, SIZE> {
     /// Creates a `AllocRingBuffer` with a certain capacity. This capacity is fixed.
     /// for this ringbuffer to work, cap must be a power of two and greater than zero.
     ///
@@ -282,8 +281,8 @@ impl<T> AllocRingBuffer<T, PowerOfTwo> {
 /// Get a reference from the buffer without checking it is initialized.
 /// Caller must be sure the index is in bounds, or this will panic.
 #[inline]
-unsafe fn get_unchecked<'a, T, MODE: RingbufferMode>(
-    rb: *const AllocRingBuffer<T, MODE>,
+unsafe fn get_unchecked<'a, T, SIZE: RingbufferSize>(
+    rb: *const AllocRingBuffer<T, SIZE>,
     index: usize,
 ) -> &'a T {
     let p = &(*rb).buf[index];
@@ -295,8 +294,8 @@ unsafe fn get_unchecked<'a, T, MODE: RingbufferMode>(
 /// Get a mut reference from the buffer without checking it is initialized.
 /// Caller must be sure the index is in bounds, or this will panic.
 #[inline]
-unsafe fn get_unchecked_mut<T, MODE: RingbufferMode>(
-    rb: *mut AllocRingBuffer<T, MODE>,
+unsafe fn get_unchecked_mut<T, SIZE: RingbufferSize>(
+    rb: *mut AllocRingBuffer<T, SIZE>,
     index: usize,
 ) -> *mut T {
     let p = (*rb).buf.as_mut_ptr().add(index);
@@ -306,8 +305,8 @@ unsafe fn get_unchecked_mut<T, MODE: RingbufferMode>(
     p.cast()
 }
 
-impl<RB, MODE: RingbufferMode> FromIterator<RB> for AllocRingBuffer<RB, MODE> {
-    fn from_iter<T: IntoIterator<Item=RB>>(iter: T) -> Self {
+impl<RB, SIZE: RingbufferSize> FromIterator<RB> for AllocRingBuffer<RB, SIZE> {
+    fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
             res.push(i);
@@ -317,16 +316,16 @@ impl<RB, MODE: RingbufferMode> FromIterator<RB> for AllocRingBuffer<RB, MODE> {
     }
 }
 
-impl<T, MODE: RingbufferMode> Default for AllocRingBuffer<T, MODE> {
+impl<T, SIZE: RingbufferSize> Default for AllocRingBuffer<T, SIZE> {
     /// Creates a buffer with a capacity of [`RINGBUFFER_DEFAULT_CAPACITY`].
     #[inline]
     fn default() -> Self {
         // SAFETY: RINGBUFFER_DEFAULT_CAPACITY is a power of two
-        unsafe{AllocRingBuffer::with_capacity_unchecked(RINGBUFFER_DEFAULT_CAPACITY)}
+        unsafe { AllocRingBuffer::with_capacity_unchecked(RINGBUFFER_DEFAULT_CAPACITY) }
     }
 }
 
-impl<T, MODE: RingbufferMode> Index<isize> for AllocRingBuffer<T, MODE> {
+impl<T, SIZE: RingbufferSize> Index<isize> for AllocRingBuffer<T, SIZE> {
     type Output = T;
 
     fn index(&self, index: isize) -> &Self::Output {
@@ -334,7 +333,7 @@ impl<T, MODE: RingbufferMode> Index<isize> for AllocRingBuffer<T, MODE> {
     }
 }
 
-impl<T, MODE: RingbufferMode> IndexMut<isize> for AllocRingBuffer<T, MODE> {
+impl<T, SIZE: RingbufferSize> IndexMut<isize> for AllocRingBuffer<T, SIZE> {
     fn index_mut(&mut self, index: isize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }
@@ -343,7 +342,7 @@ impl<T, MODE: RingbufferMode> IndexMut<isize> for AllocRingBuffer<T, MODE> {
 #[cfg(test)]
 mod tests {
     use super::alloc::vec::Vec;
-    use crate::with_alloc::RingbufferMode;
+    use crate::with_alloc::RingbufferSize;
     use crate::{
         AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite,
         RINGBUFFER_DEFAULT_CAPACITY,
@@ -352,9 +351,9 @@ mod tests {
     // just test that this compiles
     #[test]
     fn test_generic_clone() {
-        fn helper<MODE: RingbufferMode>(
-            a: &AllocRingBuffer<i32, MODE>,
-        ) -> AllocRingBuffer<i32, MODE> {
+        fn helper<SIZE: RingbufferSize>(
+            a: &AllocRingBuffer<i32, SIZE>,
+        ) -> AllocRingBuffer<i32, SIZE> {
             a.clone()
         }
 
