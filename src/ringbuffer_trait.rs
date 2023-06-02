@@ -159,12 +159,14 @@ pub unsafe trait RingBufferExt<T>:
     unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T>;
 
     /// Gets a value relative to the start of the array (rarely useful, usually you want [`Self::get`])
+    #[deprecated]
     fn get_absolute(&self, index: usize) -> Option<&T>;
 
     /// Gets a value mutably relative to the start of the array (rarely useful, usually you want [`Self::get_mut`])
+    #[deprecated]
     fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T>;
 
-    /// Returns the value at the current index.
+    /// Returns the value at the current index.t
     /// This is the value that will be overwritten by the next push and also the value pushed
     /// the longest ago. (alias of [`Self::front`])
     #[inline]
@@ -257,7 +259,7 @@ mod iter {
                 obj,
                 len: obj.len(),
                 index: 0,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             }
         }
     }
@@ -316,7 +318,7 @@ mod iter {
                 len: obj.len(),
                 obj: NonNull::from(obj),
                 index: 0,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             }
         }
     }
@@ -374,7 +376,7 @@ mod iter {
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {
                 obj,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             }
         }
     }
