@@ -441,7 +441,7 @@ macro_rules! impl_ringbuffer_ext {
         }
 
         #[inline]
-        unsafe fn ptr_get_mut<'a>(rb: *mut Self, index: isize) -> Option<*mut T> {
+        unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T> {
             (Self::ptr_len(rb) != 0).then(move || {
                 let index_from_readptr = if index >= 0 {
                     index

@@ -5,11 +5,9 @@ use crate::ringbuffer_trait::{RingBuffer, RingBufferExt, RingBufferRead, RingBuf
 extern crate alloc;
 
 // We need boxes, so depend on alloc
-use alloc::boxed::Box;
 use core::iter::FromIterator;
 use core::marker::PhantomData;
-use core::mem;
-use core::mem::MaybeUninit;
+use core::ptr;
 
 #[derive(Debug, Copy, Clone)]
 pub struct PowerOfTwo;
@@ -81,7 +79,8 @@ impl RingbufferSize for NonPowerOfTwo {
 /// ```
 #[derive(Debug)]
 pub struct AllocRingBuffer<T, SIZE: RingbufferSize = PowerOfTwo> {
-    buf: Box<[MaybeUninit<T>]>,
+    buf: *mut T,
+    capacity: usize,
     readptr: usize,
     writeptr: usize,
     mode: PhantomData<SIZE>,
@@ -90,17 +89,22 @@ pub struct AllocRingBuffer<T, SIZE: RingbufferSize = PowerOfTwo> {
 impl<T, SIZE: RingbufferSize> Drop for AllocRingBuffer<T, SIZE> {
     fn drop(&mut self) {
         self.drain().for_each(drop);
+
+        let layout = alloc::alloc::Layout::array::<T>(self.capacity).unwrap();
+        unsafe {
+            alloc::alloc::dealloc(self.buf as *mut u8, layout);
+        }
     }
 }
 
 impl<T: Clone, SIZE: RingbufferSize> Clone for AllocRingBuffer<T, SIZE> {
     fn clone(&self) -> Self {
-        debug_assert_ne!(self.buf.len(), 0);
-        debug_assert!(!SIZE::must_be_power_of_two() || self.buf.len().is_power_of_two());
+        debug_assert_ne!(self.capacity, 0);
+        debug_assert!(!SIZE::must_be_power_of_two() || self.capacity.is_power_of_two());
 
         // whatever the previous capacity was, we can just use the same one again.
         // It should be valid.
-        let mut new = unsafe { Self::with_capacity_unchecked(self.buf.len()) };
+        let mut new = unsafe { Self::with_capacity_unchecked(self.capacity) };
         self.iter().cloned().for_each(|i| new.push(i));
         new
     }
@@ -108,7 +112,7 @@ impl<T: Clone, SIZE: RingbufferSize> Clone for AllocRingBuffer<T, SIZE> {
 
 impl<T: PartialEq, SIZE: RingbufferSize> PartialEq for AllocRingBuffer<T, SIZE> {
     fn eq(&self, other: &Self) -> bool {
-        self.buf.len() == other.buf.len()
+        self.capacity == other.capacity
             && self.len() == other.len()
             && self.iter().zip(other.iter()).all(|(a, b)| a == b)
     }
@@ -134,8 +138,11 @@ unsafe impl<T, SIZE: RingbufferSize> RingBufferExt<T> for AllocRingBuffer<T, SIZ
         self.clear();
 
         self.readptr = 0;
-        self.writeptr = self.buf.len();
-        self.buf.fill_with(|| MaybeUninit::new(f()));
+        self.writeptr = self.capacity;
+
+        for i in 0..self.capacity {
+            unsafe { ptr::write(get_unchecked_mut(self, i), f()) };
+        }
     }
 }
 
@@ -144,14 +151,14 @@ impl<T, SIZE: RingbufferSize> RingBufferRead<T> for AllocRingBuffer<T, SIZE> {
         if self.is_empty() {
             None
         } else {
-            let index = SIZE::mask(self.buf.len(), self.readptr);
-            let res = mem::replace(&mut self.buf[index], MaybeUninit::uninit());
+            let index = SIZE::mask(self.capacity, self.readptr);
+            let res = unsafe { get_unchecked_mut(self, index) };
             self.readptr += 1;
 
             // Safety: the fact that we got this maybeuninit from the buffer (with mask) means that
             // it's initialized. If it wasn't the is_empty call would have caught it. Values
             // are always initialized when inserted so this is safe.
-            unsafe { Some(res.assume_init()) }
+            unsafe { Some(ptr::read(res)) }
         }
     }
 
@@ -172,25 +179,29 @@ impl<T, SIZE: RingbufferSize> RingBufferWrite<T> for AllocRingBuffer<T, SIZE> {
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
-            let previous_value = mem::replace(
-                &mut self.buf[SIZE::mask(self.buf.len(), self.readptr)],
-                MaybeUninit::uninit(),
-            );
+            let previous_value = unsafe {
+                ptr::read(get_unchecked_mut(
+                    self,
+                    SIZE::mask(self.capacity, self.readptr),
+                ))
+            };
+
             // make sure we drop whatever is being overwritten
             // SAFETY: the buffer is full, so this must be initialized
             //       : also, index has been masked
             // make sure we drop because it won't happen automatically
             unsafe {
-                drop(previous_value.assume_init());
+                drop(previous_value);
             }
 
             self.readptr += 1;
         }
 
-        let index = SIZE::mask(self.buf.len(), self.writeptr);
+        let index = SIZE::mask(self.capacity, self.writeptr);
 
-        // initializing the maybeuninit when values are inserted/pushed
-        self.buf[index] = MaybeUninit::new(value);
+        unsafe {
+            ptr::write(get_unchecked_mut(self, index), value);
+        }
 
         self.writeptr += 1;
     }
@@ -199,7 +210,7 @@ impl<T, SIZE: RingbufferSize> RingBufferWrite<T> for AllocRingBuffer<T, SIZE> {
 impl<T, SIZE: RingbufferSize> RingBuffer<T> for AllocRingBuffer<T, SIZE> {
     #[inline]
     unsafe fn ptr_capacity(rb: *const Self) -> usize {
-        (*rb).buf.len()
+        (*rb).capacity
     }
 
     impl_ringbuffer!(readptr, writeptr);
@@ -214,13 +225,12 @@ impl<T, SIZE: RingbufferSize> AllocRingBuffer<T, SIZE> {
     /// Only if Mode == NonPowerOfTwo can the capacity be not a power of two, in which case this function is also safe.
     #[inline]
     unsafe fn with_capacity_unchecked(cap: usize) -> Self {
-        let layout = alloc::alloc::Layout::array::<MaybeUninit<T>>(cap).unwrap();
-        let ptr = unsafe { alloc::alloc::alloc(layout) as *mut MaybeUninit<T> };
-        let slice_ptr = core::ptr::slice_from_raw_parts_mut(ptr, cap);
-        let buf = unsafe { Box::from_raw(slice_ptr) };
+        let layout = alloc::alloc::Layout::array::<T>(cap).unwrap();
+        let buf = unsafe { alloc::alloc::alloc(layout) as *mut T };
 
         Self {
             buf,
+            capacity: cap,
             readptr: 0,
             writeptr: 0,
             mode: Default::default(),
@@ -285,10 +295,10 @@ unsafe fn get_unchecked<'a, T, SIZE: RingbufferSize>(
     rb: *const AllocRingBuffer<T, SIZE>,
     index: usize,
 ) -> &'a T {
-    let p = &(*rb).buf[index];
+    let p = (*rb).buf.add(index);
     // Safety: caller makes sure the index is in bounds for the ringbuffer.
     // All in bounds values in the ringbuffer are initialized
-    p.assume_init_ref()
+    &*p
 }
 
 /// Get a mut reference from the buffer without checking it is initialized.
@@ -298,7 +308,7 @@ unsafe fn get_unchecked_mut<T, SIZE: RingbufferSize>(
     rb: *mut AllocRingBuffer<T, SIZE>,
     index: usize,
 ) -> *mut T {
-    let p = (*rb).buf.as_mut_ptr().add(index);
+    let p = (*rb).buf.add(index);
 
     // Safety: caller makes sure the index is in bounds for the ringbuffer.
     // All in bounds values in the ringbuffer are initialized
@@ -386,8 +396,8 @@ mod tests {
     fn test_default() {
         let b: AllocRingBuffer<u32> = AllocRingBuffer::default();
         assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.capacity());
-        assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.buf.len());
-        assert_eq!(b.buf.len(), b.capacity());
+        assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.capacity);
+        assert_eq!(b.capacity, b.capacity());
         assert_eq!(0, b.writeptr);
         assert_eq!(0, b.readptr);
         assert!(b.is_empty());
@@ -407,7 +417,7 @@ mod tests {
     #[test]
     fn test_with_capacity_power_of_two() {
         let b = AllocRingBuffer::<i32>::with_capacity_power_of_2(2);
-        assert_eq!(b.buf.len(), 4);
+        assert_eq!(b.capacity, 4);
     }
 
     #[test]
