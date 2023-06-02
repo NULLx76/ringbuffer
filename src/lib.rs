@@ -59,6 +59,8 @@
 //!
 //! Licensed under the MIT License
 
+extern crate alloc;
+
 #[macro_use]
 pub(crate) mod ringbuffer_trait;
 use core::usize;
