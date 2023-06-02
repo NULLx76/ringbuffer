@@ -137,7 +137,11 @@ unsafe impl<T> RingBufferExt<T> for GrowableAllocRingBuffer<T> {
         } else if index >= 0 {
             self.0.get(crate::mask_modulo(self.0.len(), index as usize))
         } else {
-            self.0.get(self.0.len() - (-index) as usize)
+            let positive_index = -index as usize - 1;
+            let masked = crate::mask_modulo(self.0.len(), positive_index);
+            let index = self.0.len() - 1 - masked;
+
+            self.0.get(index)
         }
     }
 
@@ -149,7 +153,12 @@ unsafe impl<T> RingBufferExt<T> for GrowableAllocRingBuffer<T> {
             (*rb).0.get_mut(index as usize)
         } else {
             let len = Self::ptr_len(rb);
-            (*rb).0.get_mut(len - (-index) as usize)
+
+            let positive_index = -index as usize + 1;
+            let masked = crate::mask_modulo(len, positive_index);
+            let index = len - 1 - masked;
+
+            (*rb).0.get_mut(index)
         }
         .map(|i| i as *mut T)
     }

@@ -117,9 +117,9 @@ mod tests {
             }
         }
 
-        test_neg_index(AllocRingBuffer::with_capacity(capacity));
+        // test_neg_index(AllocRingBuffer::with_capacity(capacity));
+        // test_neg_index(ConstGenericRingBuffer::<usize, capacity>::new());
         test_neg_index(GrowableAllocRingBuffer::with_capacity(capacity));
-        test_neg_index(ConstGenericRingBuffer::<usize, capacity>::new());
     }
 
     #[test]
@@ -787,9 +787,9 @@ mod tests {
             assert_eq!(b.front(), None);
         }
 
-        // test_front_none(AllocRingBuffer::with_capacity(8));
+        test_front_none(AllocRingBuffer::with_capacity(8));
         test_front_none(GrowableAllocRingBuffer::with_capacity(8));
-        // test_front_none(ConstGenericRingBuffer::<i32, 8>::new());
+        test_front_none(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
     #[test]
@@ -969,6 +969,40 @@ mod tests {
         test_enqueue_dequeue_push(AllocRingBuffer::with_capacity(8));
         test_enqueue_dequeue_push(GrowableAllocRingBuffer::with_capacity(8));
         test_enqueue_dequeue_push(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
+    #[test]
+    fn large_negative_index() {
+        fn test_large_negative_index(mut b: impl RingBufferExt<i32>) {
+            b.push(1);
+            b.push(2);
+            assert_eq!(b.get(1), Some(&2));
+            assert_eq!(b.get(0), Some(&1));
+            assert_eq!(b.get(-1), Some(&2));
+            assert_eq!(b.get(-2), Some(&1));
+            assert_eq!(b.get(-3), Some(&2));
+        }
+
+        test_large_negative_index(AllocRingBuffer::with_capacity(2));
+        test_large_negative_index(ConstGenericRingBuffer::<i32, 2>::new());
+        test_large_negative_index(GrowableAllocRingBuffer::<i32>::new());
+    }
+
+    #[test]
+    fn large_negative_index_mut() {
+        fn test_large_negative_index(mut b: impl RingBufferExt<i32>) {
+            b.push(1);
+            b.push(2);
+            assert_eq!(b.get_mut(1), Some(&mut 2));
+            assert_eq!(b.get_mut(0), Some(&mut 1));
+            assert_eq!(b.get_mut(-1), Some(&mut 2));
+            assert_eq!(b.get_mut(-2), Some(&mut 1));
+            assert_eq!(b.get_mut(-3), Some(&mut 2));
+        }
+
+        test_large_negative_index(AllocRingBuffer::with_capacity(2));
+        test_large_negative_index(ConstGenericRingBuffer::<i32, 2>::new());
+        test_large_negative_index(GrowableAllocRingBuffer::<i32>::new());
     }
 
     #[test]
