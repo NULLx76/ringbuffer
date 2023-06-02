@@ -143,7 +143,9 @@ unsafe impl<T> RingBufferExt<T> for GrowableAllocRingBuffer<T> {
 
     unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T> {
         #[allow(trivial_casts)]
-        if index >= 0 {
+        if RingBuffer::ptr_len(rb) == 0 {
+            None
+        } else if index >= 0 {
             (*rb).0.get_mut(index as usize)
         } else {
             let len = Self::ptr_len(rb);
