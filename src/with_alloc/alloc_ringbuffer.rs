@@ -87,6 +87,14 @@ impl<T, const N: usize> From<[T; N]> for AllocRingBuffer<T, NonPowerOfTwo> {
     }
 }
 
+impl<T: Clone, const N: usize> From<&[T; N]> for AllocRingBuffer<T, NonPowerOfTwo> {
+    // the cast here is actually not trivial
+    #[allow(trivial_casts)]
+    fn from(value: &[T; N]) -> Self {
+        Self::from(value as &[T])
+    }
+}
+
 impl<T: Clone> From<&[T]> for AllocRingBuffer<T, NonPowerOfTwo> {
     fn from(value: &[T]) -> Self {
         let mut rb = Self::with_capacity_non_power_of_two(value.len());
@@ -487,5 +495,24 @@ mod tests {
             let expected = expected[i];
             assert_eq!(actual, expected);
         }
+    }
+
+    #[test]
+    fn test_conversions() {
+        // from &[T]
+        let data: &[i32] = &[1, 2, 3, 4];
+        let buf = AllocRingBuffer::from(data);
+        assert_eq!(buf.capacity, 4);
+        assert_eq!(buf.to_vec(), alloc::vec![1, 2, 3, 4]);
+
+        // from &[T; N]
+        let buf = AllocRingBuffer::from(&[1, 2, 3, 4]);
+        assert_eq!(buf.capacity, 4);
+        assert_eq!(buf.to_vec(), alloc::vec![1, 2, 3, 4]);
+
+        // from [T; N]
+        let buf = AllocRingBuffer::from([1, 2, 3, 4]);
+        assert_eq!(buf.capacity, 4);
+        assert_eq!(buf.to_vec(), alloc::vec![1, 2, 3, 4]);
     }
 }
