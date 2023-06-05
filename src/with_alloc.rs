@@ -221,7 +221,7 @@ impl<T, MODE: RingbufferMode> AllocRingBuffer<T, MODE> {
             capacity: cap,
             readptr: 0,
             writeptr: 0,
-            mode: PhantomData::default(),
+            mode: PhantomData,
         }
     }
 }
@@ -327,7 +327,7 @@ impl<T, MODE: RingbufferMode> Default for AllocRingBuffer<T, MODE> {
             capacity: RINGBUFFER_DEFAULT_CAPACITY,
             readptr: 0,
             writeptr: 0,
-            mode: PhantomData::default(),
+            mode: PhantomData,
         }
     }
 }
