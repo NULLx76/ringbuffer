@@ -6,6 +6,10 @@
 #![deny(trivial_casts)]
 #![deny(trivial_numeric_casts)]
 #![deny(unused_qualifications)]
+#![deny(clippy::must_use_candidate)]
+#![deny(clippy::default_trait_access)]
+#![deny(clippy::doc_markdown)]
+#![deny(clippy::semicolon_if_nothing_returned)]
 #![allow(unused_unsafe)] // to support older rust versions
 //! # Ringbuffer
 //! ![Github Workflows](https://img.shields.io/github/workflow/status/NULLx76/ringbuffer/Rust?logo=github&style=for-the-badge)
