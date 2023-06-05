@@ -257,7 +257,7 @@ mod iter {
                 obj,
                 len: obj.len(),
                 index: 0,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             }
         }
     }
@@ -316,7 +316,7 @@ mod iter {
                 len: obj.len(),
                 obj: NonNull::from(obj),
                 index: 0,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             }
         }
     }
@@ -374,7 +374,7 @@ mod iter {
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {
                 obj,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             }
         }
     }
