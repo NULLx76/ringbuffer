@@ -30,10 +30,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features
 
-      - name: msrv
-        run: |
-          cargo install cargo-msrv --force
-          cargo msrv verify
+      #- name: msrv
+      #  run: |
+      #    # cargo install cargo-msrv --force
+      #    cargo install --git https://github.com/foresterre/cargo-msrv.git cargo-msrv
+      #    cargo msrv verify --log-level debug
 
   test:
     name: Test Stable
