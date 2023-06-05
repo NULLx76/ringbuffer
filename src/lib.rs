@@ -117,8 +117,8 @@ mod tests {
             }
         }
 
-        // test_neg_index(AllocRingBuffer::with_capacity(capacity));
-        // test_neg_index(ConstGenericRingBuffer::<usize, capacity>::new());
+        test_neg_index(AllocRingBuffer::with_capacity(capacity));
+        test_neg_index(ConstGenericRingBuffer::<usize, capacity>::new());
         test_neg_index(GrowableAllocRingBuffer::with_capacity(capacity));
     }
 

@@ -159,14 +159,14 @@ pub unsafe trait RingBufferExt<T>:
     unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T>;
 
     /// Gets a value relative to the start of the array (rarely useful, usually you want [`Self::get`])
-    #[deprecated]
+    #[deprecated = "cannot find a valid usecase for this, hard to implement for some ringbuffers"]
     fn get_absolute(&self, index: usize) -> Option<&T>;
 
     /// Gets a value mutably relative to the start of the array (rarely useful, usually you want [`Self::get_mut`])
-    #[deprecated]
+    #[deprecated = "cannot find a valid usecase for this, hard to implement for some ringbuffers"]
     fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T>;
 
-    /// Returns the value at the current index.t
+    /// Returns the value at the current index.
     /// This is the value that will be overwritten by the next push and also the value pushed
     /// the longest ago. (alias of [`Self::front`])
     #[inline]
