@@ -5,6 +5,9 @@ use core::ops::{Deref, DerefMut, Index, IndexMut};
 
 /// A growable ringbuffer. Once capacity is reached, the size is doubled.
 /// Wrapper of the built-in [`VecDeque`](std::collections::VecDeque) struct
+///
+/// The reason this is a wrapper, is that we want RingBuffers to implement `Index<isize>`,
+/// which we cannot do for remote types like `VecDeque`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GrowableAllocRingBuffer<T>(VecDeque<T>);
 
