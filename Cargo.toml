@@ -15,7 +15,7 @@ license = "MIT"
 
 [dev-dependencies]
 criterion = "0.4.0"
-#compiletest_rs = "0.10.0"
+compiletest_rs = "0.10.0"
 
 [features]
 default = ["alloc"]
