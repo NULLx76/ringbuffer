@@ -165,8 +165,6 @@ impl<T> RingBufferRead<T> for GrowableAllocRingBuffer<T> {
     fn dequeue(&mut self) -> Option<T> {
         self.pop_front()
     }
-
-    impl_ringbuffer_read!();
 }
 
 impl<T> RingBufferWrite<T> for GrowableAllocRingBuffer<T> {
