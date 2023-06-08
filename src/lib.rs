@@ -63,6 +63,8 @@
 //!
 //! Licensed under the MIT License
 
+extern crate alloc;
+
 #[macro_use]
 pub(crate) mod ringbuffer_trait;
 use core::usize;
@@ -72,9 +74,11 @@ pub use ringbuffer_trait::{RingBuffer, RingBufferExt, RingBufferRead, RingBuffer
 #[cfg(feature = "alloc")]
 mod with_alloc;
 #[cfg(feature = "alloc")]
-pub use with_alloc::AllocRingBuffer;
+pub use with_alloc::alloc_ringbuffer::AllocRingBuffer;
 #[cfg(feature = "alloc")]
-pub use with_alloc::RINGBUFFER_DEFAULT_CAPACITY;
+pub use with_alloc::alloc_ringbuffer::RINGBUFFER_DEFAULT_CAPACITY;
+#[cfg(feature = "alloc")]
+pub use with_alloc::vecdeque::GrowableAllocRingBuffer;
 
 mod with_const_generics;
 pub use with_const_generics::ConstGenericRingBuffer;
@@ -101,7 +105,8 @@ mod tests {
     use std::vec::Vec;
 
     use crate::{
-        AllocRingBuffer, ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite,
+        AllocRingBuffer, ConstGenericRingBuffer, GrowableAllocRingBuffer, RingBuffer,
+        RingBufferExt, RingBufferRead, RingBufferWrite,
     };
 
     #[test]
@@ -118,6 +123,7 @@ mod tests {
 
         test_neg_index(AllocRingBuffer::with_capacity(capacity));
         test_neg_index(ConstGenericRingBuffer::<usize, capacity>::new());
+        test_neg_index(GrowableAllocRingBuffer::with_capacity(capacity));
     }
 
     #[test]
@@ -128,6 +134,7 @@ mod tests {
         }
 
         test_default(AllocRingBuffer::with_capacity(8));
+        test_default(GrowableAllocRingBuffer::with_capacity(8));
         test_default(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -139,11 +146,16 @@ mod tests {
         }
 
         test_new(AllocRingBuffer::with_capacity(8));
+        test_new(GrowableAllocRingBuffer::with_capacity(8));
         test_new(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
     #[test]
     fn test_default_eq_new() {
+        assert_eq!(
+            GrowableAllocRingBuffer::<i32>::default(),
+            GrowableAllocRingBuffer::<i32>::new()
+        );
         assert_eq!(
             AllocRingBuffer::<i32>::default(),
             AllocRingBuffer::<i32>::new()
@@ -165,6 +177,7 @@ mod tests {
         }
 
         test_len(AllocRingBuffer::with_capacity(8));
+        test_len(GrowableAllocRingBuffer::with_capacity(8));
         test_len(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -185,6 +198,16 @@ mod tests {
 
         test_len_wrap(AllocRingBuffer::with_capacity(2));
         test_len_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+
+        // the growable ringbuffer actually should grow instead of wrap
+        let mut grb = GrowableAllocRingBuffer::with_capacity(2);
+        assert_eq!(0, grb.len());
+        grb.push(0);
+        assert_eq!(1, grb.len());
+        grb.push(1);
+        assert_eq!(2, grb.len());
+        grb.push(2);
+        assert_eq!(3, grb.len());
     }
 
     #[test]
@@ -200,6 +223,7 @@ mod tests {
         }
 
         test_clear(AllocRingBuffer::with_capacity(8));
+        test_clear(GrowableAllocRingBuffer::with_capacity(8));
         test_clear(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -218,6 +242,7 @@ mod tests {
         }
 
         test_empty(AllocRingBuffer::with_capacity(8));
+        test_empty(GrowableAllocRingBuffer::with_capacity(8));
         test_empty(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -244,6 +269,7 @@ mod tests {
         }
 
         test_iter(AllocRingBuffer::with_capacity(8));
+        test_iter(GrowableAllocRingBuffer::with_capacity(8));
         test_iter(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -266,6 +292,7 @@ mod tests {
         let string = "abc".to_string();
 
         test_iter(&string, AllocRingBuffer::with_capacity(8));
+        test_iter(&string, GrowableAllocRingBuffer::with_capacity(8));
         test_iter(&string, ConstGenericRingBuffer::<&str, 8>::new());
     }
 
@@ -288,6 +315,7 @@ mod tests {
         }
 
         test_double_iter(AllocRingBuffer::with_capacity(8));
+        test_double_iter(GrowableAllocRingBuffer::with_capacity(8));
         test_double_iter(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -306,6 +334,20 @@ mod tests {
 
         test_iter_wrap(AllocRingBuffer::with_capacity(2));
         test_iter_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+
+        // the growable ringbuffer shouldn't actually stop growing
+        let mut b = GrowableAllocRingBuffer::with_capacity(2);
+
+        b.push(1);
+        b.push(2);
+        // No wrap
+        b.push(3);
+
+        let mut iter = b.iter();
+        assert_eq!(&1, iter.next().unwrap());
+        assert_eq!(&2, iter.next().unwrap());
+        assert_eq!(&3, iter.next().unwrap());
+        assert!(iter.next().is_none());
     }
 
     #[test]
@@ -323,6 +365,7 @@ mod tests {
         }
 
         test_iter_mut(AllocRingBuffer::with_capacity(8));
+        test_iter_mut(GrowableAllocRingBuffer::with_capacity(8));
         test_iter_mut(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -342,6 +385,19 @@ mod tests {
 
         run_test_iter_mut_wrap(AllocRingBuffer::with_capacity(2));
         run_test_iter_mut_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+
+        // The growable ringbuffer actually shouldn't wrap
+        let mut b = GrowableAllocRingBuffer::with_capacity(2);
+
+        b.push(1);
+        b.push(2);
+        b.push(3);
+
+        for i in b.iter_mut() {
+            *i += 1;
+        }
+
+        assert_eq!(vec![2, 3, 4], b.to_vec())
     }
 
     #[test]
@@ -362,6 +418,20 @@ mod tests {
 
         run_test_iter_mut_wrap(AllocRingBuffer::with_capacity(2));
         run_test_iter_mut_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+
+        // the growable ringbuffer actually shouldn't wrap
+        let mut b = GrowableAllocRingBuffer::with_capacity(2);
+        b.push(1);
+        b.push(2);
+        b.push(3);
+
+        let buf = b.iter_mut().collect::<Vec<_>>();
+
+        for i in buf {
+            *i += 1;
+        }
+
+        assert_eq!(vec![2, 3, 4], b.to_vec())
     }
 
     #[test]
@@ -375,6 +445,7 @@ mod tests {
         }
 
         test_to_vec(AllocRingBuffer::with_capacity(8));
+        test_to_vec(GrowableAllocRingBuffer::with_capacity(8));
         test_to_vec(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -391,6 +462,15 @@ mod tests {
 
         test_to_vec_wrap(AllocRingBuffer::with_capacity(2));
         test_to_vec_wrap(ConstGenericRingBuffer::<i32, 2>::new());
+
+        // The growable ringbuffer should actually remember all items
+        let mut b = GrowableAllocRingBuffer::with_capacity(2);
+
+        b.push(1);
+        b.push(2);
+        b.push(3);
+
+        assert_eq!(vec![1, 2, 3], b.to_vec())
     }
 
     #[test]
@@ -401,6 +481,7 @@ mod tests {
         }
 
         test_index(AllocRingBuffer::with_capacity(8));
+        test_index(GrowableAllocRingBuffer::with_capacity(8));
         test_index(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -417,6 +498,7 @@ mod tests {
         }
 
         test_index_mut(AllocRingBuffer::with_capacity(8));
+        test_index_mut(GrowableAllocRingBuffer::with_capacity(8));
         test_index_mut(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -430,6 +512,7 @@ mod tests {
         }
 
         test_peek_some(AllocRingBuffer::with_capacity(2));
+        test_peek_some(GrowableAllocRingBuffer::with_capacity(2));
         test_peek_some(ConstGenericRingBuffer::<i32, 2>::new());
     }
 
@@ -440,6 +523,7 @@ mod tests {
         }
 
         test_peek_none(AllocRingBuffer::with_capacity(8));
+        test_peek_none(GrowableAllocRingBuffer::with_capacity(8));
         test_peek_none(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -464,6 +548,7 @@ mod tests {
         }
 
         test_get_relative(AllocRingBuffer::with_capacity(8));
+        test_get_relative(GrowableAllocRingBuffer::with_capacity(8));
         test_get_relative(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -488,6 +573,16 @@ mod tests {
 
         test_wrapping_get_relative(AllocRingBuffer::with_capacity(2));
         test_wrapping_get_relative(ConstGenericRingBuffer::<i32, 2>::new());
+
+        // the growable ringbuffer actually shouldn't wrap
+        let mut b = GrowableAllocRingBuffer::with_capacity(2);
+        b.push(0);
+        b.push(1);
+        b.push(2);
+
+        assert_eq!(b.get(0).unwrap(), &0);
+        assert_eq!(b.get(1).unwrap(), &1);
+        assert_eq!(b.get(2).unwrap(), &2);
     }
 
     #[test]
@@ -497,6 +592,7 @@ mod tests {
         }
 
         test_get_relative_zero_length(AllocRingBuffer::with_capacity(8));
+        test_get_relative_zero_length(GrowableAllocRingBuffer::with_capacity(8));
         test_get_relative_zero_length(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -520,6 +616,7 @@ mod tests {
         }
 
         test_get_relative_mut(AllocRingBuffer::with_capacity(8));
+        test_get_relative_mut(GrowableAllocRingBuffer::with_capacity(8));
         test_get_relative_mut(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -546,6 +643,19 @@ mod tests {
 
         test_wrapping_get_relative_mut(AllocRingBuffer::with_capacity(2));
         test_wrapping_get_relative_mut(ConstGenericRingBuffer::<i32, 2>::new());
+
+        // the growable ringbuffer actually shouldn't wrap
+        let mut b = GrowableAllocRingBuffer::with_capacity(2);
+
+        b.push(0);
+        b.push(1);
+        b.push(2);
+
+        *b.get_mut(0).unwrap() = 3;
+
+        assert_eq!(b.get(0).unwrap(), &3);
+        assert_eq!(b.get(1).unwrap(), &1);
+        assert_eq!(b.get(2).unwrap(), &2);
     }
 
     #[test]
@@ -555,10 +665,12 @@ mod tests {
         }
 
         test_get_relative_mut_zero_length(AllocRingBuffer::with_capacity(8));
+        test_get_relative_mut_zero_length(GrowableAllocRingBuffer::with_capacity(8));
         test_get_relative_mut_zero_length(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
     #[test]
+    #[allow(deprecated)]
     fn run_test_get_absolute() {
         fn test_get_absolute(mut b: impl RingBufferExt<i32>) {
             b.push(0);
@@ -588,6 +700,7 @@ mod tests {
         }
 
         test_from_iterator::<AllocRingBuffer<i32>>();
+        test_from_iterator::<GrowableAllocRingBuffer<i32>>();
         test_from_iterator::<ConstGenericRingBuffer<i32, 1024>>();
     }
 
@@ -600,6 +713,7 @@ mod tests {
         }
 
         test_from_iterator_wrap::<AllocRingBuffer<i32>>();
+        test_from_iterator_wrap::<GrowableAllocRingBuffer<i32>>();
         test_from_iterator_wrap::<ConstGenericRingBuffer<i32, 1024>>();
     }
 
@@ -638,6 +752,7 @@ mod tests {
         }
 
         test_contains(AllocRingBuffer::with_capacity(8));
+        test_contains(GrowableAllocRingBuffer::with_capacity(8));
         test_contains(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -652,6 +767,7 @@ mod tests {
         }
 
         test_is_full(AllocRingBuffer::with_capacity(2));
+        test_is_full(GrowableAllocRingBuffer::with_capacity(2));
         test_is_full(ConstGenericRingBuffer::<i32, 2>::new());
     }
 
@@ -665,6 +781,7 @@ mod tests {
         }
 
         test_front_some(AllocRingBuffer::with_capacity(2));
+        test_front_some(GrowableAllocRingBuffer::with_capacity(2));
         test_front_some(ConstGenericRingBuffer::<i32, 2>::new());
     }
 
@@ -675,6 +792,7 @@ mod tests {
         }
 
         test_front_none(AllocRingBuffer::with_capacity(8));
+        test_front_none(GrowableAllocRingBuffer::with_capacity(8));
         test_front_none(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -688,6 +806,7 @@ mod tests {
         }
 
         test_back_some(AllocRingBuffer::with_capacity(2));
+        test_back_some(GrowableAllocRingBuffer::with_capacity(2));
         test_back_some(ConstGenericRingBuffer::<i32, 2>::new());
     }
 
@@ -698,6 +817,7 @@ mod tests {
         }
 
         test_back_none(AllocRingBuffer::with_capacity(8));
+        test_back_none(GrowableAllocRingBuffer::with_capacity(8));
         test_back_none(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -711,6 +831,7 @@ mod tests {
         }
 
         test_front_some_mut(AllocRingBuffer::with_capacity(2));
+        test_front_some_mut(GrowableAllocRingBuffer::with_capacity(2));
         test_front_some_mut(ConstGenericRingBuffer::<i32, 2>::new());
     }
 
@@ -721,6 +842,7 @@ mod tests {
         }
 
         test_front_none_mut(AllocRingBuffer::with_capacity(8));
+        test_front_none_mut(GrowableAllocRingBuffer::with_capacity(8));
         test_front_none_mut(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -734,7 +856,7 @@ mod tests {
         }
 
         test_back_some_mut(AllocRingBuffer::with_capacity(2));
-
+        test_back_some_mut(GrowableAllocRingBuffer::with_capacity(2));
         test_back_some_mut(ConstGenericRingBuffer::<i32, 2>::new());
     }
 
@@ -745,7 +867,7 @@ mod tests {
         }
 
         test_back_none_mut(AllocRingBuffer::with_capacity(8));
-
+        test_back_none_mut(GrowableAllocRingBuffer::with_capacity(8));
         test_back_none_mut(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -766,6 +888,7 @@ mod tests {
         }
 
         run_test_dequeue(AllocRingBuffer::with_capacity(8));
+        run_test_dequeue(GrowableAllocRingBuffer::with_capacity(8));
         run_test_dequeue(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -784,7 +907,7 @@ mod tests {
         }
 
         test_skip(AllocRingBuffer::with_capacity(8));
-
+        test_skip(GrowableAllocRingBuffer::with_capacity(8));
         test_skip(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -802,6 +925,7 @@ mod tests {
         }
 
         test_skip2(AllocRingBuffer::with_capacity(2));
+        test_skip2(GrowableAllocRingBuffer::with_capacity(2));
         test_skip2(ConstGenericRingBuffer::<i32, 2>::new());
     }
 
@@ -824,6 +948,7 @@ mod tests {
         }
 
         test_push_dequeue_push(AllocRingBuffer::with_capacity(8));
+        test_push_dequeue_push(GrowableAllocRingBuffer::with_capacity(8));
         test_push_dequeue_push(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -846,7 +971,42 @@ mod tests {
         }
 
         test_enqueue_dequeue_push(AllocRingBuffer::with_capacity(8));
+        test_enqueue_dequeue_push(GrowableAllocRingBuffer::with_capacity(8));
         test_enqueue_dequeue_push(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
+    #[test]
+    fn large_negative_index() {
+        fn test_large_negative_index(mut b: impl RingBufferExt<i32>) {
+            b.push(1);
+            b.push(2);
+            assert_eq!(b.get(1), Some(&2));
+            assert_eq!(b.get(0), Some(&1));
+            assert_eq!(b.get(-1), Some(&2));
+            assert_eq!(b.get(-2), Some(&1));
+            assert_eq!(b.get(-3), Some(&2));
+        }
+
+        test_large_negative_index(AllocRingBuffer::with_capacity(2));
+        test_large_negative_index(ConstGenericRingBuffer::<i32, 2>::new());
+        test_large_negative_index(GrowableAllocRingBuffer::<i32>::new());
+    }
+
+    #[test]
+    fn large_negative_index_mut() {
+        fn test_large_negative_index(mut b: impl RingBufferExt<i32>) {
+            b.push(1);
+            b.push(2);
+            assert_eq!(b.get_mut(1), Some(&mut 2));
+            assert_eq!(b.get_mut(0), Some(&mut 1));
+            assert_eq!(b.get_mut(-1), Some(&mut 2));
+            assert_eq!(b.get_mut(-2), Some(&mut 1));
+            assert_eq!(b.get_mut(-3), Some(&mut 2));
+        }
+
+        test_large_negative_index(AllocRingBuffer::with_capacity(2));
+        test_large_negative_index(ConstGenericRingBuffer::<i32, 2>::new());
+        test_large_negative_index(GrowableAllocRingBuffer::<i32>::new());
     }
 
     #[test]
@@ -871,6 +1031,26 @@ mod tests {
 
         test_push_dequeue_push_full(AllocRingBuffer::with_capacity(2));
         test_push_dequeue_push_full(ConstGenericRingBuffer::<i32, 2>::new());
+
+        // the growable ringbuffer should actually keep growing and dequeue all items
+        let mut b = GrowableAllocRingBuffer::with_capacity(2);
+        b.push(0);
+        b.push(1);
+        b.push(2);
+
+        assert_eq!(b.dequeue(), Some(0));
+        assert_eq!(b.dequeue(), Some(1));
+        assert_eq!(b.dequeue(), Some(2));
+        assert_eq!(b.dequeue(), None);
+
+        b.push(0);
+        b.push(1);
+        b.push(2);
+
+        assert_eq!(b.dequeue(), Some(0));
+        assert_eq!(b.dequeue(), Some(1));
+        assert_eq!(b.dequeue(), Some(2));
+        assert_eq!(b.dequeue(), None);
     }
 
     #[test]
@@ -903,6 +1083,35 @@ mod tests {
 
         test_push_dequeue_push_full_get(AllocRingBuffer::with_capacity(2));
         test_push_dequeue_push_full_get(ConstGenericRingBuffer::<i32, 2>::new());
+
+        // the growable ringbuffer should actually keep growing and dequeue all items
+        let mut b = GrowableAllocRingBuffer::with_capacity(2);
+
+        b.push(0);
+        b.push(1);
+        b.push(2);
+
+        assert_eq!(b.dequeue(), Some(0));
+        assert_eq!(b.dequeue(), Some(1));
+        assert_eq!(b.dequeue(), Some(2));
+        assert_eq!(b.dequeue(), None);
+
+        b.push(0);
+        b.push(1);
+        b.push(2);
+
+        assert_eq!(b.dequeue(), Some(0));
+        assert_eq!(b.dequeue(), Some(1));
+        assert_eq!(b.dequeue(), Some(2));
+        assert_eq!(b.dequeue(), None);
+
+        b.push(0);
+        b.push(1);
+        b.push(2);
+
+        assert_eq!(b.get(-1), Some(&2));
+        assert_eq!(b.get(-2), Some(&1));
+        assert_eq!(b.get(-3), Some(&0))
     }
 
     #[test]
@@ -932,6 +1141,7 @@ mod tests {
         }
 
         test_push_dequeue_push_full_get_rep(AllocRingBuffer::with_capacity(8));
+        test_push_dequeue_push_full_get_rep(GrowableAllocRingBuffer::with_capacity(8));
         test_push_dequeue_push_full_get_rep(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
@@ -955,6 +1165,7 @@ mod tests {
         }
 
         test_clone(AllocRingBuffer::with_capacity(4));
+        test_clone(GrowableAllocRingBuffer::with_capacity(4));
         test_clone(ConstGenericRingBuffer::<i32, 4>::new());
     }
 
@@ -979,6 +1190,7 @@ mod tests {
         }
 
         test_default_fill(AllocRingBuffer::with_capacity(4));
+        test_default_fill(GrowableAllocRingBuffer::with_capacity(4));
         test_default_fill(ConstGenericRingBuffer::<i32, 4>::new());
     }
 
@@ -1014,6 +1226,7 @@ mod tests {
 
         next_back_test(ConstGenericRingBuffer::<i32, 8>::new());
         next_back_test(AllocRingBuffer::with_capacity(8));
+        next_back_test(GrowableAllocRingBuffer::with_capacity(8));
     }
 
     #[test]
@@ -1033,6 +1246,7 @@ mod tests {
 
         next_back_test_mut(ConstGenericRingBuffer::<i32, 8>::new());
         next_back_test_mut(AllocRingBuffer::with_capacity(8));
+        next_back_test_mut(GrowableAllocRingBuffer::with_capacity(8));
     }
     #[test]
     fn run_test_fill() {
@@ -1055,6 +1269,7 @@ mod tests {
         }
 
         test_fill(AllocRingBuffer::with_capacity(4));
+        test_fill(GrowableAllocRingBuffer::with_capacity(4));
         test_fill(ConstGenericRingBuffer::<i32, 4>::new());
     }
 
@@ -1114,6 +1329,11 @@ mod tests {
         #[test]
         fn run_test_drops_contents_const_generic() {
             test_dropped!({ ConstGenericRingBuffer::<_, 1>::new() });
+        }
+
+        #[test]
+        fn run_test_drops_contents_growable_alloc() {
+            test_dropped!({ GrowableAllocRingBuffer::with_capacity(1) });
         }
     }
 }
