@@ -1,10 +1,10 @@
-extern crate std;
+extern crate alloc;
 
-use crate::{AllocRingBuffer, ConstGenericRingBuffer, GrowableAllocRingBuffer};
-use crate::{RingBufferExt, RingBufferWrite};
 use alloc::collections::{LinkedList, VecDeque};
 use alloc::string::ToString;
 use core::ops::Deref;
+use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, GrowableAllocRingBuffer};
+use ringbuffer::{RingBufferExt, RingBufferWrite};
 use std::vec;
 
 macro_rules! convert_test {
