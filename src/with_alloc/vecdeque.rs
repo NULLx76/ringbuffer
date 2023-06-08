@@ -1,3 +1,4 @@
+use crate::ringbuffer_trait::RingBufferIntoIterator;
 use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
 use crate::{AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 use alloc::collections::VecDeque;
@@ -148,6 +149,15 @@ impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
 
     unsafe fn ptr_capacity(rb: *const Self) -> usize {
         (*rb).0.capacity()
+    }
+}
+
+impl<T> IntoIterator for GrowableAllocRingBuffer<T> {
+    type Item = T;
+    type IntoIter = RingBufferIntoIterator<T, Self>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        RingBufferIntoIterator::new(self)
     }
 }
 
