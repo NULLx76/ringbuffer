@@ -167,14 +167,6 @@ unsafe impl<T> RingBufferExt<T> for GrowableAllocRingBuffer<T> {
         }
         .map(|i| i as *mut T)
     }
-
-    fn get_absolute(&self, _index: usize) -> Option<&T> {
-        unimplemented!()
-    }
-
-    fn get_absolute_mut(&mut self, _index: usize) -> Option<&mut T> {
-        unimplemented!()
-    }
 }
 
 #[cfg(test)]
