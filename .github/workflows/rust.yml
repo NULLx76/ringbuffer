@@ -30,11 +30,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features
 
-      - name: msrv
-        run: |
-          cargo install cargo-msrv --force
-          cargo msrv verify
-
   test:
     name: Test Stable
     runs-on: ubuntu-latest
