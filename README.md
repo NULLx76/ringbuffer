@@ -43,6 +43,17 @@ fn main() {
 
 ```
 
+# Comparison of ringbuffer types
+
+| type                                          | heap allocated | growable | size must be power of 2 | `no_std` |
+| ----------------------------------------------|----------------|----------|-------------------------|----------|
+| `AllocRingBuffer<T, PowerOfTwo>`              | yes            | no       | yes                     | no       |
+| `AllocRingBuffer<T, NonPowerOfTwo>`           | yes            | no       | no                      | no       |
+| `GrowableAllocRingBuffer<T>`                  | yes            | yes      | no                      | no       |
+| `ConstGenericRingBuffer<T, const CAP: usize>` | no             | no       | no[^1]                  | yes      |
+
+[^1]: Using a size that is not a power of 2 will be ~3x slower.
+
 # Features
 
 | name  | default | description                                                                                                  |
