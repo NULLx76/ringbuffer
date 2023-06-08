@@ -1,6 +1,8 @@
 use core::ops::{Index, IndexMut};
 
-use crate::ringbuffer_trait::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
+use crate::ringbuffer_trait::{
+    RingBuffer, RingBufferExt, RingBufferIntoIterator, RingBufferRead, RingBufferWrite,
+};
 
 extern crate alloc;
 
@@ -241,6 +243,15 @@ unsafe impl<T, SIZE: RingbufferSize> RingBufferExt<T> for AllocRingBuffer<T, SIZ
         for i in 0..self.capacity {
             unsafe { ptr::write(get_unchecked_mut(self, i), f()) };
         }
+    }
+}
+
+impl<T, SIZE: RingbufferSize> IntoIterator for AllocRingBuffer<T, SIZE> {
+    type Item = T;
+    type IntoIter = RingBufferIntoIterator<T, Self>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        RingBufferIntoIterator::new(self)
     }
 }
 
