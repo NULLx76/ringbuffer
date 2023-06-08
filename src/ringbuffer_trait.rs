@@ -59,7 +59,7 @@ pub trait RingBufferWrite<T>: RingBuffer<T> + Extend<T> {
 
     /// alias for [`push`](RingBufferWrite::push), forming a more natural counterpart to [`dequeue`](RingBufferRead::dequeue)
     fn enqueue(&mut self, value: T) {
-        self.push(value)
+        self.push(value);
     }
 }
 
@@ -109,7 +109,7 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
 /// for every different index passed in. See the exact requirements
 /// in the safety comment on the next function of the mutable Iterator
 /// implementation, since these safety guarantees are necessary for
-/// iter_mut to work
+/// [`iter_mut`](RingBufferExt::iter_mut) to work
 pub unsafe trait RingBufferExt<T>:
     RingBuffer<T> + RingBufferRead<T> + RingBufferWrite<T> + Index<isize, Output = T> + IndexMut<isize>
 {
@@ -153,9 +153,11 @@ pub unsafe trait RingBufferExt<T>:
     unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T>;
 
     /// Gets a value relative to the start of the array (rarely useful, usually you want [`Self::get`])
+    #[deprecated = "cannot find a valid usecase for this, hard to implement for some ringbuffers"]
     fn get_absolute(&self, index: usize) -> Option<&T>;
 
     /// Gets a value mutably relative to the start of the array (rarely useful, usually you want [`Self::get_mut`])
+    #[deprecated = "cannot find a valid usecase for this, hard to implement for some ringbuffers"]
     fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T>;
 
     /// Returns the value at the current index.
@@ -251,7 +253,7 @@ mod iter {
                 obj,
                 len: obj.len(),
                 index: 0,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             }
         }
     }
@@ -310,7 +312,7 @@ mod iter {
                 len: obj.len(),
                 obj: NonNull::from(obj),
                 index: 0,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             }
         }
     }
@@ -368,7 +370,7 @@ mod iter {
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {
                 obj,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             }
         }
     }
@@ -435,7 +437,7 @@ macro_rules! impl_ringbuffer_ext {
         }
 
         #[inline]
-        unsafe fn ptr_get_mut<'a>(rb: *mut Self, index: isize) -> Option<*mut T> {
+        unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T> {
             (Self::ptr_len(rb) != 0).then(move || {
                 let index_from_readptr = if index >= 0 {
                     index
