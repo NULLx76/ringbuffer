@@ -123,6 +123,62 @@ impl<T: Clone> From<&mut [T]> for AllocRingBuffer<T, NonPowerOfTwo> {
     }
 }
 
+impl<T: Clone, const CAP: usize> From<&mut [T; CAP]> for AllocRingBuffer<T, NonPowerOfTwo> {
+    fn from(value: &mut [T; CAP]) -> Self {
+        Self::from(value.clone())
+    }
+}
+
+impl<T> From<alloc::vec::Vec<T>> for AllocRingBuffer<T, NonPowerOfTwo> {
+    fn from(value: alloc::vec::Vec<T>) -> Self {
+        let mut res = AllocRingBuffer::with_capacity_non_power_of_two(value.len());
+        res.extend(value.into_iter());
+        res
+    }
+}
+
+impl<T> From<alloc::collections::VecDeque<T>> for AllocRingBuffer<T, NonPowerOfTwo> {
+    fn from(value: alloc::collections::VecDeque<T>) -> Self {
+        let mut res = AllocRingBuffer::with_capacity_non_power_of_two(value.len());
+        res.extend(value.into_iter());
+        res
+    }
+}
+
+impl<T> From<alloc::collections::LinkedList<T>> for AllocRingBuffer<T, NonPowerOfTwo> {
+    fn from(value: alloc::collections::LinkedList<T>) -> Self {
+        let mut res = AllocRingBuffer::with_capacity_non_power_of_two(value.len());
+        res.extend(value.into_iter());
+        res
+    }
+}
+
+impl From<alloc::string::String> for AllocRingBuffer<char, NonPowerOfTwo> {
+    fn from(value: alloc::string::String) -> Self {
+        let mut res = AllocRingBuffer::with_capacity_non_power_of_two(value.len());
+        res.extend(value.chars());
+        res
+    }
+}
+
+impl From<&str> for AllocRingBuffer<char, NonPowerOfTwo> {
+    fn from(value: &str) -> Self {
+        let mut res = AllocRingBuffer::with_capacity_non_power_of_two(value.len());
+        res.extend(value.chars());
+        res
+    }
+}
+
+impl<T, const CAP: usize> From<crate::ConstGenericRingBuffer<T, CAP>>
+    for AllocRingBuffer<T, NonPowerOfTwo>
+{
+    fn from(mut value: crate::ConstGenericRingBuffer<T, CAP>) -> Self {
+        let mut res = AllocRingBuffer::with_capacity_non_power_of_two(value.len());
+        res.extend(value.drain());
+        res
+    }
+}
+
 impl<T, SIZE: RingbufferSize> Drop for AllocRingBuffer<T, SIZE> {
     fn drop(&mut self) {
         self.drain().for_each(drop);
