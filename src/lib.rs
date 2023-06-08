@@ -77,7 +77,7 @@ mod with_alloc;
 #[cfg(feature = "alloc")]
 pub use with_alloc::alloc_ringbuffer::AllocRingBuffer;
 #[cfg(feature = "alloc")]
-pub use with_alloc::alloc_ringbuffer::{RingbufferSize, NonPowerOfTwo, PowerOfTwo};
+pub use with_alloc::alloc_ringbuffer::{NonPowerOfTwo, PowerOfTwo, RingbufferSize};
 #[cfg(feature = "alloc")]
 pub use with_alloc::vecdeque::GrowableAllocRingBuffer;
 
