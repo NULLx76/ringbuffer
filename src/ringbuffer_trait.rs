@@ -401,6 +401,7 @@ mod iter {
     impl<T, RB: RingBufferExt<T>> Iterator for RingBufferIntoIterator<T, RB> {
         type Item = T;
 
+        #[inline]
         fn next(&mut self) -> Option<Self::Item> {
             self.obj.dequeue()
         }
