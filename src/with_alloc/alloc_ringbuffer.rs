@@ -6,7 +6,6 @@ extern crate alloc;
 
 // We need boxes, so depend on alloc
 use crate::GrowableAllocRingBuffer;
-use core::iter::FromIterator;
 use core::marker::PhantomData;
 use core::ptr;
 
@@ -158,10 +157,6 @@ impl<T: PartialEq, SIZE: RingbufferSize> PartialEq for AllocRingBuffer<T, SIZE> 
 
 impl<T: Eq + PartialEq, SIZE: RingbufferSize> Eq for AllocRingBuffer<T, SIZE> {}
 
-/// The capacity of a `RingBuffer` created by new or default (`1024`).
-// must be a power of 2
-pub const RINGBUFFER_DEFAULT_CAPACITY: usize = 1024;
-
 unsafe impl<T, SIZE: RingbufferSize> RingBufferExt<T> for AllocRingBuffer<T, SIZE> {
     impl_ringbuffer_ext!(
         get_unchecked,
@@ -310,23 +305,24 @@ impl<T> AllocRingBuffer<T, PowerOfTwo> {
     }
 
     #[inline]
+    /// Alias of [`with_capacity`](AllocRingBuffer::new).
+    #[must_use]
+    #[deprecated = "alias of new"]
+    pub fn with_capacity(cap: usize) -> Self {
+        Self::new(cap)
+    }
+
     /// Creates a `AllocRingBuffer` with a certain capacity. The capacity must be a power of two.
     /// # Panics
     /// Panics when capacity is zero or not a power of two
+    #[inline]
     #[must_use]
-    pub fn with_capacity(cap: usize) -> Self {
+    pub fn new(cap: usize) -> Self {
         assert_ne!(cap, 0, "Capacity must be greater than 0");
         assert!(cap.is_power_of_two(), "Capacity must be a power of two");
 
         // Safety: assertions check that cap is a power of two and nonzero
         unsafe { Self::with_capacity_unchecked(cap) }
-    }
-
-    /// Creates an `AllocRingBuffer` with a capacity of [`RINGBUFFER_DEFAULT_CAPACITY`].
-    #[inline]
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
     }
 }
 
@@ -357,26 +353,6 @@ unsafe fn get_unchecked_mut<T, SIZE: RingbufferSize>(
     p.cast()
 }
 
-impl<RB, SIZE: RingbufferSize> FromIterator<RB> for AllocRingBuffer<RB, SIZE> {
-    fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
-        let mut res = Self::default();
-        for i in iter {
-            res.push(i);
-        }
-
-        res
-    }
-}
-
-impl<T, SIZE: RingbufferSize> Default for AllocRingBuffer<T, SIZE> {
-    /// Creates a buffer with a capacity of [`RINGBUFFER_DEFAULT_CAPACITY`].
-    #[inline]
-    fn default() -> Self {
-        // SAFETY: RINGBUFFER_DEFAULT_CAPACITY is a power of two
-        unsafe { AllocRingBuffer::with_capacity_unchecked(RINGBUFFER_DEFAULT_CAPACITY) }
-    }
-}
-
 impl<T, SIZE: RingbufferSize> Index<isize> for AllocRingBuffer<T, SIZE> {
     type Output = T;
 
@@ -393,12 +369,8 @@ impl<T, SIZE: RingbufferSize> IndexMut<isize> for AllocRingBuffer<T, SIZE> {
 
 #[cfg(test)]
 mod tests {
-    use super::alloc::vec::Vec;
     use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
-    use crate::{
-        AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite,
-        RINGBUFFER_DEFAULT_CAPACITY,
-    };
+    use crate::{AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 
     // just test that this compiles
     #[test]
@@ -409,7 +381,7 @@ mod tests {
             a.clone()
         }
 
-        _ = helper(&AllocRingBuffer::with_capacity(2));
+        _ = helper(&AllocRingBuffer::new(2));
         _ = helper(&AllocRingBuffer::with_capacity_non_power_of_two(5));
     }
 
@@ -435,28 +407,6 @@ mod tests {
     }
 
     #[test]
-    fn test_default() {
-        let b: AllocRingBuffer<u32> = AllocRingBuffer::default();
-        assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.capacity());
-        assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, b.capacity);
-        assert_eq!(b.capacity, b.capacity());
-        assert_eq!(0, b.writeptr);
-        assert_eq!(0, b.readptr);
-        assert!(b.is_empty());
-        assert_eq!(0, b.iter().count());
-        assert_eq!(
-            Vec::<u32>::with_capacity(RINGBUFFER_DEFAULT_CAPACITY),
-            b.to_vec()
-        );
-    }
-
-    #[test]
-    fn test_default_capacity_constant() {
-        // This is to prevent accidentally changing it.
-        assert_eq!(RINGBUFFER_DEFAULT_CAPACITY, 1024)
-    }
-
-    #[test]
     fn test_with_capacity_power_of_two() {
         let b = AllocRingBuffer::<i32>::with_capacity_power_of_2(2);
         assert_eq!(b.capacity, 4);
@@ -465,19 +415,19 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_with_capacity_no_power_of_two() {
-        let _ = AllocRingBuffer::<i32>::with_capacity(10);
+        let _ = AllocRingBuffer::<i32>::new(10);
     }
 
     #[test]
     #[should_panic]
     fn test_index_zero_length() {
-        let b = AllocRingBuffer::<i32>::with_capacity(2);
+        let b = AllocRingBuffer::<i32>::new(2);
         let _ = b[2];
     }
 
     #[test]
     fn test_extend() {
-        let mut buf = AllocRingBuffer::<u8>::with_capacity(4);
+        let mut buf = AllocRingBuffer::<u8>::new(4);
         (0..4).for_each(|_| buf.push(0));
 
         let new_data = [0, 1, 2];
@@ -494,7 +444,7 @@ mod tests {
 
     #[test]
     fn test_extend_with_overflow() {
-        let mut buf = AllocRingBuffer::<u8>::with_capacity(8);
+        let mut buf = AllocRingBuffer::<u8>::new(8);
         (0..8).for_each(|_| buf.push(0));
 
         let new_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
