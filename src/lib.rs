@@ -1329,4 +1329,27 @@ mod tests {
             test_dropped!({ GrowableAllocRingBuffer::with_capacity(1) });
         }
     }
+
+    #[test]
+    fn test_clone() {
+        macro_rules! test_clone {
+            ($e: expr) => {
+                let mut e1 = $e;
+                e1.push(1);
+                e1.push(2);
+
+                let mut e2 = e1.clone();
+
+                e2.push(11);
+                e2.push(12);
+
+                assert_eq!(e1.to_vec(), vec![1, 2]);
+                assert_eq!(e2.to_vec(), vec![1, 2, 11, 12]);
+            };
+        }
+
+        test_clone!(ConstGenericRingBuffer::<_, 4>::new());
+        test_clone!(GrowableAllocRingBuffer::<_>::new());
+        test_clone!(AllocRingBuffer::<_, _>::new(4));
+    }
 }
