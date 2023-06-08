@@ -1,4 +1,4 @@
-use crate::ringbuffer_trait::RingBufferIntoIterator;
+use crate::ringbuffer_trait::{RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator};
 use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
 use crate::RingBuffer;
 use core::iter::FromIterator;
@@ -220,6 +220,24 @@ impl<T, const CAP: usize> IntoIterator for ConstGenericRingBuffer<T, CAP> {
 
     fn into_iter(self) -> Self::IntoIter {
         RingBufferIntoIterator::new(self)
+    }
+}
+
+impl<'a, T, const CAP: usize> IntoIterator for &'a ConstGenericRingBuffer<T, CAP> {
+    type Item = &'a T;
+    type IntoIter = RingBufferIterator<'a, T, ConstGenericRingBuffer<T, CAP>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, T, const CAP: usize> IntoIterator for &'a mut ConstGenericRingBuffer<T, CAP> {
+    type Item = &'a mut T;
+    type IntoIter = RingBufferMutIterator<'a, T, ConstGenericRingBuffer<T, CAP>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
     }
 }
 
