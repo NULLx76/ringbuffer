@@ -270,8 +270,6 @@ impl<T, SIZE: RingbufferSize> RingBufferRead<T> for AllocRingBuffer<T, SIZE> {
             unsafe { Some(ptr::read(res)) }
         }
     }
-
-    impl_ringbuffer_read!();
 }
 
 impl<T, SIZE: RingbufferSize> Extend<T> for AllocRingBuffer<T, SIZE> {

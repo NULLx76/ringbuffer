@@ -71,7 +71,10 @@ pub trait RingBufferRead<T>: RingBuffer<T> + IntoIterator<Item = T> {
 
     /// dequeues the top item off the queue, but does not return it. Instead it is dropped.
     /// If the ringbuffer is empty, this function is a nop.
-    fn skip(&mut self);
+    #[inline]
+    fn skip(&mut self) {
+        let _ = self.dequeue();
+    }
 
     /// Returns an iterator over the elements in the ringbuffer,
     /// dequeueing elements as they are iterated over.
@@ -419,17 +422,6 @@ mod iter {
 pub use iter::{
     RingBufferDrainingIterator, RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator,
 };
-
-/// Implement various functions on implementors of [`RingBufferRead`].
-/// This is to avoid duplicate code.
-macro_rules! impl_ringbuffer_read {
-    () => {
-        #[inline]
-        fn skip(&mut self) {
-            let _ = self.dequeue().map(drop);
-        }
-    };
-}
 
 /// Implement various functions on implementors of [`RingBuffer`].
 /// This is to avoid duplicate code.
