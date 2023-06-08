@@ -6,7 +6,7 @@ use core::ops::{Deref, DerefMut, Index, IndexMut};
 /// A growable ringbuffer. Once capacity is reached, the size is doubled.
 /// Wrapper of the built-in [`VecDeque`](std::collections::VecDeque) struct
 ///
-/// The reason this is a wrapper, is that we want RingBuffers to implement `Index<isize>`,
+/// The reason this is a wrapper, is that we want `RingBuffers` to implement `Index<isize>`,
 /// which we cannot do for remote types like `VecDeque`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GrowableAllocRingBuffer<T>(VecDeque<T>);
@@ -59,11 +59,13 @@ impl<T> AsRef<VecDeque<T>> for GrowableAllocRingBuffer<T> {
 
 impl<T> GrowableAllocRingBuffer<T> {
     /// Creates an empty ringbuffer.
+    #[must_use]
     pub fn new() -> Self {
         Self(VecDeque::new())
     }
 
     /// Creates an empty ringbuffer with space for at least capacity elements.
+    #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self(VecDeque::with_capacity(capacity))
     }
@@ -89,13 +91,13 @@ impl<T> RingBufferRead<T> for GrowableAllocRingBuffer<T> {
 
 impl<T> RingBufferWrite<T> for GrowableAllocRingBuffer<T> {
     fn push(&mut self, value: T) {
-        self.push_back(value)
+        self.push_back(value);
     }
 }
 
 impl<T> Extend<T> for GrowableAllocRingBuffer<T> {
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
-        self.0.extend(iter)
+        self.0.extend(iter);
     }
 }
 
@@ -124,14 +126,14 @@ unsafe impl<T> RingBufferExt<T> for GrowableAllocRingBuffer<T> {
         self.clear();
         let initial_capacity = self.0.capacity();
         for _ in 0..initial_capacity {
-            self.0.push_back(f())
+            self.0.push_back(f());
         }
 
-        debug_assert_eq!(initial_capacity, self.0.capacity())
+        debug_assert_eq!(initial_capacity, self.0.capacity());
     }
 
     fn clear(&mut self) {
-        self.0.clear()
+        self.0.clear();
     }
 
     fn get(&self, index: isize) -> Option<&T> {
