@@ -268,6 +268,33 @@ mod tests {
         test_iter(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
+    #[test]
+    fn run_test_into_iter() {
+        fn test_iter(mut b: impl RingBufferExt<i32>) {
+            b.push(1);
+            b.push(2);
+            b.push(3);
+            b.push(4);
+            b.push(5);
+            b.push(6);
+            b.push(7);
+
+            let mut iter = b.into_iter();
+            assert_eq!(1, iter.next().unwrap());
+            assert_eq!(2, iter.next().unwrap());
+            assert_eq!(3, iter.next().unwrap());
+            assert_eq!(4, iter.next().unwrap());
+            assert_eq!(5, iter.next().unwrap());
+            assert_eq!(6, iter.next().unwrap());
+            assert_eq!(7, iter.next().unwrap());
+            assert_eq!(None, iter.next());
+        }
+
+        test_iter(AllocRingBuffer::new(8));
+        test_iter(GrowableAllocRingBuffer::with_capacity(8));
+        test_iter(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
     #[cfg(feature = "alloc")]
     #[test]
     fn run_test_iter_with_lifetimes() {

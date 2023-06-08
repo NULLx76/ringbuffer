@@ -388,7 +388,7 @@ mod iter {
         phantom: PhantomData<T>,
     }
 
-    impl<T, RB: RingBufferRead<T>> RingBufferIntoIterator<T, RB> {
+    impl<T, RB: RingBufferExt<T>> RingBufferIntoIterator<T, RB> {
         #[inline]
         pub fn new(obj: RB) -> Self {
             Self {
@@ -398,7 +398,7 @@ mod iter {
         }
     }
 
-    impl<T, RB: RingBufferRead<T>> Iterator for RingBufferIntoIterator<T, RB> {
+    impl<T, RB: RingBufferExt<T>> Iterator for RingBufferIntoIterator<T, RB> {
         type Item = T;
 
         fn next(&mut self) -> Option<Self::Item> {
