@@ -21,7 +21,7 @@ MSRV: Rust 1.59
 # Usage
 
 ```rust
-use ringbuffer::{AllocRingBuffer, RingBuffer};
+use ringbuffer::{AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite};
 fn main() {
     let mut buffer = AllocRingBuffer::with_capacity(2);
 
