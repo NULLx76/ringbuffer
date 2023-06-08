@@ -7,14 +7,18 @@ The ringbuffer crate provides safe fixed size circular buffers (ringbuffers) in 
 
 Implementations for three kinds of ringbuffers, with a mostly similar API are provided:
 
-| type                      | description                                                                                                                                                                      |
-|---------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `AllocRingBuffer`         | Ringbuffer allocated on the heap at runtime. This ringbuffer is still fixed size. This requires alloc and the alloc feature.                                                     |
-| `GrowableAllocRingBuffer` | Ringbuffer allocated on the heap at runtime. This ringbuffer can grow in size, and is implemented as an `alloc::VecDeque` internally. This requires alloc and the alloc feature. |
-| `ConstGenericRingBuffer`  | Ringbuffer which uses const generics to allocate on the stack.                                                                                                                   |
+| type                           | description                                                                                                                                                                      |
+|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`AllocRingBuffer`][1]         | Ringbuffer allocated on the heap at runtime. This ringbuffer is still fixed size. This requires alloc and the alloc feature.                                                     |
+| [`GrowableAllocRingBuffer`][2] | Ringbuffer allocated on the heap at runtime. This ringbuffer can grow in size, and is implemented as an `alloc::VecDeque` internally. This requires alloc and the alloc feature. |
+| [`ConstGenericRingBuffer`][3]  | Ringbuffer which uses const generics to allocate on the stack.                                                                                                                   |
 
-All of these ringbuffers also implement the RingBuffer trait for their shared API surface.
+All of these ringbuffers also implement the [RingBuffer][4] trait for their shared API surface.
 
+[1]: https://docs.rs/ringbuffer/latest/ringbuffer/struct.AllocRingBuffer.html
+[2]: https://docs.rs/ringbuffer/latest/ringbuffer/struct.GrowableAllocRingBuffer.html
+[3]: https://docs.rs/ringbuffer/latest/ringbuffer/struct.ConstGenericRingBuffer.html
+[4]: https://docs.rs/ringbuffer/latest/ringbuffer/trait.RingBuffer.html
 
 MSRV: Rust 1.59
 
