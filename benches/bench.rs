@@ -1,6 +1,9 @@
 #![cfg(not(tarpaulin))]
 use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion};
 use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBuffer};
+use crate::comparison::comparison_benches;
+
+mod comparison;
 
 fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
@@ -112,7 +115,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         c,
         AllocRingBuffer,
         i32,
-        with_capacity,
+        new,
         benchmark_push,
         16,
         1024,
@@ -136,7 +139,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         c,
         AllocRingBuffer,
         i32,
-        with_capacity,
+        new,
         benchmark_various,
         16,
         1024,
@@ -160,7 +163,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         c,
         AllocRingBuffer,
         i32,
-        with_capacity,
+        new,
         benchmark_push_dequeue,
         16,
         1024,
@@ -196,4 +199,4 @@ fn criterion_benchmark(c: &mut Criterion) {
 }
 
 criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);
+criterion_main!(benches, comparison_benches);

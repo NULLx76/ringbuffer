@@ -16,6 +16,7 @@ license = "MIT"
 [dev-dependencies]
 criterion = "0.4.0"
 compiletest_rs = "0.10.0"
+heapless = "0.7.16"
 
 [features]
 default = ["alloc"]
