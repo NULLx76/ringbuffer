@@ -4,6 +4,7 @@ use crate::RingBufferExt;
 use crate::{AllocRingBuffer, ConstGenericRingBuffer, GrowableAllocRingBuffer};
 use alloc::collections::{LinkedList, VecDeque};
 use alloc::string::ToString;
+use core::ops::Deref;
 use std::vec;
 
 macro_rules! convert_test {
@@ -76,3 +77,42 @@ convert_tests!(
         const_from_arb: {let a = AllocRingBuffer::from(['1', '2']); a},
     ] => ConstGenericRingBuffer::<_, 2>
 );
+
+#[test]
+fn test_extra_conversions_growable() {
+    let a: &mut [i32; 2] = &mut [1, 2];
+    let a = GrowableAllocRingBuffer::from(a);
+    assert_eq!(a.to_vec(), vec![1, 2]);
+
+    let a: &mut [i32] = &mut [1, 2];
+    let a = GrowableAllocRingBuffer::from(a);
+    assert_eq!(a.to_vec(), vec![1, 2]);
+
+    let mut b = VecDeque::<i32>::new();
+    b.push_back(1);
+    b.push_back(2);
+    assert_eq!(a.deref(), &b);
+    assert_eq!(a.as_ref(), &b);
+}
+
+#[test]
+fn test_extra_conversions_alloc() {
+    let a: &mut [i32; 2] = &mut [1, 2];
+    let a = AllocRingBuffer::from(a);
+    assert_eq!(a.to_vec(), vec![1, 2]);
+
+    let a: &mut [i32] = &mut [1, 2];
+    let a = AllocRingBuffer::from(a);
+    assert_eq!(a.to_vec(), vec![1, 2]);
+}
+
+#[test]
+fn test_extra_conversions_const() {
+    let a: &mut [i32; 2] = &mut [1, 2];
+    let a = ConstGenericRingBuffer::<_, 2>::from(a);
+    assert_eq!(a.to_vec(), vec![1, 2]);
+
+    let a: &mut [i32] = &mut [1, 2];
+    let a = ConstGenericRingBuffer::<_, 2>::from(a);
+    assert_eq!(a.to_vec(), vec![1, 2]);
+}
