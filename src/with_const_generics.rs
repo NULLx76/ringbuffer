@@ -1,3 +1,4 @@
+use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
 use crate::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 use core::iter::FromIterator;
 use core::mem;
@@ -37,6 +38,97 @@ pub struct ConstGenericRingBuffer<T, const CAP: usize> {
     buf: [MaybeUninit<T>; CAP],
     readptr: usize,
     writeptr: usize,
+}
+
+impl<T, const CAP: usize> From<[T; CAP]> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: [T; CAP]) -> Self {
+        Self {
+            // Safety:
+            // T has the same layout as MaybeUninit<T>
+            // [T; N] has the same layout as [MaybeUninit<T>; N]
+            buf: unsafe { mem::transmute_copy(&value) },
+            readptr: 0,
+            writeptr: CAP,
+        }
+    }
+}
+
+impl<T: Clone, const CAP: usize> From<&[T; CAP]> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: &[T; CAP]) -> Self {
+        Self::from(value.clone())
+    }
+}
+
+impl<T: Clone, const CAP: usize> From<&[T]> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: &[T]) -> Self {
+        value.iter().cloned().collect()
+    }
+}
+
+impl<T: Clone, const CAP: usize> From<&mut [T; CAP]> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: &mut [T; CAP]) -> Self {
+        Self::from(value.clone())
+    }
+}
+
+impl<T: Clone, const CAP: usize> From<&mut [T]> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: &mut [T]) -> Self {
+        value.iter().cloned().collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T, const CAP: usize> From<alloc::vec::Vec<T>> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: alloc::vec::Vec<T>) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T, const CAP: usize> From<alloc::collections::VecDeque<T>> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: alloc::collections::VecDeque<T>) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T, const CAP: usize> From<alloc::collections::LinkedList<T>>
+    for ConstGenericRingBuffer<T, CAP>
+{
+    fn from(value: alloc::collections::LinkedList<T>) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<const CAP: usize> From<alloc::string::String> for ConstGenericRingBuffer<char, CAP> {
+    fn from(value: alloc::string::String) -> Self {
+        value.chars().collect()
+    }
+}
+
+impl<const CAP: usize> From<&str> for ConstGenericRingBuffer<char, CAP> {
+    fn from(value: &str) -> Self {
+        value.chars().collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T, const CAP: usize> From<crate::GrowableAllocRingBuffer<T>>
+    for ConstGenericRingBuffer<T, CAP>
+{
+    fn from(mut value: crate::GrowableAllocRingBuffer<T>) -> Self {
+        value.drain().collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T, const CAP: usize, SIZE: RingbufferSize> From<crate::AllocRingBuffer<T, SIZE>>
+    for ConstGenericRingBuffer<T, CAP>
+{
+    fn from(mut value: crate::AllocRingBuffer<T, SIZE>) -> Self {
+        value.drain().collect()
+    }
 }
 
 impl<T, const CAP: usize> Drop for ConstGenericRingBuffer<T, CAP> {
