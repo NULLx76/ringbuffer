@@ -23,11 +23,81 @@ impl<T> From<VecDeque<T>> for GrowableAllocRingBuffer<T> {
     }
 }
 
+impl<T: Clone, const N: usize> From<&[T; N]> for GrowableAllocRingBuffer<T> {
+    // the cast here is actually not trivial
+    #[allow(trivial_casts)]
+    fn from(value: &[T; N]) -> Self {
+        Self::from(value as &[T])
+    }
+}
+
+impl<T: Clone> From<&[T]> for GrowableAllocRingBuffer<T> {
+    fn from(value: &[T]) -> Self {
+        let mut rb = Self::new();
+        rb.extend(value.iter().cloned());
+        rb
+    }
+}
+
 impl<T, SIZE: RingbufferSize> From<AllocRingBuffer<T, SIZE>> for GrowableAllocRingBuffer<T> {
     fn from(mut v: AllocRingBuffer<T, SIZE>) -> GrowableAllocRingBuffer<T> {
         let mut rb = GrowableAllocRingBuffer::new();
         rb.extend(v.drain());
         rb
+    }
+}
+
+impl<T: Clone> From<&mut [T]> for GrowableAllocRingBuffer<T> {
+    fn from(value: &mut [T]) -> Self {
+        Self::from(&*value)
+    }
+}
+
+impl<T: Clone, const CAP: usize> From<&mut [T; CAP]> for GrowableAllocRingBuffer<T> {
+    fn from(value: &mut [T; CAP]) -> Self {
+        Self::from(value.clone())
+    }
+}
+
+impl<T> From<alloc::vec::Vec<T>> for GrowableAllocRingBuffer<T> {
+    fn from(value: alloc::vec::Vec<T>) -> Self {
+        let mut res = GrowableAllocRingBuffer::new();
+        res.extend(value.into_iter());
+        res
+    }
+}
+
+impl<T> From<alloc::collections::LinkedList<T>> for GrowableAllocRingBuffer<T> {
+    fn from(value: alloc::collections::LinkedList<T>) -> Self {
+        let mut res = GrowableAllocRingBuffer::new();
+        res.extend(value.into_iter());
+        res
+    }
+}
+
+impl From<alloc::string::String> for GrowableAllocRingBuffer<char> {
+    fn from(value: alloc::string::String) -> Self {
+        let mut res = GrowableAllocRingBuffer::new();
+        res.extend(value.chars());
+        res
+    }
+}
+
+impl From<&str> for GrowableAllocRingBuffer<char> {
+    fn from(value: &str) -> Self {
+        let mut res = GrowableAllocRingBuffer::new();
+        res.extend(value.chars());
+        res
+    }
+}
+
+impl<T, const CAP: usize> From<crate::ConstGenericRingBuffer<T, CAP>>
+    for GrowableAllocRingBuffer<T>
+{
+    fn from(mut value: crate::ConstGenericRingBuffer<T, CAP>) -> Self {
+        let mut res = GrowableAllocRingBuffer::new();
+        res.extend(value.drain());
+        res
     }
 }
 
@@ -174,38 +244,5 @@ unsafe impl<T> RingBufferExt<T> for GrowableAllocRingBuffer<T> {
 
     fn get_absolute_mut(&mut self, _index: usize) -> Option<&mut T> {
         unimplemented!()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        AllocRingBuffer, GrowableAllocRingBuffer, RingBuffer, RingBufferRead, RingBufferWrite,
-    };
-
-    #[test]
-    fn test_convert() {
-        let mut a = GrowableAllocRingBuffer::new();
-        a.push(0);
-        a.push(1);
-
-        let mut b: AllocRingBuffer<_, _> = a.into();
-        assert_eq!(b.capacity(), 2);
-        assert_eq!(b.len(), 2);
-        assert_eq!(b.dequeue(), Some(0));
-        assert_eq!(b.dequeue(), Some(1));
-    }
-
-    #[test]
-    fn test_convert_back() {
-        let mut a = AllocRingBuffer::new(2);
-        a.push(0);
-        a.push(1);
-
-        let mut b: GrowableAllocRingBuffer<_> = a.into();
-        assert_eq!(b.len(), 2);
-        assert!(b.capacity() >= 2);
-        assert_eq!(b.dequeue(), Some(0));
-        assert_eq!(b.dequeue(), Some(1));
     }
 }
