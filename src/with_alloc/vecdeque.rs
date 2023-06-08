@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn test_convert_back() {
-        let mut a = AllocRingBuffer::with_capacity(2);
+        let mut a = AllocRingBuffer::new(2);
         a.push(0);
         a.push(1);
 
