@@ -29,7 +29,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features
-
   test:
     name: Test Stable
     runs-on: ubuntu-latest
