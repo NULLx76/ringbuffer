@@ -4,7 +4,6 @@ use core::ops::{Index, IndexMut};
 extern crate alloc;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-use core::iter::FromIterator;
 
 /// `RingBuffer` is a trait defining the standard interface for all `RingBuffer`
 /// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
@@ -112,12 +111,7 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
 /// implementation, since these safety guarantees are necessary for
 /// [`iter_mut`](RingBufferExt::iter_mut) to work
 pub unsafe trait RingBufferExt<T>:
-    RingBuffer<T>
-    + RingBufferRead<T>
-    + RingBufferWrite<T>
-    + Index<isize, Output = T>
-    + IndexMut<isize>
-    + FromIterator<T>
+    RingBuffer<T> + RingBufferRead<T> + RingBufferWrite<T> + Index<isize, Output = T> + IndexMut<isize>
 {
     /// Sets every element in the ringbuffer to the value returned by f.
     fn fill_with<F: FnMut() -> T>(&mut self, f: F);
@@ -443,7 +437,7 @@ macro_rules! impl_ringbuffer_ext {
         }
 
         #[inline]
-        unsafe fn ptr_get_mut<'a>(rb: *mut Self, index: isize) -> Option<*mut T> {
+        unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T> {
             (Self::ptr_len(rb) != 0).then(move || {
                 let index_from_readptr = if index >= 0 {
                     index
