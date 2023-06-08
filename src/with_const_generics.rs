@@ -1,3 +1,4 @@
+use crate::ringbuffer_trait::RingBufferIntoIterator;
 use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
 use crate::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
 use core::iter::FromIterator;
@@ -211,6 +212,15 @@ unsafe fn get_unchecked_mut<T, const N: usize>(
         .as_mut_ptr()
         .as_mut()
         .expect("const array ptr shouldn't be null!")
+}
+
+impl<T, const CAP: usize> IntoIterator for ConstGenericRingBuffer<T, CAP> {
+    type Item = T;
+    type IntoIter = RingBufferIntoIterator<T, Self>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        RingBufferIntoIterator::new(self)
+    }
 }
 
 impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {

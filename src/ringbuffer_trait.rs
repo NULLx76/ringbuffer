@@ -65,7 +65,7 @@ pub trait RingBufferWrite<T>: RingBuffer<T> + Extend<T> {
 
 /// Defines behaviour for ringbuffers which allow for reading from the start of them (as a queue).
 /// For arbitrary buffer access however, [`RingBufferExt`] is necessary.
-pub trait RingBufferRead<T>: RingBuffer<T> {
+pub trait RingBufferRead<T>: RingBuffer<T> + IntoIterator<Item = T> {
     /// dequeues the top item off the ringbuffer, and moves this item out.
     fn dequeue(&mut self) -> Option<T>;
 
@@ -358,8 +358,7 @@ mod iter {
         }
     }
 
-    /// `RingBufferMutIterator` holds a reference to a `RingBufferRead` and iterates over it. `index` is the
-    /// current iterator position.
+    /// `RingBufferMutIterator` holds a reference to a `RingBufferRead` and iterates over it.
     pub struct RingBufferDrainingIterator<'rb, T, RB: RingBufferRead<T>> {
         obj: &'rb mut RB,
         phantom: PhantomData<T>,
@@ -381,10 +380,45 @@ mod iter {
         fn next(&mut self) -> Option<T> {
             self.obj.dequeue()
         }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.obj.len(), Some(self.obj.len()))
+        }
+    }
+
+    /// `RingBufferIntoIterator` holds a `RingBufferRead` and iterates over it.
+    pub struct RingBufferIntoIterator<T, RB: RingBufferRead<T>> {
+        obj: RB,
+        phantom: PhantomData<T>,
+    }
+
+    impl<T, RB: RingBufferExt<T>> RingBufferIntoIterator<T, RB> {
+        #[inline]
+        pub fn new(obj: RB) -> Self {
+            Self {
+                obj,
+                phantom: PhantomData,
+            }
+        }
+    }
+
+    impl<T, RB: RingBufferExt<T>> Iterator for RingBufferIntoIterator<T, RB> {
+        type Item = T;
+
+        #[inline]
+        fn next(&mut self) -> Option<Self::Item> {
+            self.obj.dequeue()
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.obj.len(), Some(self.obj.len()))
+        }
     }
 }
 
-pub use iter::{RingBufferDrainingIterator, RingBufferIterator, RingBufferMutIterator};
+pub use iter::{
+    RingBufferDrainingIterator, RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator,
+};
 
 /// Implement various functions on implementors of [`RingBufferRead`].
 /// This is to avoid duplicate code.
