@@ -5,6 +5,7 @@ use crate::ringbuffer_trait::{RingBuffer, RingBufferExt, RingBufferRead, RingBuf
 extern crate alloc;
 
 // We need boxes, so depend on alloc
+use crate::GrowableAllocRingBuffer;
 use core::iter::FromIterator;
 use core::marker::PhantomData;
 use core::ptr;
@@ -14,9 +15,8 @@ pub struct PowerOfTwo;
 
 #[derive(Debug, Copy, Clone)]
 pub struct NonPowerOfTwo;
-
 mod private {
-    use crate::with_alloc::{NonPowerOfTwo, PowerOfTwo};
+    use crate::with_alloc::alloc_ringbuffer::{NonPowerOfTwo, PowerOfTwo};
 
     pub trait Sealed {}
 
@@ -84,6 +84,44 @@ pub struct AllocRingBuffer<T, SIZE: RingbufferSize = PowerOfTwo> {
     readptr: usize,
     writeptr: usize,
     mode: PhantomData<SIZE>,
+}
+
+impl<T, const N: usize> From<[T; N]> for AllocRingBuffer<T, NonPowerOfTwo> {
+    fn from(value: [T; N]) -> Self {
+        let mut rb = Self::with_capacity_non_power_of_two(value.len());
+        rb.extend(value.into_iter());
+        rb
+    }
+}
+
+impl<T: Clone, const N: usize> From<&[T; N]> for AllocRingBuffer<T, NonPowerOfTwo> {
+    // the cast here is actually not trivial
+    #[allow(trivial_casts)]
+    fn from(value: &[T; N]) -> Self {
+        Self::from(value as &[T])
+    }
+}
+
+impl<T: Clone> From<&[T]> for AllocRingBuffer<T, NonPowerOfTwo> {
+    fn from(value: &[T]) -> Self {
+        let mut rb = Self::with_capacity_non_power_of_two(value.len());
+        rb.extend(value.iter().cloned());
+        rb
+    }
+}
+
+impl<T> From<GrowableAllocRingBuffer<T>> for AllocRingBuffer<T, NonPowerOfTwo> {
+    fn from(mut v: GrowableAllocRingBuffer<T>) -> AllocRingBuffer<T, NonPowerOfTwo> {
+        let mut rb = AllocRingBuffer::with_capacity_non_power_of_two(v.len());
+        rb.extend(v.drain());
+        rb
+    }
+}
+
+impl<T: Clone> From<&mut [T]> for AllocRingBuffer<T, NonPowerOfTwo> {
+    fn from(value: &mut [T]) -> Self {
+        Self::from(&*value)
+    }
 }
 
 impl<T, SIZE: RingbufferSize> Drop for AllocRingBuffer<T, SIZE> {
@@ -222,7 +260,7 @@ impl<T, SIZE: RingbufferSize> AllocRingBuffer<T, SIZE> {
     ///
     /// # Safety
     /// Only safe if the capacity is greater than zero, and a power of two.
-    /// Only if Mode == NonPowerOfTwo can the capacity be not a power of two, in which case this function is also safe.
+    /// Only if `MODE` == [`NonPowerOfTwo`](NonPowerOfTwo) can the capacity be not a power of two, in which case this function is also safe.
     #[inline]
     unsafe fn with_capacity_unchecked(cap: usize) -> Self {
         let layout = alloc::alloc::Layout::array::<T>(cap).unwrap();
@@ -233,7 +271,7 @@ impl<T, SIZE: RingbufferSize> AllocRingBuffer<T, SIZE> {
             capacity: cap,
             readptr: 0,
             writeptr: 0,
-            mode: Default::default(),
+            mode: PhantomData,
         }
     }
 }
@@ -252,6 +290,7 @@ impl<T> AllocRingBuffer<T, NonPowerOfTwo> {
     /// # Panics
     /// if the capacity is zero
     #[inline]
+    #[must_use]
     pub fn with_capacity_non_power_of_two(cap: usize) -> Self {
         assert_ne!(cap, 0, "Capacity must be greater than 0");
 
@@ -264,6 +303,7 @@ impl<T> AllocRingBuffer<T, PowerOfTwo> {
     /// Creates a `AllocRingBuffer` with a certain capacity. The actual capacity is the input to the
     /// function raised to the power of two (effectively the input is the log2 of the actual capacity)
     #[inline]
+    #[must_use]
     pub fn with_capacity_power_of_2(cap_power_of_two: usize) -> Self {
         // Safety: 1 << n is always a power of two, and nonzero
         unsafe { Self::with_capacity_unchecked(1 << cap_power_of_two) }
@@ -273,6 +313,7 @@ impl<T> AllocRingBuffer<T, PowerOfTwo> {
     /// Creates a `AllocRingBuffer` with a certain capacity. The capacity must be a power of two.
     /// # Panics
     /// Panics when capacity is zero or not a power of two
+    #[must_use]
     pub fn with_capacity(cap: usize) -> Self {
         assert_ne!(cap, 0, "Capacity must be greater than 0");
         assert!(cap.is_power_of_two(), "Capacity must be a power of two");
@@ -283,6 +324,7 @@ impl<T> AllocRingBuffer<T, PowerOfTwo> {
 
     /// Creates an `AllocRingBuffer` with a capacity of [`RINGBUFFER_DEFAULT_CAPACITY`].
     #[inline]
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -352,7 +394,7 @@ impl<T, SIZE: RingbufferSize> IndexMut<isize> for AllocRingBuffer<T, SIZE> {
 #[cfg(test)]
 mod tests {
     use super::alloc::vec::Vec;
-    use crate::with_alloc::RingbufferSize;
+    use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
     use crate::{
         AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite,
         RINGBUFFER_DEFAULT_CAPACITY,
@@ -465,5 +507,24 @@ mod tests {
             let expected = expected[i];
             assert_eq!(actual, expected);
         }
+    }
+
+    #[test]
+    fn test_conversions() {
+        // from &[T]
+        let data: &[i32] = &[1, 2, 3, 4];
+        let buf = AllocRingBuffer::from(data);
+        assert_eq!(buf.capacity, 4);
+        assert_eq!(buf.to_vec(), alloc::vec![1, 2, 3, 4]);
+
+        // from &[T; N]
+        let buf = AllocRingBuffer::from(&[1, 2, 3, 4]);
+        assert_eq!(buf.capacity, 4);
+        assert_eq!(buf.to_vec(), alloc::vec![1, 2, 3, 4]);
+
+        // from [T; N]
+        let buf = AllocRingBuffer::from([1, 2, 3, 4]);
+        assert_eq!(buf.capacity, 4);
+        assert_eq!(buf.to_vec(), alloc::vec![1, 2, 3, 4]);
     }
 }
