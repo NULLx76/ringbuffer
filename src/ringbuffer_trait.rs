@@ -380,6 +380,10 @@ mod iter {
         fn next(&mut self) -> Option<T> {
             self.obj.dequeue()
         }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.obj.len(), Some(self.obj.len()))
+        }
     }
 
     /// `RingBufferIntoIterator` holds a `RingBufferRead` and iterates over it.
@@ -404,6 +408,10 @@ mod iter {
         #[inline]
         fn next(&mut self) -> Option<Self::Item> {
             self.obj.dequeue()
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.obj.len(), Some(self.obj.len()))
         }
     }
 }
