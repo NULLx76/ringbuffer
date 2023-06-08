@@ -174,7 +174,10 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     /// of two might be significantly (up to 3 times) slower.
     #[inline]
     #[must_use]
-    pub const fn new() -> Self {
+    pub const fn new<const N: usize>() -> Self
+    where
+        ConstGenericRingBuffer<T, CAP>: From<ConstGenericRingBuffer<T, N>>,
+    {
         #[allow(clippy::let_unit_value)]
         let _ = Self::ERROR_CAPACITY_IS_NOT_ALLOWED_TO_BE_ZERO;
 
