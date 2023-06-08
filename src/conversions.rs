@@ -1,7 +1,7 @@
 extern crate std;
 
-use crate::RingBufferExt;
 use crate::{AllocRingBuffer, ConstGenericRingBuffer, GrowableAllocRingBuffer};
+use crate::{RingBufferExt, RingBufferWrite};
 use alloc::collections::{LinkedList, VecDeque};
 use alloc::string::ToString;
 use core::ops::Deref;
@@ -13,8 +13,10 @@ macro_rules! convert_test {
         fn $name() {
             let a = $from;
 
-            let b: $to = a.into();
+            let mut b: $to = a.into();
             assert_eq!(b.to_vec(), vec!['1', '2']);
+            b.push('3');
+            assert_eq!(b, b);
         }
     };
 }
