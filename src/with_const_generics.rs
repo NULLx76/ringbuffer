@@ -238,8 +238,6 @@ impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
             unsafe { Some(res.assume_init()) }
         }
     }
-
-    impl_ringbuffer_read!();
 }
 
 impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
