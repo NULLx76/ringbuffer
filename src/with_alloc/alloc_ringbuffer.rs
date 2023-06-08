@@ -1,6 +1,8 @@
 use core::ops::{Index, IndexMut};
 
-use crate::ringbuffer_trait::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
+use crate::ringbuffer_trait::{
+    RingBuffer, RingBufferExt, RingBufferIntoIterator, RingBufferRead, RingBufferWrite,
+};
 
 extern crate alloc;
 
@@ -10,9 +12,13 @@ use core::marker::PhantomData;
 use core::ptr;
 
 #[derive(Debug, Copy, Clone)]
+/// Represents that an alloc ringbuffer must have a size that's a power of two.
+/// This means slightly more optimizations can be performed, but it is less flexible.
 pub struct PowerOfTwo;
 
 #[derive(Debug, Copy, Clone)]
+/// Represents that an alloc ringbuffer can have a size that's not a power of two.
+/// This means slightly fewer optimizations can be performed, but it is more flexible.
 pub struct NonPowerOfTwo;
 mod private {
     use crate::with_alloc::alloc_ringbuffer::{NonPowerOfTwo, PowerOfTwo};
@@ -23,8 +29,13 @@ mod private {
     impl Sealed for NonPowerOfTwo {}
 }
 
+/// Sealed trait with two implementations that represent the kinds of sizes a ringbuffer can have
+/// *[`NonPowerOfTwo`]
+/// *[`PowerOfTwo`]
 pub trait RingbufferSize: private::Sealed {
+    /// the mask function to use for wrapping indices in the ringbuffer
     fn mask(cap: usize, index: usize) -> usize;
+    /// true in [`PowerOfTwo`], false in [`NonPowerOfTwo`]
     fn must_be_power_of_two() -> bool;
 }
 
@@ -232,6 +243,15 @@ unsafe impl<T, SIZE: RingbufferSize> RingBufferExt<T> for AllocRingBuffer<T, SIZ
         for i in 0..self.capacity {
             unsafe { ptr::write(get_unchecked_mut(self, i), f()) };
         }
+    }
+}
+
+impl<T, SIZE: RingbufferSize> IntoIterator for AllocRingBuffer<T, SIZE> {
+    type Item = T;
+    type IntoIter = RingBufferIntoIterator<T, Self>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        RingBufferIntoIterator::new(self)
     }
 }
 

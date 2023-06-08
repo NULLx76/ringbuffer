@@ -27,6 +27,8 @@ mod with_alloc;
 #[cfg(feature = "alloc")]
 pub use with_alloc::alloc_ringbuffer::AllocRingBuffer;
 #[cfg(feature = "alloc")]
+pub use with_alloc::alloc_ringbuffer::{NonPowerOfTwo, PowerOfTwo, RingbufferSize};
+#[cfg(feature = "alloc")]
 pub use with_alloc::vecdeque::GrowableAllocRingBuffer;
 
 mod with_const_generics;
@@ -210,6 +212,33 @@ mod tests {
             assert_eq!(&6, iter.next_back().unwrap());
             assert_eq!(&5, iter.next_back().unwrap());
             assert_eq!(&4, iter.next().unwrap());
+            assert_eq!(None, iter.next());
+        }
+
+        test_iter(AllocRingBuffer::new(8));
+        test_iter(GrowableAllocRingBuffer::with_capacity(8));
+        test_iter(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
+    #[test]
+    fn run_test_into_iter() {
+        fn test_iter(mut b: impl RingBufferExt<i32>) {
+            b.push(1);
+            b.push(2);
+            b.push(3);
+            b.push(4);
+            b.push(5);
+            b.push(6);
+            b.push(7);
+
+            let mut iter = b.into_iter();
+            assert_eq!(1, iter.next().unwrap());
+            assert_eq!(2, iter.next().unwrap());
+            assert_eq!(3, iter.next().unwrap());
+            assert_eq!(4, iter.next().unwrap());
+            assert_eq!(5, iter.next().unwrap());
+            assert_eq!(6, iter.next().unwrap());
+            assert_eq!(7, iter.next().unwrap());
             assert_eq!(None, iter.next());
         }
 
@@ -1278,5 +1307,28 @@ mod tests {
         fn run_test_drops_contents_growable_alloc() {
             test_dropped!({ GrowableAllocRingBuffer::with_capacity(1) });
         }
+    }
+
+    #[test]
+    fn test_clone() {
+        macro_rules! test_clone {
+            ($e: expr) => {
+                let mut e1 = $e;
+                e1.push(1);
+                e1.push(2);
+
+                let mut e2 = e1.clone();
+
+                e2.push(11);
+                e2.push(12);
+
+                assert_eq!(e1.to_vec(), vec![1, 2]);
+                assert_eq!(e2.to_vec(), vec![1, 2, 11, 12]);
+            };
+        }
+
+        test_clone!(ConstGenericRingBuffer::<_, 4>::new());
+        test_clone!(GrowableAllocRingBuffer::<_>::new());
+        test_clone!(AllocRingBuffer::<_, _>::new(4));
     }
 }
