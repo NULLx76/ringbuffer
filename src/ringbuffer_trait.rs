@@ -60,7 +60,7 @@ pub trait RingBufferWrite<T>: RingBuffer<T> + Extend<T> {
 
     /// alias for [`push`](RingBufferWrite::push), forming a more natural counterpart to [`dequeue`](RingBufferRead::dequeue)
     fn enqueue(&mut self, value: T) {
-        self.push(value)
+        self.push(value);
     }
 }
 
@@ -110,7 +110,7 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
 /// for every different index passed in. See the exact requirements
 /// in the safety comment on the next function of the mutable Iterator
 /// implementation, since these safety guarantees are necessary for
-/// iter_mut to work
+/// [`iter_mut`](RingBufferExt::iter_mut) to work
 pub unsafe trait RingBufferExt<T>:
     RingBuffer<T>
     + RingBufferRead<T>
@@ -159,9 +159,11 @@ pub unsafe trait RingBufferExt<T>:
     unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T>;
 
     /// Gets a value relative to the start of the array (rarely useful, usually you want [`Self::get`])
+    #[deprecated = "cannot find a valid usecase for this, hard to implement for some ringbuffers"]
     fn get_absolute(&self, index: usize) -> Option<&T>;
 
     /// Gets a value mutably relative to the start of the array (rarely useful, usually you want [`Self::get_mut`])
+    #[deprecated = "cannot find a valid usecase for this, hard to implement for some ringbuffers"]
     fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T>;
 
     /// Returns the value at the current index.
