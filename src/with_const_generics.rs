@@ -1,4 +1,4 @@
-use crate::ringbuffer_trait::RingBufferIntoIterator;
+use crate::ringbuffer_trait::{RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator};
 use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
 use crate::RingBuffer;
 use core::iter::FromIterator;
@@ -223,6 +223,24 @@ impl<T, const CAP: usize> IntoIterator for ConstGenericRingBuffer<T, CAP> {
     }
 }
 
+impl<'a, T, const CAP: usize> IntoIterator for &'a ConstGenericRingBuffer<T, CAP> {
+    type Item = &'a T;
+    type IntoIter = RingBufferIterator<'a, T, ConstGenericRingBuffer<T, CAP>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, T, const CAP: usize> IntoIterator for &'a mut ConstGenericRingBuffer<T, CAP> {
+    type Item = &'a mut T;
+    type IntoIter = RingBufferMutIterator<'a, T, ConstGenericRingBuffer<T, CAP>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
 impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
     fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
         let iter = iter.into_iter();
@@ -235,7 +253,6 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
 
 unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
-    #[cfg(not(tarpaulin_include))]
     unsafe fn ptr_capacity(_: *const Self) -> usize {
         CAP
     }
@@ -262,8 +279,6 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
     }
-
-    impl_ringbuffer_read!();
 
     fn dequeue(&mut self) -> Option<T> {
         if self.is_empty() {
@@ -300,7 +315,7 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
 impl<T, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     /// Creates a buffer with a capacity specified through the Cap type parameter.
     /// # Panics
-    /// Panics if `CAP` is 0 or not a power of two
+    /// Panics if `CAP` is 0
     #[inline]
     fn default() -> Self {
         Self::new()

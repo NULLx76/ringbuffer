@@ -54,6 +54,7 @@ mod tests {
     use std::vec;
     use std::vec::Vec;
 
+    use crate::ringbuffer_trait::{RingBufferIterator, RingBufferMutIterator};
     use crate::{AllocRingBuffer, ConstGenericRingBuffer, GrowableAllocRingBuffer, RingBuffer};
 
     #[test]
@@ -217,6 +218,37 @@ mod tests {
     }
 
     #[test]
+    fn run_test_iter_ref() {
+        fn test_iter<B>(mut b: B)
+        where
+            B: RingBuffer<i32>,
+            for<'a> &'a B: IntoIterator<Item = &'a i32, IntoIter = RingBufferIterator<'a, i32, B>>,
+        {
+            b.push(1);
+            b.push(2);
+            b.push(3);
+            b.push(4);
+            b.push(5);
+            b.push(6);
+            b.push(7);
+
+            let mut iter = (&b).into_iter();
+            assert_eq!(&1, iter.next().unwrap());
+            assert_eq!(&7, iter.next_back().unwrap());
+            assert_eq!(&2, iter.next().unwrap());
+            assert_eq!(&3, iter.next().unwrap());
+            assert_eq!(&6, iter.next_back().unwrap());
+            assert_eq!(&5, iter.next_back().unwrap());
+            assert_eq!(&4, iter.next().unwrap());
+            assert_eq!(None, iter.next());
+        }
+
+        test_iter(AllocRingBuffer::new(8));
+        test_iter(GrowableAllocRingBuffer::with_capacity(8));
+        test_iter(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
+    #[test]
     fn run_test_into_iter() {
         fn test_iter(mut b: impl RingBuffer<i32>) {
             b.push(1);
@@ -328,6 +360,30 @@ mod tests {
             b.push(3);
 
             for el in b.iter_mut() {
+                *el += 1;
+            }
+
+            assert_eq!(vec![2, 3, 4], b.to_vec())
+        }
+
+        test_iter_mut(AllocRingBuffer::new(8));
+        test_iter_mut(GrowableAllocRingBuffer::with_capacity(8));
+        test_iter_mut(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
+    #[test]
+    fn run_test_iter_mut_ref() {
+        fn test_iter_mut<B>(mut b: B)
+        where
+            B: RingBuffer<i32>,
+            for<'a> &'a mut B:
+                IntoIterator<Item = &'a mut i32, IntoIter = RingBufferMutIterator<'a, i32, B>>,
+        {
+            b.push(1);
+            b.push(2);
+            b.push(3);
+
+            for el in &mut b {
                 *el += 1;
             }
 

@@ -18,7 +18,6 @@ fn run_mode(mode: &'static str) {
 
 #[test]
 #[cfg_attr(miri, ignore)]
-#[cfg(not(tarpaulin))]
 fn compile_test() {
     run_mode("compile-fail");
 }

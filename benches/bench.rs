@@ -1,4 +1,3 @@
-#![cfg(not(tarpaulin))]
 use crate::comparison::comparison_benches;
 use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion};
 use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBuffer};

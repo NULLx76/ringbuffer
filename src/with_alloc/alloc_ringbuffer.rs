@@ -1,6 +1,8 @@
 use core::ops::{Index, IndexMut};
 
-use crate::ringbuffer_trait::{RingBuffer, RingBufferIntoIterator};
+use crate::ringbuffer_trait::{
+    RingBuffer, RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator,
+};
 
 extern crate alloc;
 
@@ -231,6 +233,24 @@ impl<T, SIZE: RingbufferSize> IntoIterator for AllocRingBuffer<T, SIZE> {
     }
 }
 
+impl<'a, T, SIZE: RingbufferSize> IntoIterator for &'a AllocRingBuffer<T, SIZE> {
+    type Item = &'a T;
+    type IntoIter = RingBufferIterator<'a, T, AllocRingBuffer<T, SIZE>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, T, SIZE: RingbufferSize> IntoIterator for &'a mut AllocRingBuffer<T, SIZE> {
+    type Item = &'a mut T;
+    type IntoIter = RingBufferMutIterator<'a, T, AllocRingBuffer<T, SIZE>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
 impl<T, SIZE: RingbufferSize> Extend<T> for AllocRingBuffer<T, SIZE> {
     fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
         let iter = iter.into_iter();
@@ -278,8 +298,6 @@ unsafe impl<T, SIZE: RingbufferSize> RingBuffer<T> for AllocRingBuffer<T, SIZE> 
 
         self.writeptr += 1;
     }
-
-    impl_ringbuffer_read!();
 
     fn dequeue(&mut self) -> Option<T> {
         if self.is_empty() {
