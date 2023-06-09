@@ -1,6 +1,8 @@
 use core::ops::{Index, IndexMut};
 
-use crate::ringbuffer_trait::{RingBuffer, RingBufferIntoIterator};
+use crate::ringbuffer_trait::{
+    RingBuffer, RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator,
+};
 
 extern crate alloc;
 
@@ -228,6 +230,24 @@ impl<T, SIZE: RingbufferSize> IntoIterator for AllocRingBuffer<T, SIZE> {
 
     fn into_iter(self) -> Self::IntoIter {
         RingBufferIntoIterator::new(self)
+    }
+}
+
+impl<'a, T, SIZE: RingbufferSize> IntoIterator for &'a AllocRingBuffer<T, SIZE> {
+    type Item = &'a T;
+    type IntoIter = RingBufferIterator<'a, T, AllocRingBuffer<T, SIZE>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, T, SIZE: RingbufferSize> IntoIterator for &'a mut AllocRingBuffer<T, SIZE> {
+    type Item = &'a mut T;
+    type IntoIter = RingBufferMutIterator<'a, T, AllocRingBuffer<T, SIZE>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::ringbuffer_trait::RingBufferIntoIterator;
+use crate::ringbuffer_trait::{RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator};
 use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
 use crate::{AllocRingBuffer, RingBuffer};
 use alloc::collections::VecDeque;
@@ -148,6 +148,24 @@ impl<T> IntoIterator for GrowableAllocRingBuffer<T> {
 
     fn into_iter(self) -> Self::IntoIter {
         RingBufferIntoIterator::new(self)
+    }
+}
+
+impl<'a, T> IntoIterator for &'a GrowableAllocRingBuffer<T> {
+    type Item = &'a T;
+    type IntoIter = RingBufferIterator<'a, T, GrowableAllocRingBuffer<T>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut GrowableAllocRingBuffer<T> {
+    type Item = &'a mut T;
+    type IntoIter = RingBufferMutIterator<'a, T, GrowableAllocRingBuffer<T>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
     }
 }
 
