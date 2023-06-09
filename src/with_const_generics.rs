@@ -235,7 +235,6 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
 
 unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
     #[inline]
-    #[cfg(not(tarpaulin_include))]
     unsafe fn ptr_capacity(_: *const Self) -> usize {
         CAP
     }
