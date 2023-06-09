@@ -93,7 +93,7 @@ macro_rules! generate_benches {
 
 fn benchmark_non_power_of_two<const L: usize>(b: &mut Bencher) {
     b.iter(|| {
-        let mut rb = AllocRingBuffer::with_capacity_non_power_of_two(L);
+        let mut rb = AllocRingBuffer::with_capacity_power_of_2(L);
 
         for i in 0..1_000_000 {
             rb.push(i);
