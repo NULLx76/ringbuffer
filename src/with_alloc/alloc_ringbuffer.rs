@@ -1,8 +1,6 @@
 use core::ops::{Index, IndexMut};
 
-use crate::ringbuffer_trait::{
-    RingBuffer, RingBufferExt, RingBufferIntoIterator, RingBufferRead, RingBufferWrite,
-};
+use crate::ringbuffer_trait::{RingBuffer, RingBufferIntoIterator};
 
 extern crate alloc;
 
@@ -61,15 +59,15 @@ impl RingbufferSize for NonPowerOfTwo {
     }
 }
 
-/// The `AllocRingBuffer` is a `RingBufferExt` which is based on a Vec. This means it allocates at runtime
+/// The `AllocRingBuffer` is a `RingBuffer` which is based on a Vec. This means it allocates at runtime
 /// on the heap, and therefore needs the [`alloc`] crate. This struct and therefore the dependency on
 /// alloc can be disabled by disabling the `alloc` (default) feature.
 ///
 /// # Example
 /// ```
-/// use ringbuffer::{AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite};
+/// use ringbuffer::{AllocRingBuffer, RingBuffer};
 ///
-/// let mut buffer = AllocRingBuffer::with_capacity(2);
+/// let mut buffer = AllocRingBuffer::new(2);
 ///
 /// // First entry of the buffer is now 5.
 /// buffer.push(5);
@@ -224,51 +222,12 @@ impl<T: PartialEq, SIZE: RingbufferSize> PartialEq for AllocRingBuffer<T, SIZE> 
 
 impl<T: Eq + PartialEq, SIZE: RingbufferSize> Eq for AllocRingBuffer<T, SIZE> {}
 
-unsafe impl<T, SIZE: RingbufferSize> RingBufferExt<T> for AllocRingBuffer<T, SIZE> {
-    impl_ringbuffer_ext!(
-        get_unchecked,
-        get_unchecked_mut,
-        readptr,
-        writeptr,
-        SIZE::mask
-    );
-
-    #[inline]
-    fn fill_with<F: FnMut() -> T>(&mut self, mut f: F) {
-        self.clear();
-
-        self.readptr = 0;
-        self.writeptr = self.capacity;
-
-        for i in 0..self.capacity {
-            unsafe { ptr::write(get_unchecked_mut(self, i), f()) };
-        }
-    }
-}
-
 impl<T, SIZE: RingbufferSize> IntoIterator for AllocRingBuffer<T, SIZE> {
     type Item = T;
     type IntoIter = RingBufferIntoIterator<T, Self>;
 
     fn into_iter(self) -> Self::IntoIter {
         RingBufferIntoIterator::new(self)
-    }
-}
-
-impl<T, SIZE: RingbufferSize> RingBufferRead<T> for AllocRingBuffer<T, SIZE> {
-    fn dequeue(&mut self) -> Option<T> {
-        if self.is_empty() {
-            None
-        } else {
-            let index = SIZE::mask(self.capacity, self.readptr);
-            let res = unsafe { get_unchecked_mut(self, index) };
-            self.readptr += 1;
-
-            // Safety: the fact that we got this maybeuninit from the buffer (with mask) means that
-            // it's initialized. If it wasn't the is_empty call would have caught it. Values
-            // are always initialized when inserted so this is safe.
-            unsafe { Some(ptr::read(res)) }
-        }
     }
 }
 
@@ -282,7 +241,14 @@ impl<T, SIZE: RingbufferSize> Extend<T> for AllocRingBuffer<T, SIZE> {
     }
 }
 
-impl<T, SIZE: RingbufferSize> RingBufferWrite<T> for AllocRingBuffer<T, SIZE> {
+unsafe impl<T, SIZE: RingbufferSize> RingBuffer<T> for AllocRingBuffer<T, SIZE> {
+    #[inline]
+    unsafe fn ptr_capacity(rb: *const Self) -> usize {
+        (*rb).capacity
+    }
+
+    impl_ringbuffer!(readptr, writeptr);
+
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
@@ -312,15 +278,41 @@ impl<T, SIZE: RingbufferSize> RingBufferWrite<T> for AllocRingBuffer<T, SIZE> {
 
         self.writeptr += 1;
     }
-}
 
-impl<T, SIZE: RingbufferSize> RingBuffer<T> for AllocRingBuffer<T, SIZE> {
-    #[inline]
-    unsafe fn ptr_capacity(rb: *const Self) -> usize {
-        (*rb).capacity
+    fn dequeue(&mut self) -> Option<T> {
+        if self.is_empty() {
+            None
+        } else {
+            let index = SIZE::mask(self.capacity, self.readptr);
+            let res = unsafe { get_unchecked_mut(self, index) };
+            self.readptr += 1;
+
+            // Safety: the fact that we got this maybeuninit from the buffer (with mask) means that
+            // it's initialized. If it wasn't the is_empty call would have caught it. Values
+            // are always initialized when inserted so this is safe.
+            unsafe { Some(ptr::read(res)) }
+        }
     }
 
-    impl_ringbuffer!(readptr, writeptr);
+    impl_ringbuffer_ext!(
+        get_unchecked,
+        get_unchecked_mut,
+        readptr,
+        writeptr,
+        SIZE::mask
+    );
+
+    #[inline]
+    fn fill_with<F: FnMut() -> T>(&mut self, mut f: F) {
+        self.clear();
+
+        self.readptr = 0;
+        self.writeptr = self.capacity;
+
+        for i in 0..self.capacity {
+            unsafe { ptr::write(get_unchecked_mut(self, i), f()) };
+        }
+    }
 }
 
 impl<T, SIZE: RingbufferSize> AllocRingBuffer<T, SIZE> {
@@ -444,7 +436,7 @@ impl<T, SIZE: RingbufferSize> IndexMut<isize> for AllocRingBuffer<T, SIZE> {
 #[cfg(test)]
 mod tests {
     use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
-    use crate::{AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
+    use crate::{AllocRingBuffer, RingBuffer};
 
     // just test that this compiles
     #[test]

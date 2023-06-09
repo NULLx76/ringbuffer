@@ -1,6 +1,6 @@
 use crate::ringbuffer_trait::RingBufferIntoIterator;
 use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
-use crate::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
+use crate::RingBuffer;
 use core::iter::FromIterator;
 use core::mem;
 use core::mem::MaybeUninit;
@@ -14,7 +14,7 @@ use core::ops::{Index, IndexMut};
 ///
 /// # Example
 /// ```
-/// use ringbuffer::{ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite};
+/// use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
 ///
 /// let mut buffer = ConstGenericRingBuffer::<_, 2>::new();
 ///
@@ -223,23 +223,6 @@ impl<T, const CAP: usize> IntoIterator for ConstGenericRingBuffer<T, CAP> {
     }
 }
 
-impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
-    fn dequeue(&mut self) -> Option<T> {
-        if self.is_empty() {
-            None
-        } else {
-            let index = crate::mask_modulo(CAP, self.readptr);
-            let res = mem::replace(&mut self.buf[index], MaybeUninit::uninit());
-            self.readptr += 1;
-
-            // Safety: the fact that we got this maybeuninit from the buffer (with mask) means that
-            // it's initialized. If it wasn't the is_empty call would have caught it. Values
-            // are always initialized when inserted so this is safe.
-            unsafe { Some(res.assume_init()) }
-        }
-    }
-}
-
 impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
     fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
         let iter = iter.into_iter();
@@ -250,7 +233,14 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
     }
 }
 
-impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> {
+unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
+    #[inline]
+    unsafe fn ptr_capacity(_: *const Self) -> usize {
+        CAP
+    }
+
+    impl_ringbuffer!(readptr, writeptr);
+
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
@@ -271,9 +261,22 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
     }
-}
 
-unsafe impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
+    fn dequeue(&mut self) -> Option<T> {
+        if self.is_empty() {
+            None
+        } else {
+            let index = crate::mask_modulo(CAP, self.readptr);
+            let res = mem::replace(&mut self.buf[index], MaybeUninit::uninit());
+            self.readptr += 1;
+
+            // Safety: the fact that we got this maybeuninit from the buffer (with mask) means that
+            // it's initialized. If it wasn't the is_empty call would have caught it. Values
+            // are always initialized when inserted so this is safe.
+            unsafe { Some(res.assume_init()) }
+        }
+    }
+
     impl_ringbuffer_ext!(
         get_unchecked,
         get_unchecked_mut,
@@ -289,16 +292,6 @@ unsafe impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, 
         self.writeptr = CAP;
         self.buf.fill_with(|| MaybeUninit::new(f()));
     }
-}
-
-impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
-    #[inline]
-    #[cfg(not(tarpaulin_include))]
-    unsafe fn ptr_capacity(_: *const Self) -> usize {
-        CAP
-    }
-
-    impl_ringbuffer!(readptr, writeptr);
 }
 
 impl<T, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {

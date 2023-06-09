@@ -1,6 +1,6 @@
 use crate::ringbuffer_trait::RingBufferIntoIterator;
 use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
-use crate::{AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
+use crate::{AllocRingBuffer, RingBuffer};
 use alloc::collections::VecDeque;
 use core::ops::{Deref, DerefMut, Index, IndexMut};
 
@@ -142,16 +142,6 @@ impl<T> GrowableAllocRingBuffer<T> {
     }
 }
 
-impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
-    unsafe fn ptr_len(rb: *const Self) -> usize {
-        (*rb).0.len()
-    }
-
-    unsafe fn ptr_capacity(rb: *const Self) -> usize {
-        (*rb).0.capacity()
-    }
-}
-
 impl<T> IntoIterator for GrowableAllocRingBuffer<T> {
     type Item = T;
     type IntoIter = RingBufferIntoIterator<T, Self>;
@@ -161,45 +151,23 @@ impl<T> IntoIterator for GrowableAllocRingBuffer<T> {
     }
 }
 
-impl<T> RingBufferRead<T> for GrowableAllocRingBuffer<T> {
+unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
+    unsafe fn ptr_len(rb: *const Self) -> usize {
+        (*rb).0.len()
+    }
+
+    unsafe fn ptr_capacity(rb: *const Self) -> usize {
+        (*rb).0.capacity()
+    }
+
     fn dequeue(&mut self) -> Option<T> {
         self.pop_front()
     }
-}
 
-impl<T> RingBufferWrite<T> for GrowableAllocRingBuffer<T> {
     fn push(&mut self, value: T) {
         self.push_back(value);
     }
-}
 
-impl<T> Extend<T> for GrowableAllocRingBuffer<T> {
-    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
-        self.0.extend(iter);
-    }
-}
-
-impl<T> Index<isize> for GrowableAllocRingBuffer<T> {
-    type Output = T;
-
-    fn index(&self, index: isize) -> &Self::Output {
-        self.get(index).expect("index out of bounds")
-    }
-}
-
-impl<T> IndexMut<isize> for GrowableAllocRingBuffer<T> {
-    fn index_mut(&mut self, index: isize) -> &mut Self::Output {
-        self.get_mut(index).expect("index out of bounds")
-    }
-}
-
-impl<T> FromIterator<T> for GrowableAllocRingBuffer<T> {
-    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        Self(VecDeque::from_iter(iter))
-    }
-}
-
-unsafe impl<T> RingBufferExt<T> for GrowableAllocRingBuffer<T> {
     fn fill_with<F: FnMut() -> T>(&mut self, mut f: F) {
         self.clear();
         let initial_capacity = self.0.capacity();
@@ -252,5 +220,31 @@ unsafe impl<T> RingBufferExt<T> for GrowableAllocRingBuffer<T> {
 
     fn get_absolute_mut(&mut self, _index: usize) -> Option<&mut T> {
         unimplemented!()
+    }
+}
+
+impl<T> Extend<T> for GrowableAllocRingBuffer<T> {
+    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        self.0.extend(iter);
+    }
+}
+
+impl<T> Index<isize> for GrowableAllocRingBuffer<T> {
+    type Output = T;
+
+    fn index(&self, index: isize) -> &Self::Output {
+        self.get(index).expect("index out of bounds")
+    }
+}
+
+impl<T> IndexMut<isize> for GrowableAllocRingBuffer<T> {
+    fn index_mut(&mut self, index: isize) -> &mut Self::Output {
+        self.get_mut(index).expect("index out of bounds")
+    }
+}
+
+impl<T> FromIterator<T> for GrowableAllocRingBuffer<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        Self(VecDeque::from_iter(iter))
     }
 }

@@ -1,8 +1,7 @@
-#![cfg(not(tarpaulin))]
 use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion};
-use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBufferExt, RingBufferWrite};
+use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBuffer};
 
-fn benchmark_push<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
@@ -15,7 +14,7 @@ fn benchmark_push<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) 
     })
 }
 
-fn benchmark_push_dequeue<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_push_dequeue<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
@@ -49,7 +48,7 @@ fn benchmark_push_dequeue<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, 
     })
 }
 
-fn benchmark_various<T: RingBufferExt<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+fn benchmark_various<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
         let mut rb = new();
 
