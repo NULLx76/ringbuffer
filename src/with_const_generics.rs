@@ -262,8 +262,6 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
         self.writeptr += 1;
     }
 
-    impl_ringbuffer_read!();
-
     fn dequeue(&mut self) -> Option<T> {
         if self.is_empty() {
             None
@@ -299,7 +297,7 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
 impl<T, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     /// Creates a buffer with a capacity specified through the Cap type parameter.
     /// # Panics
-    /// Panics if `CAP` is 0 or not a power of two
+    /// Panics if `CAP` is 0
     #[inline]
     fn default() -> Self {
         Self::new()
