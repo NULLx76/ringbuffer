@@ -61,7 +61,7 @@ fn main() {
 [^1]: Using a size that is not a power of 2 will be ~3x slower.
 [^2]: All ringbuffers are `no_std`, but some require an allocator to be available.
 
-## To other ringbuffers
+## Comparison of other ringbuffers and ringbuffer-like datastructures
 
 We ran a benchmark, pushing `10 000` elements to a ringbuffer with a capacity of `1000` (where it was possible to
 configure one) to compare
