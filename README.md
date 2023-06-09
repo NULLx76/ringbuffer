@@ -9,7 +9,7 @@ Implementations for three kinds of ringbuffers, with a mostly similar API are pr
 
 | type                      | description                                                                                                                                                                      |
 |---------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `AllocRingBuffer`         | Ringbuffer allocated on the heap at runtime. This ringbuffer is still fixed size. This requires alloc and the alloc feature.                                                     |
+| `AllocRingBuffer`         | Ringbuffer allocated on the heap at runtime. This ringbuffer is still fixed size. This requires the alloc feature.                                                |
 | `GrowableAllocRingBuffer` | Ringbuffer allocated on the heap at runtime. This ringbuffer can grow in size, and is implemented as an `alloc::VecDeque` internally. This requires alloc and the alloc feature. |
 | `ConstGenericRingBuffer`  | Ringbuffer which uses const generics to allocate on the stack.                                                                                                                   |
 
