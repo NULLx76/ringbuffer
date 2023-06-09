@@ -63,7 +63,7 @@ fn main() {
 
 ## Comparison of other ringbuffers and ringbuffer-like datastructures
 
-We ran a benchmark, pushing `10 000` elements to a ringbuffer with a capacity of `1000` (where it was possible to
+We ran a benchmark, pushing `16 384` elements to a ringbuffer with a capacity of `1024` (where it was possible to
 configure one) to compare
 `ringbuffer` to a few common alternatives.
 The outcomes show that using the [`ConstGenericRingBuffer`] is about 23 times faster than using an `std::channel` (
