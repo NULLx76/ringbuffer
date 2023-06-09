@@ -1,5 +1,4 @@
 use crate::ringbuffer_trait::{RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator};
-use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
 use crate::{AllocRingBuffer, RingBuffer};
 use alloc::collections::VecDeque;
 use core::ops::{Deref, DerefMut, Index, IndexMut};
@@ -40,8 +39,8 @@ impl<T: Clone> From<&[T]> for GrowableAllocRingBuffer<T> {
     }
 }
 
-impl<T, SIZE: RingbufferSize> From<AllocRingBuffer<T, SIZE>> for GrowableAllocRingBuffer<T> {
-    fn from(mut v: AllocRingBuffer<T, SIZE>) -> GrowableAllocRingBuffer<T> {
+impl<T> From<AllocRingBuffer<T>> for GrowableAllocRingBuffer<T> {
+    fn from(mut v: AllocRingBuffer<T>) -> GrowableAllocRingBuffer<T> {
         let mut rb = GrowableAllocRingBuffer::new();
         rb.extend(v.drain());
         rb
