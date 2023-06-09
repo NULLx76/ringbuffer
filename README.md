@@ -49,17 +49,6 @@ fn main() {
 |-------|---------|--------------------------------------------------------------------------------------------------------------|
 | alloc | ✓       | Disable this feature to remove the dependency on alloc. Disabling this feature  makes `ringbuffer` `no_std`. |
 
-# Comparing with other ringbuffer(-likes)
-
-To push `10 000` elements to a buffer that was (where possible) pre-sized with a capacity,
-
-std channel                        time:   [455.65 µs 457.95 µs 460.53 µs]
-std vec                            time:   [57.369 µs 57.414 µs 57.458 µs]
-std vecdeque (growable ringbuffer) time:   [31.816 µs 31.933 µs 32.082 µs]
-alloc ringbuffer                   time:   [29.909 µs 29.931 µs 29.955 µs]
-heapless deque                     time:   [26.805 µs 26.850 µs 26.910 µs]
-const generic ringbuffer           time:   [18.916 µs 19.141 µs 19.356 µs]
-
 # License
 
 Licensed under MIT License
