@@ -279,8 +279,6 @@ unsafe impl<T, SIZE: RingbufferSize> RingBuffer<T> for AllocRingBuffer<T, SIZE> 
         self.writeptr += 1;
     }
 
-    impl_ringbuffer_read!();
-
     fn dequeue(&mut self) -> Option<T> {
         if self.is_empty() {
             None

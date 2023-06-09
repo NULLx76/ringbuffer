@@ -5,7 +5,7 @@ use alloc::collections::VecDeque;
 use core::ops::{Deref, DerefMut, Index, IndexMut};
 
 /// A growable ringbuffer. Once capacity is reached, the size is doubled.
-/// Wrapper of the built-in [`VecDeque`](std::collections::VecDeque) struct
+/// Wrapper of the built-in [`VecDeque`] struct.
 ///
 /// The reason this is a wrapper, is that we want `RingBuffers` to implement `Index<isize>`,
 /// which we cannot do for remote types like `VecDeque`
@@ -163,8 +163,6 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
     fn dequeue(&mut self) -> Option<T> {
         self.pop_front()
     }
-
-    impl_ringbuffer_read!();
 
     fn push(&mut self, value: T) {
         self.push_back(value);
