@@ -1,9 +1,9 @@
 #![cfg(not(tarpaulin))]
 
-use std::collections::{LinkedList, VecDeque};
-use std::sync::mpsc::channel;
 use criterion::{black_box, criterion_group, Bencher, Criterion};
 use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBuffer};
+use std::collections::{LinkedList, VecDeque};
+use std::sync::mpsc::channel;
 
 const ITER: usize = 1024 * 16;
 const CAP: usize = 1024;
