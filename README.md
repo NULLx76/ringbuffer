@@ -82,7 +82,7 @@ where ringbuffer is slightly faster as well (among 100 measurements).
 | `ConstGenericRingBuffer`              | `[13.685 µs 13.712 µs 13.743 µs]`                        |
 
 Note that none of the alternatives to `RingBuffer` have the exact same behavior to `RingBuffer`. All `std` datastructures
-compared here can grow unbounded (though in benchmarks they weren't filled over `10 000` elements). 
+compared here can grow unbounded (though in benchmarks they weren't filled over `65 536` elements). 
 
 `heapless::Deque` doesn't drop old items like `ringbuffer` does when the deque is full. Instead, new items aren't let in on push operations.
 
