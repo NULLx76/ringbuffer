@@ -263,7 +263,7 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
     fn push(&mut self, value: T) {
         if self.is_full() {
             let previous_value = mem::replace(
-                &mut self.buf[crate::mask_modulo(CAP, self.readptr)],
+                &mut self.buf[crate::const_mask_modulo(CAP, self.readptr)],
                 MaybeUninit::uninit(),
             );
             // make sure we drop whatever is being overwritten
@@ -275,7 +275,7 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
             }
             self.readptr += 1;
         }
-        let index = crate::mask_modulo(CAP, self.writeptr);
+        let index = crate::const_mask_modulo(CAP, self.writeptr);
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
     }
@@ -284,7 +284,7 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
         if self.is_empty() {
             None
         } else {
-            let index = crate::mask_modulo(CAP, self.readptr);
+            let index = crate::const_mask_modulo(CAP, self.readptr);
             let res = mem::replace(&mut self.buf[index], MaybeUninit::uninit());
             self.readptr += 1;
 
@@ -300,7 +300,7 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
         get_unchecked_mut,
         readptr,
         writeptr,
-        crate::mask_modulo
+        crate::const_mask_modulo
     );
 
     #[inline]

@@ -19,6 +19,8 @@ extern crate alloc;
 #[macro_use]
 pub(crate) mod ringbuffer_trait;
 
+use core::num::NonZeroUsize;
+
 pub use ringbuffer_trait::RingBuffer;
 
 #[cfg(feature = "alloc")]
@@ -41,7 +43,13 @@ const fn mask(cap: usize, index: usize) -> usize {
 
 /// Used internally. Computes the bitmask used to properly wrap the ringbuffers.
 #[inline]
-const fn mask_modulo(cap: usize, index: usize) -> usize {
+fn mask_modulo(cap: usize, index: usize) -> usize {
+    index % unsafe { NonZeroUsize::new_unchecked(cap) }
+}
+
+/// Used internally. Computes the bitmask used to properly wrap the ringbuffers.
+#[inline]
+const fn const_mask_modulo(cap: usize, index: usize) -> usize {
     index % cap
 }
 
