@@ -88,9 +88,9 @@ compared here can grow unbounded (though in benchmarks they weren't filled over 
 
 # Features
 
-| name  | default | description                                                                                                  |
-|-------|---------|--------------------------------------------------------------------------------------------------------------|
-| alloc | ✓       | Disable this feature to remove the dependency on alloc. Disabling this feature  makes `ringbuffer` `no_std`. |
+| name  | default | description                                                                                                |
+|-------|---------|------------------------------------------------------------------------------------------------------------|
+| alloc | ✓       | Disable this feature to remove the dependency on alloc.                                                    |
 
 # License
 

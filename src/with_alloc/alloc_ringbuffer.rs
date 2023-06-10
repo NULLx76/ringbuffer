@@ -324,6 +324,7 @@ unsafe impl<T, SIZE: RingbufferSize> RingBuffer<T> for AllocRingBuffer<T, SIZE> 
 
     #[inline]
     fn fill_with<F: FnMut() -> T>(&mut self, mut f: F) {
+        // This clear is necessary so that the drop methods are called.
         self.clear();
 
         self.readptr = 0;
