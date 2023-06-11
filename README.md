@@ -48,6 +48,48 @@ fn main() {
 
 ```
 
+# Benchmarks
+
+## Single operations
+
+For all benchmarks here, we take `40 000` measurements over 60 seconds, usually resulting in a couple of billion iterations executed. The benchmarks were executed on a dedicated core (no scheduling overhead).
+The accuracy of this is good enough that two runs in a row show no (significant) difference in performance.
+Hardware: AMD Ryzen 9 5900HX with the following caches:
+```
+L1d:                   256 KiB (8 instances)
+L1i:                   256 KiB (8 instances)
+L2:                    4 MiB (8 instances)
+L3:                    16 MiB (1 instance)
+```
+
+A full ringbuffer means it was first filled *to capacity* for push benchmarks, and for dequeue benchmarks it means that there is indeed an item in the ringbuffer to dequeue, as opposed to the empty versions where the dequeue operation returns `None`
+
+| benchmark           | capacity | variant      | alloc ringbuffer | const generic ringbuffer | growable ringbuffer | 
+|---------------------|----------|--------------|------------------|--------------------------|---------------------|
+| push single item    | 16       | buffer full  | 2.50ns           | 2.14ns                   | 45.2ns              | 
+|                     | 10       | buffer full  | 2.22ns           | 1.84ns                   | 45.5ns              |
+|                     | 16       | buffer empty | 1.94ns           | 1.56ns                   | 1.98ns              |
+|                     | 10       | buffer empty | 2.22ns           | 1.41ns                   | 1.72ns              |
+| dequeue single item | 16       | buffer full  | 1.97ns           | 1.69ns                   | 1.72ns              |
+|                     | 10       | buffer full  | 1.72ns           | 1.51ns                   | 1.84ns              |
+|                     | 16       | buffer empty | 826ps            | 1.48ns                   | 746ps               |
+|                     | 10       | buffer empty | 820ps            | 949ps                    | 758ps               |
+
+## Batches
+
+For these benchmarks, the same hardware was used, but only `20 000` samples were taken since each instance takes longer.
+Draining the buffer means removing capacity items from a ringbuffer filled to capacity.
+
+| benchmark                     | capacity | alloc ringbuffer | const generic ringbuffer | growable ringbuffer |
+|-------------------------------|----------|------------------|--------------------------|---------------------|
+| fill buffer (1x capacity)     | 1024     | 1.11µs           | 1.01µs                   | 1.18µs              | 
+|                               | 1000     | 1.90µs           | 1.27µs                   | 1.15µs              | 
+| overfill buffer (2x capacity) | 1024     | 2.43µs           | 2.30µs                   | 2.58µs              |
+|                               | 1000     | 3.81µs           | 2.53µs                   | 2.43µs              |
+| drain buffer                  | 1024     | 84ns             | 610ns                    | 1.45µs              |
+|                               | 1000     | 1.88µs           | 93ns                     | 1.40µs              |
+
+
 # Features
 
 | name  | default | description                                                                                                  |
