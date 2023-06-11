@@ -72,8 +72,8 @@ A full ringbuffer means it was first filled *to capacity* for push benchmarks, a
 |                     | 10       | buffer empty | 2.22ns           | 1.41ns                   | 1.72ns              |
 | dequeue single item | 16       | buffer full  | 1.97ns           | 1.69ns                   | 1.72ns              |
 |                     | 10       | buffer full  | 1.72ns           | 1.51ns                   | 1.84ns              |
-|                     | 16       | buffer empty | 826ps            | 1.48ns                   | 746ps               |
-|                     | 10       | buffer empty | 820ps            | 949ps                    | 758ps               |
+|                     | 16       | buffer empty | 830ps            | 1.48ns                   | 750ps               |
+|                     | 10       | buffer empty | 820ps            | 950ps                    | 760ps               |
 
 ## Batches
 
@@ -86,7 +86,7 @@ Draining the buffer means removing capacity items from a ringbuffer filled to ca
 |                               | 1000     | 1.90µs           | 1.27µs                   | 1.15µs              | 
 | overfill buffer (2x capacity) | 1024     | 2.43µs           | 2.30µs                   | 2.58µs              |
 |                               | 1000     | 3.81µs           | 2.53µs                   | 2.43µs              |
-| drain buffer                  | 1024     | 84e1ns           | 61e1ns                   | 1.45µs              |
+| drain buffer                  | 1024     | 840ns            | 610ns                    | 1.45µs              |
 |                               | 1000     | 1.88µs           | 93e1ns                   | 1.40µs              |
 
 
