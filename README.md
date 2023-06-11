@@ -86,8 +86,8 @@ Draining the buffer means removing capacity items from a ringbuffer filled to ca
 |                               | 1000     | 1.90µs           | 1.27µs                   | 1.15µs              | 
 | overfill buffer (2x capacity) | 1024     | 2.43µs           | 2.30µs                   | 2.58µs              |
 |                               | 1000     | 3.81µs           | 2.53µs                   | 2.43µs              |
-| drain buffer                  | 1024     | 84ns             | 610ns                    | 1.45µs              |
-|                               | 1000     | 1.88µs           | 93ns                     | 1.40µs              |
+| drain buffer                  | 1024     | 84e1ns           | 61e1ns                   | 1.45µs              |
+|                               | 1000     | 1.88µs           | 93e1ns                   | 1.40µs              |
 
 
 # Features
