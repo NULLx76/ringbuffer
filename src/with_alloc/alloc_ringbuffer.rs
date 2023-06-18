@@ -96,6 +96,11 @@ pub struct AllocRingBuffer<T, SIZE: RingbufferSize = PowerOfTwo> {
     mode: PhantomData<SIZE>,
 }
 
+// SAFETY: all methods that require mutable access take &mut,
+// being send and sync was the old behavior but broke when we switched to *mut T.
+unsafe impl<T: Sync> Sync for AllocRingBuffer<T> {}
+unsafe impl<T: Send> Send for AllocRingBuffer<T> {}
+
 impl<T, const N: usize> From<[T; N]> for AllocRingBuffer<T, NonPowerOfTwo> {
     fn from(value: [T; N]) -> Self {
         let mut rb = Self::with_capacity_non_power_of_two(value.len());
