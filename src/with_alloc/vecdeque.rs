@@ -63,7 +63,7 @@ impl<T: Clone, const CAP: usize> From<&mut [T; CAP]> for GrowableAllocRingBuffer
 impl<T> From<alloc::vec::Vec<T>> for GrowableAllocRingBuffer<T> {
     fn from(value: alloc::vec::Vec<T>) -> Self {
         let mut res = GrowableAllocRingBuffer::new();
-        res.extend(value.into_iter());
+        res.extend(value);
         res
     }
 }
@@ -71,7 +71,7 @@ impl<T> From<alloc::vec::Vec<T>> for GrowableAllocRingBuffer<T> {
 impl<T> From<alloc::collections::LinkedList<T>> for GrowableAllocRingBuffer<T> {
     fn from(value: alloc::collections::LinkedList<T>) -> Self {
         let mut res = GrowableAllocRingBuffer::new();
-        res.extend(value.into_iter());
+        res.extend(value);
         res
     }
 }

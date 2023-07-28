@@ -104,7 +104,7 @@ unsafe impl<T: Send> Send for AllocRingBuffer<T> {}
 impl<T, const N: usize> From<[T; N]> for AllocRingBuffer<T, NonPowerOfTwo> {
     fn from(value: [T; N]) -> Self {
         let mut rb = Self::with_capacity_non_power_of_two(value.len());
-        rb.extend(value.into_iter());
+        rb.extend(value);
         rb
     }
 }
@@ -148,7 +148,7 @@ impl<T: Clone, const CAP: usize> From<&mut [T; CAP]> for AllocRingBuffer<T, NonP
 impl<T> From<alloc::vec::Vec<T>> for AllocRingBuffer<T, NonPowerOfTwo> {
     fn from(value: alloc::vec::Vec<T>) -> Self {
         let mut res = AllocRingBuffer::with_capacity_non_power_of_two(value.len());
-        res.extend(value.into_iter());
+        res.extend(value);
         res
     }
 }
@@ -156,7 +156,7 @@ impl<T> From<alloc::vec::Vec<T>> for AllocRingBuffer<T, NonPowerOfTwo> {
 impl<T> From<alloc::collections::VecDeque<T>> for AllocRingBuffer<T, NonPowerOfTwo> {
     fn from(value: alloc::collections::VecDeque<T>) -> Self {
         let mut res = AllocRingBuffer::with_capacity_non_power_of_two(value.len());
-        res.extend(value.into_iter());
+        res.extend(value);
         res
     }
 }
@@ -164,7 +164,7 @@ impl<T> From<alloc::collections::VecDeque<T>> for AllocRingBuffer<T, NonPowerOfT
 impl<T> From<alloc::collections::LinkedList<T>> for AllocRingBuffer<T, NonPowerOfTwo> {
     fn from(value: alloc::collections::LinkedList<T>) -> Self {
         let mut res = AllocRingBuffer::with_capacity_non_power_of_two(value.len());
-        res.extend(value.into_iter());
+        res.extend(value);
         res
     }
 }
