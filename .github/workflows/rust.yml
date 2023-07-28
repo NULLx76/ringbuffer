@@ -111,3 +111,22 @@ jobs:
         with:
           command: build
           args: --target thumbv7em-none-eabihf --all-features
+
+  build-without-alloc:
+    name: Build no-std without alloc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install stable no-std toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: thumbv7em-none-eabihf
+          override: true
+
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --target thumbv7em-none-eabihf --no-default-features
