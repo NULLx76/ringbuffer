@@ -1,10 +1,12 @@
 use crate::ringbuffer_trait::{RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator};
-use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
 use crate::RingBuffer;
 use core::iter::FromIterator;
 use core::mem;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
+
+#[cfg(feature = "alloc")]
+use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
 
 /// The `ConstGenericRingBuffer` struct is a `RingBuffer` implementation which does not require `alloc` but
 /// uses const generics instead.
