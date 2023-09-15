@@ -68,7 +68,7 @@ pub unsafe trait RingBuffer<T>:
     #[doc(hidden)]
     unsafe fn ptr_capacity(rb: *const Self) -> usize;
 
-    /// Raw pointer version of buffer_size.
+    /// Raw pointer version of `buffer_size`.
     ///
     /// # Safety
     /// ONLY SAFE WHEN self is a *mut to to an implementor of `RingBuffer`
