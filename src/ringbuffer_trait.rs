@@ -4,7 +4,6 @@ use core::ops::{Index, IndexMut};
 extern crate alloc;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-use core::iter::FromIterator;
 
 /// `RingBuffer` is a trait defining the standard interface for all `RingBuffer`
 /// implementations ([`AllocRingBuffer`](crate::AllocRingBuffer), [`ConstGenericRingBuffer`](crate::ConstGenericRingBuffer))
@@ -12,8 +11,16 @@ use core::iter::FromIterator;
 /// This trait is not object safe, so can't be used dynamically. However it is possible to
 /// define a generic function over types implementing `RingBuffer`.
 ///
-/// Most actual functionality of ringbuffers is contained in the extension traits [`RingBufferExt`], [`RingBufferRead`] and [`RingBufferWrite`]
-pub trait RingBuffer<T>: Sized {
+/// # Safety
+/// Implementing this implies that the ringbuffer upholds some safety
+/// guarantees, such as returning a different value from `get_mut` any
+/// for every different index passed in. See the exact requirements
+/// in the safety comment on the next function of the mutable Iterator
+/// implementation, since these safety guarantees are necessary for
+/// [`iter_mut`](RingBuffer::iter_mut) to work
+pub unsafe trait RingBuffer<T>:
+    Sized + IntoIterator<Item = T> + Extend<T> + Index<isize, Output = T> + IndexMut<isize>
+{
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.
     /// This is because when the length is reached, new items are appended at the start.
@@ -50,37 +57,32 @@ pub trait RingBuffer<T>: Sized {
     /// Safety: ONLY SAFE WHEN self is a *mut to to an implementor of RingBuffer
     #[doc(hidden)]
     unsafe fn ptr_capacity(rb: *const Self) -> usize;
-}
 
-/// Defines behaviour for ringbuffers which allow for writing to the end of them (as a queue).
-/// For arbitrary buffer access however, [`RingBufferExt`] is necessary.
-pub trait RingBufferWrite<T>: RingBuffer<T> + Extend<T> {
     /// Pushes a value onto the buffer. Cycles around if capacity is reached.
     fn push(&mut self, value: T);
 
-    /// alias for [`push`](RingBufferWrite::push), forming a more natural counterpart to [`dequeue`](RingBufferRead::dequeue)
+    /// alias for [`push`](RingBuffer::push), forming a more natural counterpart to [`dequeue`](RingBuffer::dequeue)
     fn enqueue(&mut self, value: T) {
         self.push(value);
     }
-}
 
-/// Defines behaviour for ringbuffers which allow for reading from the start of them (as a queue).
-/// For arbitrary buffer access however, [`RingBufferExt`] is necessary.
-pub trait RingBufferRead<T>: RingBuffer<T> {
     /// dequeues the top item off the ringbuffer, and moves this item out.
     fn dequeue(&mut self) -> Option<T>;
 
     /// dequeues the top item off the queue, but does not return it. Instead it is dropped.
     /// If the ringbuffer is empty, this function is a nop.
-    fn skip(&mut self);
+    #[inline]
+    fn skip(&mut self) {
+        let _ = self.dequeue();
+    }
 
     /// Returns an iterator over the elements in the ringbuffer,
     /// dequeueing elements as they are iterated over.
     ///
     /// ```
-    /// use ringbuffer::{AllocRingBuffer, RingBufferWrite, RingBufferRead, RingBuffer};
+    /// use ringbuffer::{AllocRingBuffer, RingBuffer};
     ///
-    /// let mut rb = AllocRingBuffer::with_capacity(16);
+    /// let mut rb = AllocRingBuffer::new(16);
     /// for i in 0..8 {
     ///     rb.push(i);
     /// }
@@ -99,26 +101,7 @@ pub trait RingBufferRead<T>: RingBuffer<T> {
     fn drain(&mut self) -> RingBufferDrainingIterator<T, Self> {
         RingBufferDrainingIterator::new(self)
     }
-}
 
-/// Defines behaviour for ringbuffers which allow them to be used as a general purpose buffer.
-/// With this trait, arbitrary access of elements in the buffer is possible.
-///
-/// # Safety
-/// Implementing this implies that the ringbuffer upholds some safety
-/// guarantees, such as returning a different value from `get_mut` any
-/// for every different index passed in. See the exact requirements
-/// in the safety comment on the next function of the mutable Iterator
-/// implementation, since these safety guarantees are necessary for
-/// [`iter_mut`](RingBufferExt::iter_mut) to work
-pub unsafe trait RingBufferExt<T>:
-    RingBuffer<T>
-    + RingBufferRead<T>
-    + RingBufferWrite<T>
-    + Index<isize, Output = T>
-    + IndexMut<isize>
-    + FromIterator<T>
-{
     /// Sets every element in the ringbuffer to the value returned by f.
     fn fill_with<F: FnMut() -> T>(&mut self, f: F);
 
@@ -153,8 +136,8 @@ pub unsafe trait RingBufferExt<T>:
         unsafe { Self::ptr_get_mut(self, index).map(|i| &mut *i) }
     }
 
-    /// same as [`get_mut`](RingBufferExt::get_mut) but on raw pointers.
-    /// Safety: ONLY SAFE WHEN self is a *mut to to an implementor of RingBufferExt
+    /// same as [`get_mut`](RingBuffer::get_mut) but on raw pointers.
+    /// Safety: ONLY SAFE WHEN self is a *mut to to an implementor of RingBuffer
     #[doc(hidden)]
     unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T>;
 
@@ -230,21 +213,21 @@ pub unsafe trait RingBufferExt<T>:
 }
 
 mod iter {
-    use crate::{RingBufferExt, RingBufferRead};
+    use crate::RingBuffer;
     use core::iter::FusedIterator;
     use core::marker::PhantomData;
     use core::ptr::NonNull;
 
-    /// `RingBufferIterator` holds a reference to a `RingBufferExt` and iterates over it. `index` is the
+    /// `RingBufferIterator` holds a reference to a `RingBuffer` and iterates over it. `index` is the
     /// current iterator position.
-    pub struct RingBufferIterator<'rb, T, RB: RingBufferExt<T>> {
+    pub struct RingBufferIterator<'rb, T, RB: RingBuffer<T>> {
         obj: &'rb RB,
         len: usize,
         index: usize,
         phantom: PhantomData<T>,
     }
 
-    impl<'rb, T, RB: RingBufferExt<T>> RingBufferIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBuffer<T>> RingBufferIterator<'rb, T, RB> {
         #[inline]
         pub fn new(obj: &'rb RB) -> Self {
             Self {
@@ -256,7 +239,7 @@ mod iter {
         }
     }
 
-    impl<'rb, T: 'rb, RB: RingBufferExt<T>> Iterator for RingBufferIterator<'rb, T, RB> {
+    impl<'rb, T: 'rb, RB: RingBuffer<T>> Iterator for RingBufferIterator<'rb, T, RB> {
         type Item = &'rb T;
 
         #[inline]
@@ -275,11 +258,11 @@ mod iter {
         }
     }
 
-    impl<'rb, T: 'rb, RB: RingBufferExt<T>> FusedIterator for RingBufferIterator<'rb, T, RB> {}
+    impl<'rb, T: 'rb, RB: RingBuffer<T>> FusedIterator for RingBufferIterator<'rb, T, RB> {}
 
-    impl<'rb, T: 'rb, RB: RingBufferExt<T>> ExactSizeIterator for RingBufferIterator<'rb, T, RB> {}
+    impl<'rb, T: 'rb, RB: RingBuffer<T>> ExactSizeIterator for RingBufferIterator<'rb, T, RB> {}
 
-    impl<'rb, T: 'rb, RB: RingBufferExt<T>> DoubleEndedIterator for RingBufferIterator<'rb, T, RB> {
+    impl<'rb, T: 'rb, RB: RingBuffer<T>> DoubleEndedIterator for RingBufferIterator<'rb, T, RB> {
         #[inline]
         fn next_back(&mut self) -> Option<Self::Item> {
             if self.len > 0 && self.index < self.len {
@@ -292,19 +275,19 @@ mod iter {
         }
     }
 
-    /// `RingBufferMutIterator` holds a reference to a `RingBufferExt` and iterates over it. `index` is the
+    /// `RingBufferMutIterator` holds a reference to a `RingBuffer` and iterates over it. `index` is the
     /// current iterator position.
     ///
     /// WARNING: NEVER ACCESS THE `obj` FIELD OUTSIDE OF NEXT. It's private on purpose, and
     /// can technically be accessed in the same module. However, this breaks the safety of `next()`
-    pub struct RingBufferMutIterator<'rb, T, RB: RingBufferExt<T>> {
+    pub struct RingBufferMutIterator<'rb, T, RB: RingBuffer<T>> {
         obj: NonNull<RB>,
         index: usize,
         len: usize,
         phantom: PhantomData<&'rb mut T>,
     }
 
-    impl<'rb, T, RB: RingBufferExt<T>> RingBufferMutIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBuffer<T>> RingBufferMutIterator<'rb, T, RB> {
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {
                 len: obj.len(),
@@ -315,14 +298,11 @@ mod iter {
         }
     }
 
-    impl<'rb, T: 'rb, RB: RingBufferExt<T> + 'rb> FusedIterator for RingBufferMutIterator<'rb, T, RB> {}
+    impl<'rb, T: 'rb, RB: RingBuffer<T> + 'rb> FusedIterator for RingBufferMutIterator<'rb, T, RB> {}
 
-    impl<'rb, T: 'rb, RB: RingBufferExt<T> + 'rb> ExactSizeIterator
-        for RingBufferMutIterator<'rb, T, RB>
-    {
-    }
+    impl<'rb, T: 'rb, RB: RingBuffer<T> + 'rb> ExactSizeIterator for RingBufferMutIterator<'rb, T, RB> {}
 
-    impl<'rb, T: 'rb, RB: RingBufferExt<T> + 'rb> DoubleEndedIterator
+    impl<'rb, T: 'rb, RB: RingBuffer<T> + 'rb> DoubleEndedIterator
         for RingBufferMutIterator<'rb, T, RB>
     {
         #[inline]
@@ -337,7 +317,7 @@ mod iter {
         }
     }
 
-    impl<'rb, T, RB: RingBufferExt<T> + 'rb> Iterator for RingBufferMutIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBuffer<T> + 'rb> Iterator for RingBufferMutIterator<'rb, T, RB> {
         type Item = &'rb mut T;
 
         fn next(&mut self) -> Option<Self::Item> {
@@ -356,14 +336,13 @@ mod iter {
         }
     }
 
-    /// `RingBufferMutIterator` holds a reference to a `RingBufferRead` and iterates over it. `index` is the
-    /// current iterator position.
-    pub struct RingBufferDrainingIterator<'rb, T, RB: RingBufferRead<T>> {
+    /// `RingBufferMutIterator` holds a reference to a `RingBuffer` and iterates over it.
+    pub struct RingBufferDrainingIterator<'rb, T, RB: RingBuffer<T>> {
         obj: &'rb mut RB,
         phantom: PhantomData<T>,
     }
 
-    impl<'rb, T, RB: RingBufferRead<T>> RingBufferDrainingIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBuffer<T>> RingBufferDrainingIterator<'rb, T, RB> {
         #[inline]
         pub fn new(obj: &'rb mut RB) -> Self {
             Self {
@@ -373,27 +352,51 @@ mod iter {
         }
     }
 
-    impl<'rb, T, RB: RingBufferRead<T>> Iterator for RingBufferDrainingIterator<'rb, T, RB> {
+    impl<'rb, T, RB: RingBuffer<T>> Iterator for RingBufferDrainingIterator<'rb, T, RB> {
         type Item = T;
 
         fn next(&mut self) -> Option<T> {
             self.obj.dequeue()
         }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.obj.len(), Some(self.obj.len()))
+        }
+    }
+
+    /// `RingBufferIntoIterator` holds a `RingBuffer` and iterates over it.
+    pub struct RingBufferIntoIterator<T, RB: RingBuffer<T>> {
+        obj: RB,
+        phantom: PhantomData<T>,
+    }
+
+    impl<T, RB: RingBuffer<T>> RingBufferIntoIterator<T, RB> {
+        #[inline]
+        pub fn new(obj: RB) -> Self {
+            Self {
+                obj,
+                phantom: PhantomData,
+            }
+        }
+    }
+
+    impl<T, RB: RingBuffer<T>> Iterator for RingBufferIntoIterator<T, RB> {
+        type Item = T;
+
+        #[inline]
+        fn next(&mut self) -> Option<Self::Item> {
+            self.obj.dequeue()
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.obj.len(), Some(self.obj.len()))
+        }
     }
 }
 
-pub use iter::{RingBufferDrainingIterator, RingBufferIterator, RingBufferMutIterator};
-
-/// Implement various functions on implementors of [`RingBufferRead`].
-/// This is to avoid duplicate code.
-macro_rules! impl_ringbuffer_read {
-    () => {
-        #[inline]
-        fn skip(&mut self) {
-            let _ = self.dequeue().map(drop);
-        }
-    };
-}
+pub use iter::{
+    RingBufferDrainingIterator, RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator,
+};
 
 /// Implement various functions on implementors of [`RingBuffer`].
 /// This is to avoid duplicate code.
@@ -406,7 +409,7 @@ macro_rules! impl_ringbuffer {
     };
 }
 
-/// Implement various functions on implementors of [`RingBufferExt`].
+/// Implement various functions on implementors of [`RingBuffer`].
 /// This is to avoid duplicate code.
 macro_rules! impl_ringbuffer_ext {
     ($get_unchecked: ident, $get_unchecked_mut: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {

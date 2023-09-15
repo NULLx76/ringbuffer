@@ -1,8 +1,12 @@
-use crate::{RingBuffer, RingBufferExt, RingBufferRead, RingBufferWrite};
+use crate::ringbuffer_trait::{RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator};
+use crate::RingBuffer;
 use core::iter::FromIterator;
 use core::mem;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
+
+#[cfg(feature = "alloc")]
+use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
 
 /// The `ConstGenericRingBuffer` struct is a `RingBuffer` implementation which does not require `alloc` but
 /// uses const generics instead.
@@ -12,7 +16,7 @@ use core::ops::{Index, IndexMut};
 ///
 /// # Example
 /// ```
-/// use ringbuffer::{ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite};
+/// use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
 ///
 /// let mut buffer = ConstGenericRingBuffer::<_, 2>::new();
 ///
@@ -37,6 +41,97 @@ pub struct ConstGenericRingBuffer<T, const CAP: usize> {
     buf: [MaybeUninit<T>; CAP],
     readptr: usize,
     writeptr: usize,
+}
+
+impl<T, const CAP: usize> From<[T; CAP]> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: [T; CAP]) -> Self {
+        Self {
+            // Safety:
+            // T has the same layout as MaybeUninit<T>
+            // [T; N] has the same layout as [MaybeUninit<T>; N]
+            buf: unsafe { mem::transmute_copy(&value) },
+            readptr: 0,
+            writeptr: CAP,
+        }
+    }
+}
+
+impl<T: Clone, const CAP: usize> From<&[T; CAP]> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: &[T; CAP]) -> Self {
+        Self::from(value.clone())
+    }
+}
+
+impl<T: Clone, const CAP: usize> From<&[T]> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: &[T]) -> Self {
+        value.iter().cloned().collect()
+    }
+}
+
+impl<T: Clone, const CAP: usize> From<&mut [T; CAP]> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: &mut [T; CAP]) -> Self {
+        Self::from(value.clone())
+    }
+}
+
+impl<T: Clone, const CAP: usize> From<&mut [T]> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: &mut [T]) -> Self {
+        value.iter().cloned().collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T, const CAP: usize> From<alloc::vec::Vec<T>> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: alloc::vec::Vec<T>) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T, const CAP: usize> From<alloc::collections::VecDeque<T>> for ConstGenericRingBuffer<T, CAP> {
+    fn from(value: alloc::collections::VecDeque<T>) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T, const CAP: usize> From<alloc::collections::LinkedList<T>>
+    for ConstGenericRingBuffer<T, CAP>
+{
+    fn from(value: alloc::collections::LinkedList<T>) -> Self {
+        value.into_iter().collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<const CAP: usize> From<alloc::string::String> for ConstGenericRingBuffer<char, CAP> {
+    fn from(value: alloc::string::String) -> Self {
+        value.chars().collect()
+    }
+}
+
+impl<const CAP: usize> From<&str> for ConstGenericRingBuffer<char, CAP> {
+    fn from(value: &str) -> Self {
+        value.chars().collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T, const CAP: usize> From<crate::GrowableAllocRingBuffer<T>>
+    for ConstGenericRingBuffer<T, CAP>
+{
+    fn from(mut value: crate::GrowableAllocRingBuffer<T>) -> Self {
+        value.drain().collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T, const CAP: usize, SIZE: RingbufferSize> From<crate::AllocRingBuffer<T, SIZE>>
+    for ConstGenericRingBuffer<T, CAP>
+{
+    fn from(mut value: crate::AllocRingBuffer<T, SIZE>) -> Self {
+        value.drain().collect()
+    }
 }
 
 impl<T, const CAP: usize> Drop for ConstGenericRingBuffer<T, CAP> {
@@ -121,23 +216,31 @@ unsafe fn get_unchecked_mut<T, const N: usize>(
         .expect("const array ptr shouldn't be null!")
 }
 
-impl<T, const CAP: usize> RingBufferRead<T> for ConstGenericRingBuffer<T, CAP> {
-    fn dequeue(&mut self) -> Option<T> {
-        if self.is_empty() {
-            None
-        } else {
-            let index = crate::mask_modulo(CAP, self.readptr);
-            let res = mem::replace(&mut self.buf[index], MaybeUninit::uninit());
-            self.readptr += 1;
+impl<T, const CAP: usize> IntoIterator for ConstGenericRingBuffer<T, CAP> {
+    type Item = T;
+    type IntoIter = RingBufferIntoIterator<T, Self>;
 
-            // Safety: the fact that we got this maybeuninit from the buffer (with mask) means that
-            // it's initialized. If it wasn't the is_empty call would have caught it. Values
-            // are always initialized when inserted so this is safe.
-            unsafe { Some(res.assume_init()) }
-        }
+    fn into_iter(self) -> Self::IntoIter {
+        RingBufferIntoIterator::new(self)
     }
+}
 
-    impl_ringbuffer_read!();
+impl<'a, T, const CAP: usize> IntoIterator for &'a ConstGenericRingBuffer<T, CAP> {
+    type Item = &'a T;
+    type IntoIter = RingBufferIterator<'a, T, ConstGenericRingBuffer<T, CAP>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, T, const CAP: usize> IntoIterator for &'a mut ConstGenericRingBuffer<T, CAP> {
+    type Item = &'a mut T;
+    type IntoIter = RingBufferMutIterator<'a, T, ConstGenericRingBuffer<T, CAP>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
 }
 
 impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
@@ -150,7 +253,14 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
     }
 }
 
-impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> {
+unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
+    #[inline]
+    unsafe fn ptr_capacity(_: *const Self) -> usize {
+        CAP
+    }
+
+    impl_ringbuffer!(readptr, writeptr);
+
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
@@ -171,9 +281,22 @@ impl<T, const CAP: usize> RingBufferWrite<T> for ConstGenericRingBuffer<T, CAP> 
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
     }
-}
 
-unsafe impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, CAP> {
+    fn dequeue(&mut self) -> Option<T> {
+        if self.is_empty() {
+            None
+        } else {
+            let index = crate::mask_modulo(CAP, self.readptr);
+            let res = mem::replace(&mut self.buf[index], MaybeUninit::uninit());
+            self.readptr += 1;
+
+            // Safety: the fact that we got this maybeuninit from the buffer (with mask) means that
+            // it's initialized. If it wasn't the is_empty call would have caught it. Values
+            // are always initialized when inserted so this is safe.
+            unsafe { Some(res.assume_init()) }
+        }
+    }
+
     impl_ringbuffer_ext!(
         get_unchecked,
         get_unchecked_mut,
@@ -191,20 +314,10 @@ unsafe impl<T, const CAP: usize> RingBufferExt<T> for ConstGenericRingBuffer<T, 
     }
 }
 
-impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP> {
-    #[inline]
-    #[cfg(not(tarpaulin_include))]
-    unsafe fn ptr_capacity(_: *const Self) -> usize {
-        CAP
-    }
-
-    impl_ringbuffer!(readptr, writeptr);
-}
-
 impl<T, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
     /// Creates a buffer with a capacity specified through the Cap type parameter.
     /// # Panics
-    /// Panics if `CAP` is 0 or not a power of two
+    /// Panics if `CAP` is 0
     #[inline]
     fn default() -> Self {
         Self::new()
