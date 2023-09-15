@@ -26,8 +26,6 @@ mod with_alloc;
 #[cfg(feature = "alloc")]
 pub use with_alloc::alloc_ringbuffer::AllocRingBuffer;
 #[cfg(feature = "alloc")]
-pub use with_alloc::alloc_ringbuffer::{NonPowerOfTwo, PowerOfTwo, RingbufferSize};
-#[cfg(feature = "alloc")]
 pub use with_alloc::vecdeque::GrowableAllocRingBuffer;
 
 mod with_const_generics;
@@ -1368,6 +1366,6 @@ mod tests {
 
         test_clone!(ConstGenericRingBuffer::<_, 4>::new());
         test_clone!(GrowableAllocRingBuffer::<_>::new());
-        test_clone!(AllocRingBuffer::<_, _>::new(4));
+        test_clone!(AllocRingBuffer::<_>::new(4));
     }
 }
