@@ -2,6 +2,9 @@ extern crate compiletest_rs as compiletest;
 
 use std::path::PathBuf;
 
+#[cfg(test)]
+mod conversions;
+
 fn run_mode(mode: &'static str) {
     let mut config = compiletest::Config::default();
 
@@ -15,7 +18,6 @@ fn run_mode(mode: &'static str) {
 
 #[test]
 #[cfg_attr(miri, ignore)]
-#[cfg(not(tarpaulin))]
 fn compile_test() {
     run_mode("compile-fail");
 }
