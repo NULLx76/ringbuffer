@@ -241,7 +241,7 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
 
             (*rb).0.get_mut(index)
         }
-            .map(|i| i as *mut T)
+        .map(|i| i as *mut T)
     }
 
     unsafe fn ptr_get_mut(rb: *mut Self, index: usize) -> Option<*mut T> {
@@ -274,7 +274,6 @@ impl<T> IndexMut<usize> for GrowableAllocRingBuffer<T> {
         self.get_mut(index).expect("index out of bounds")
     }
 }
-
 
 impl<T> FromIterator<T> for GrowableAllocRingBuffer<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {

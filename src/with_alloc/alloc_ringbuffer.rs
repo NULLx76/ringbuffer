@@ -272,7 +272,13 @@ unsafe impl<T> RingBuffer<T> for AllocRingBuffer<T> {
         }
     }
 
-    impl_ringbuffer_ext!(get_unchecked, get_unchecked_mut, readptr, writeptr, mask_and);
+    impl_ringbuffer_ext!(
+        get_unchecked,
+        get_unchecked_mut,
+        readptr,
+        writeptr,
+        mask_and
+    );
 
     #[inline]
     fn fill_with<F: FnMut() -> T>(&mut self, mut f: F) {
@@ -361,7 +367,6 @@ impl<T> IndexMut<usize> for AllocRingBuffer<T> {
         self.get_mut(index).expect("index out of bounds")
     }
 }
-
 
 #[cfg(test)]
 mod tests {
