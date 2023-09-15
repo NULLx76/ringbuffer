@@ -19,8 +19,7 @@ use alloc::vec::Vec;
 /// implementation, since these safety guarantees are necessary for
 /// [`iter_mut`](RingBuffer::iter_mut) to work
 pub unsafe trait RingBuffer<T>:
-    Sized + IntoIterator<Item = T> + Extend<T> +
-        Index<usize, Output = T> + IndexMut<usize>
+    Sized + IntoIterator<Item = T> + Extend<T> + Index<usize, Output = T> + IndexMut<usize>
 {
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.
@@ -466,10 +465,7 @@ macro_rules! impl_ringbuffer_ext {
                 unsafe {
                     // SAFETY: index has been modulo-ed to be within range
                     // to be within bounds
-                    $get_unchecked(
-                        self,
-                        $mask(self.buffer_size(), normalized_index as usize),
-                    )
+                    $get_unchecked(self, $mask(self.buffer_size(), normalized_index as usize))
                 }
             })
         }
@@ -478,19 +474,14 @@ macro_rules! impl_ringbuffer_ext {
         fn get(&self, index: usize) -> Option<&T> {
             use core::ops::Not;
             self.is_empty().not().then(move || {
-                let normalized_index =
-                    self.$readptr + index.rem_euclid(self.len());
+                let normalized_index = self.$readptr + index.rem_euclid(self.len());
                 unsafe {
                     // SAFETY: index has been modulo-ed to be within range
                     // to be within bounds
-                    $get_unchecked(
-                        self,
-                        $mask(self.buffer_size(), normalized_index),
-                    )
+                    $get_unchecked(self, $mask(self.buffer_size(), normalized_index))
                 }
             })
         }
-
 
         #[inline]
         #[doc(hidden)]
@@ -520,17 +511,12 @@ macro_rules! impl_ringbuffer_ext {
         #[doc(hidden)]
         unsafe fn ptr_get_mut(rb: *mut Self, index: usize) -> Option<*mut T> {
             (Self::ptr_len(rb) != 0).then(move || {
-
-                let normalized_index = (*rb).$readptr
-                    + index.rem_euclid(Self::ptr_len(rb));
+                let normalized_index = (*rb).$readptr + index.rem_euclid(Self::ptr_len(rb));
 
                 unsafe {
                     // SAFETY: index has been modulo-ed to be within range
                     // to be within bounds
-                    $get_unchecked_mut(
-                        rb,
-                        $mask(Self::ptr_buffer_size(rb), normalized_index),
-                    )
+                    $get_unchecked_mut(rb, $mask(Self::ptr_buffer_size(rb), normalized_index))
                 }
             })
         }

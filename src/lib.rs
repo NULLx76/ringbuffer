@@ -216,7 +216,6 @@ mod tests {
         test_iter(ConstGenericRingBuffer::<i32, 8>::new());
     }
 
-
     #[test]
     fn run_test_forward_iter_non_power_of_two() {
         fn test_iter(mut b: impl RingBuffer<i32>) {

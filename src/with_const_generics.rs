@@ -352,7 +352,6 @@ impl<T, const CAP: usize> IndexMut<usize> for ConstGenericRingBuffer<T, CAP> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -421,36 +420,77 @@ mod tests {
 
     #[cfg(test)]
     mod tests {
+        use crate::{AllocRingBuffer, ConstGenericRingBuffer, GrowableAllocRingBuffer, RingBuffer};
         use alloc::collections::{LinkedList, VecDeque};
         use alloc::string::ToString;
-        use crate::{AllocRingBuffer, ConstGenericRingBuffer, GrowableAllocRingBuffer, RingBuffer};
         use alloc::vec;
 
         #[test]
         fn from() {
-            assert_eq!(ConstGenericRingBuffer::<i32, 3>::from([1, 2, 3]).to_vec(), vec![1, 2, 3]);
+            assert_eq!(
+                ConstGenericRingBuffer::<i32, 3>::from([1, 2, 3]).to_vec(),
+                vec![1, 2, 3]
+            );
 
             let v: &[i32; 3] = &[1, 2, 3];
-            assert_eq!(ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(), vec![1, 2, 3]);
+            assert_eq!(
+                ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(),
+                vec![1, 2, 3]
+            );
 
             let v: &[i32] = &[1, 2, 3];
-            assert_eq!(ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(), vec![1, 2, 3]);
+            assert_eq!(
+                ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(),
+                vec![1, 2, 3]
+            );
 
             let v: &mut [i32; 3] = &mut [1, 2, 3];
-            assert_eq!(ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(), vec![1, 2, 3]);
+            assert_eq!(
+                ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(),
+                vec![1, 2, 3]
+            );
 
             let v: &mut [i32] = &mut [1, 2, 3];
-            assert_eq!(ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(), vec![1, 2, 3]);
+            assert_eq!(
+                ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(),
+                vec![1, 2, 3]
+            );
 
-            assert_eq!(ConstGenericRingBuffer::<i32, 3>::from(vec![1, 2, 3]).to_vec(), vec![1, 2, 3]);
-            assert_eq!(ConstGenericRingBuffer::<i32, 3>::from(vec![1, 2, 3].into_iter().collect::<VecDeque<_>>()).to_vec(), vec![1, 2, 3]);
-            assert_eq!(ConstGenericRingBuffer::<i32, 3>::from(vec![1, 2, 3].into_iter().collect::<LinkedList<_>>()).to_vec(), vec![1, 2, 3]);
-            assert_eq!(ConstGenericRingBuffer::<_, 3>::from("abc".to_string()).to_vec(), vec!['a', 'b', 'c']);
-            assert_eq!(ConstGenericRingBuffer::<_, 3>::from("abc").to_vec(), vec!['a', 'b', 'c']);
-            assert_eq!(ConstGenericRingBuffer::<_, 3>::from(GrowableAllocRingBuffer::from(vec![1, 2, 3])).to_vec(), vec![1, 2, 3]);
-            assert_eq!(ConstGenericRingBuffer::<_, 3>::from(AllocRingBuffer::from(vec![1, 2, 3])).to_vec(), vec![1, 2, 3]);
+            assert_eq!(
+                ConstGenericRingBuffer::<i32, 3>::from(vec![1, 2, 3]).to_vec(),
+                vec![1, 2, 3]
+            );
+            assert_eq!(
+                ConstGenericRingBuffer::<i32, 3>::from(
+                    vec![1, 2, 3].into_iter().collect::<VecDeque<_>>()
+                )
+                .to_vec(),
+                vec![1, 2, 3]
+            );
+            assert_eq!(
+                ConstGenericRingBuffer::<i32, 3>::from(
+                    vec![1, 2, 3].into_iter().collect::<LinkedList<_>>()
+                )
+                .to_vec(),
+                vec![1, 2, 3]
+            );
+            assert_eq!(
+                ConstGenericRingBuffer::<_, 3>::from("abc".to_string()).to_vec(),
+                vec!['a', 'b', 'c']
+            );
+            assert_eq!(
+                ConstGenericRingBuffer::<_, 3>::from("abc").to_vec(),
+                vec!['a', 'b', 'c']
+            );
+            assert_eq!(
+                ConstGenericRingBuffer::<_, 3>::from(GrowableAllocRingBuffer::from(vec![1, 2, 3]))
+                    .to_vec(),
+                vec![1, 2, 3]
+            );
+            assert_eq!(
+                ConstGenericRingBuffer::<_, 3>::from(AllocRingBuffer::from(vec![1, 2, 3])).to_vec(),
+                vec![1, 2, 3]
+            );
         }
     }
-
-
 }
