@@ -20,10 +20,8 @@ use alloc::vec::Vec;
 /// implementation, since these safety guarantees are necessary for
 /// [`iter_mut`](RingBuffer::iter_mut) to work
 pub unsafe trait RingBuffer<T>:
-    Sized +
-    IntoIterator<Item=T> +
-    Extend<T> +
-    Index<usize, Output=T> + IndexMut<usize> {
+    Sized + IntoIterator<Item = T> + Extend<T> + Index<usize, Output = T> + IndexMut<usize>
+{
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.
     /// This is because when the length is reached, new items are appended at the start.
@@ -88,7 +86,7 @@ pub unsafe trait RingBuffer<T>:
 
     /// alias for [`extend`](RingBuffer::extend).
     #[inline]
-    fn enqueue_many<I: IntoIterator<Item=T>>(&mut self, items: I) {
+    fn enqueue_many<I: IntoIterator<Item = T>>(&mut self, items: I) {
         self.extend(items);
     }
 
@@ -97,7 +95,7 @@ pub unsafe trait RingBuffer<T>:
     /// Iterates over the slice `other`, clones each element, and then appends
     /// it to this `RingBuffer`. The `other` slice is traversed in-order.
     ///
-    /// Depending on the RingBuffer implementation, may be faster than inserting items in a loop
+    /// Depending on the `RingBuffer` implementation, may be faster than inserting items in a loop
     ///
     /// Note that this function is same as [`extend`] except that it is
     /// specialized to work with slices instead. If and when Rust gets
@@ -117,8 +115,11 @@ pub unsafe trait RingBuffer<T>:
     /// ```
     ///
     /// [`extend`]: RingBuffer::extend
-    fn extend_from_slice(&mut self, other: &[T]) where T: Clone {
-        self.extend(other.into_iter().cloned())
+    fn extend_from_slice(&mut self, other: &[T])
+    where
+        T: Clone,
+    {
+        self.extend(other.iter().cloned());
     }
 
     /// dequeues the top item off the ringbuffer, and moves this item out.
@@ -180,16 +181,16 @@ pub unsafe trait RingBuffer<T>:
 
     /// Sets every element in the ringbuffer to it's default value
     fn fill_default(&mut self)
-        where
-            T: Default,
+    where
+        T: Default,
     {
         self.fill_with(Default::default);
     }
 
     /// Sets every element in the ringbuffer to `value`
     fn fill(&mut self, value: T)
-        where
-            T: Clone,
+    where
+        T: Clone,
     {
         self.fill_with(|| value.clone());
     }
@@ -289,16 +290,16 @@ pub unsafe trait RingBuffer<T>:
     /// Converts the buffer to a vector. This Copies all elements in the ringbuffer.
     #[cfg(feature = "alloc")]
     fn to_vec(&self) -> Vec<T>
-        where
-            T: Clone,
+    where
+        T: Clone,
     {
         self.iter().cloned().collect()
     }
 
     /// Returns true if elem is in the ringbuffer.
     fn contains(&self, elem: &T) -> bool
-        where
-            T: PartialEq,
+    where
+        T: PartialEq,
     {
         self.iter().any(|i| i == elem)
     }
@@ -395,7 +396,7 @@ mod iter {
     impl<'rb, T: 'rb, RB: RingBuffer<T> + 'rb> ExactSizeIterator for RingBufferMutIterator<'rb, T, RB> {}
 
     impl<'rb, T: 'rb, RB: RingBuffer<T> + 'rb> DoubleEndedIterator
-    for RingBufferMutIterator<'rb, T, RB>
+        for RingBufferMutIterator<'rb, T, RB>
     {
         #[inline]
         fn next_back(&mut self) -> Option<Self::Item> {

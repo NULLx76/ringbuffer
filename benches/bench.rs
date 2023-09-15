@@ -1,6 +1,6 @@
 #![cfg(not(tarpaulin_include))]
 
-use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion, BatchSize};
+use criterion::{black_box, criterion_group, criterion_main, BatchSize, Bencher, Criterion};
 use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBuffer};
 
 fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
@@ -192,36 +192,44 @@ fn extend_many_too_many(b: &mut Bencher) {
     let rb = ConstGenericRingBuffer::new::<8192>();
     let input = (0..16384).collect::<Vec<_>>();
 
-    b.iter_batched(&|| rb.clone(), |mut r| {
-        black_box(r.extend(black_box(input.as_slice())))
-    }, BatchSize::SmallInput);
+    b.iter_batched(
+        &|| rb.clone(),
+        |mut r| black_box(r.extend(black_box(input.as_slice()))),
+        BatchSize::SmallInput,
+    );
 }
 
 fn extend_too_many(b: &mut Bencher) {
     let rb = ConstGenericRingBuffer::new::<8192>();
     let input = (0..10000).collect::<Vec<_>>();
 
-    b.iter_batched(&|| rb.clone(), |mut r| {
-        black_box(r.extend(black_box(input.as_slice())))
-    }, BatchSize::SmallInput);
+    b.iter_batched(
+        &|| rb.clone(),
+        |mut r| black_box(r.extend(black_box(input.as_slice()))),
+        BatchSize::SmallInput,
+    );
 }
 
 fn extend_exact_cap(b: &mut Bencher) {
     let rb = ConstGenericRingBuffer::new::<8192>();
     let input = (0..8192).collect::<Vec<_>>();
 
-    b.iter_batched(&|| rb.clone(), |mut r| {
-        black_box(r.extend(black_box(input.as_slice())))
-    }, BatchSize::SmallInput);
+    b.iter_batched(
+        &|| rb.clone(),
+        |mut r| black_box(r.extend(black_box(input.as_slice()))),
+        BatchSize::SmallInput,
+    );
 }
 
 fn extend_too_few(b: &mut Bencher) {
     let rb = ConstGenericRingBuffer::new::<8192>();
     let input = (0..4096).collect::<Vec<_>>();
 
-    b.iter_batched(&|| rb.clone(), |mut r| {
-        black_box(r.extend(black_box(input.as_slice())))
-    }, BatchSize::LargeInput);
+    b.iter_batched(
+        &|| rb.clone(),
+        |mut r| black_box(r.extend(black_box(input.as_slice()))),
+        BatchSize::LargeInput,
+    );
 }
 
 criterion_group!(benches, criterion_benchmark);

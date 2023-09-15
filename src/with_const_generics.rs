@@ -93,7 +93,7 @@ impl<T, const CAP: usize> From<alloc::collections::VecDeque<T>> for ConstGeneric
 
 #[cfg(feature = "alloc")]
 impl<T, const CAP: usize> From<alloc::collections::LinkedList<T>>
-for ConstGenericRingBuffer<T, CAP>
+    for ConstGenericRingBuffer<T, CAP>
 {
     fn from(value: alloc::collections::LinkedList<T>) -> Self {
         value.into_iter().collect()
@@ -115,7 +115,7 @@ impl<const CAP: usize> From<&str> for ConstGenericRingBuffer<char, CAP> {
 
 #[cfg(feature = "alloc")]
 impl<T, const CAP: usize> From<crate::GrowableAllocRingBuffer<T>>
-for ConstGenericRingBuffer<T, CAP>
+    for ConstGenericRingBuffer<T, CAP>
 {
     fn from(mut value: crate::GrowableAllocRingBuffer<T>) -> Self {
         value.drain().collect()
@@ -172,11 +172,11 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     #[inline]
     #[must_use]
     pub const fn new<const N: usize>() -> Self
-        where
-            ConstGenericRingBuffer<T, CAP>: From<ConstGenericRingBuffer<T, N>>,
+    where
+        ConstGenericRingBuffer<T, CAP>: From<ConstGenericRingBuffer<T, N>>,
     {
         #[allow(clippy::let_unit_value)]
-            let _ = Self::ERROR_CAPACITY_IS_NOT_ALLOWED_TO_BE_ZERO;
+        let _ = Self::ERROR_CAPACITY_IS_NOT_ALLOWED_TO_BE_ZERO;
 
         // allow here since we are constructing an array of MaybeUninit<T>
         // which explicitly *is* defined behavior
@@ -242,15 +242,17 @@ impl<'a, T, const CAP: usize> IntoIterator for &'a mut ConstGenericRingBuffer<T,
 }
 
 impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
-    const BATCH_SIZE: usize = 8;
-
     /// splits the ringbuffer into two slices. One from the old pointer to the end of the buffer,
     /// and one from the start of the buffer to the new pointer
     ///
     /// # Safety
     /// Only safe when old != new
     #[inline]
-    unsafe fn split_pointer_move(&mut self, old: usize, new: usize) -> (&mut [MaybeUninit<T>], &mut [MaybeUninit<T>]) {
+    unsafe fn split_pointer_move(
+        &mut self,
+        old: usize,
+        new: usize,
+    ) -> (&mut [MaybeUninit<T>], &mut [MaybeUninit<T>]) {
         let old_mod = crate::mask_modulo(CAP, old);
         let new_mod = crate::mask_modulo(CAP, new);
 
@@ -269,7 +271,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     }
 
     /// # Safety
-    /// Only safe when CAP >= Self::BATCH_SIZE
+    /// Only safe when `CAP` >= `BATCH_SIZE`
     #[inline]
     unsafe fn extend_from_arr_batch<const BATCH_SIZE: usize>(&mut self, data: [T; BATCH_SIZE]) {
         debug_assert!(CAP >= BATCH_SIZE);
@@ -294,6 +296,8 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
         // self.buf[index] = MaybeUninit::new(value);
         // self.writeptr += 1;
 
+        let old_len = self.len();
+
         let old_writeptr = self.writeptr;
         let old_readptr = self.readptr;
 
@@ -302,7 +306,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
 
         // but maybe we also need to update the readptr
         // first we calculate if we will be full. if not, no need to update the readptr
-        let num_items_until_full = self.capacity() - self.len();
+        let num_items_until_full = self.capacity() - old_len;
         if num_items_until_full < BATCH_SIZE {
             // the difference is how much the read ptr needs to move
             self.readptr += BATCH_SIZE - num_items_until_full;
@@ -311,7 +315,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
 
             // if readptr moves, we also need to free some items.
             // Safety: same safety guarantees as this function and old != new by the assertion above
-            let (p1, p2) = unsafe{self.split_pointer_move(old_readptr, self.readptr)};
+            let (p1, p2) = unsafe { self.split_pointer_move(old_readptr, self.readptr) };
             // assertion: we can never be in a situation where we have to drop more than a batch size of items
             debug_assert!(p1.len() + p2.len() <= BATCH_SIZE);
 
@@ -326,16 +330,22 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
         debug_assert_ne!(old_writeptr, self.writeptr);
         // now we need to write some items between old_writeptr and self.writeptr
         // Safety: same safety guarantees as this function and old != new by the assertion above
-        let (p1, p2) = unsafe{self.split_pointer_move(old_writeptr, self.writeptr)};
+        let (p1, p2) = unsafe { self.split_pointer_move(old_writeptr, self.writeptr) };
         // assertion: we can never be in a situation where we have to write more than a batch size of items
-        debug_assert!(p1.len() + p2.len() <= Self::BATCH_SIZE);
+        debug_assert!(
+            p1.len() + p2.len() <= BATCH_SIZE,
+            "p1: {}; p2: {}; batch: {}",
+            p1.len(),
+            p2.len(),
+            BATCH_SIZE
+        );
 
         // if we are lucky, we're not on the boundary so either p1 or p2 has a length of Self::BATCH_SIZE
-        if p1.len() == Self::BATCH_SIZE {
+        if p1.len() == BATCH_SIZE {
             for (index, i) in data.into_iter().enumerate() {
                 p1[index] = MaybeUninit::new(i);
             }
-        } else if p2.len() == Self::BATCH_SIZE {
+        } else if p2.len() == BATCH_SIZE {
             for (index, i) in data.into_iter().enumerate() {
                 p2[index] = MaybeUninit::new(i);
             }
@@ -346,28 +356,31 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
             let mut data_iter = data.into_iter();
 
             // put p1.len() in p1
-            for index in 0..p1.len() {
+            for i in p1 {
                 let next_item = data_iter.next();
                 // Safety: p1.len() + p2.len() <= Self::BATCH_SIZE so the two loops here
                 // together cannot run for more than Self::BATCH_SIZE iterations
-                p1[index] = MaybeUninit::new(unsafe{next_item.unwrap_unchecked()});
+                *i = MaybeUninit::new(unsafe { next_item.unwrap_unchecked() });
             }
 
             // put p2.len() in p2
-            for index in 0..p2.len() {
+            for i in p2 {
                 let next_item = data_iter.next();
                 // Safety: p1.len() + p2.len() <= Self::BATCH_SIZE so the two loops here
                 // together cannot run for more than Self::BATCH_SIZE iterations
-                p2[index] = MaybeUninit::new(unsafe{next_item.unwrap_unchecked()});
+                *i = MaybeUninit::new(unsafe { next_item.unwrap_unchecked() });
             }
         }
     }
 
     #[inline]
-    fn fill_batch<const BATCH_SIZE: usize>(batch: &mut [MaybeUninit<T>; BATCH_SIZE], iter: &mut impl Iterator<Item=T>) -> usize {
-        for index in 0..BATCH_SIZE {
+    fn fill_batch<const BATCH_SIZE: usize>(
+        batch: &mut [MaybeUninit<T>; BATCH_SIZE],
+        iter: &mut impl Iterator<Item = T>,
+    ) -> usize {
+        for (index, b) in batch.iter_mut().enumerate() {
             if let Some(i) = iter.next() {
-                batch[index] = MaybeUninit::new(i);
+                *b = MaybeUninit::new(i);
             } else {
                 return index;
             }
@@ -377,15 +390,16 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     }
 
     #[inline]
-    fn extend_batched<const BATCH_SIZE: usize>(&mut self, mut other: impl Iterator<Item=T>) {
+    fn extend_batched<const BATCH_SIZE: usize>(&mut self, mut other: impl Iterator<Item = T>) {
         // SAFETY: if CAP < Self::BATCH_SIZE we can't run extend_from_arr_batch so we catch that here
         if CAP < BATCH_SIZE {
             for i in other {
-                self.push(i)
+                self.push(i);
             }
         } else {
             // Safety: assume init to MaybeUninit slice is safe
-            let mut batch: [MaybeUninit<T>; BATCH_SIZE] = unsafe{MaybeUninit::uninit().assume_init()};
+            let mut batch: [MaybeUninit<T>; BATCH_SIZE] =
+                unsafe { MaybeUninit::uninit().assume_init() };
 
             // repeat until we find an empty batch
             loop {
@@ -394,10 +408,10 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
 
                 // if the batch isn't complete, individually add the items from that batch
                 if how_full < BATCH_SIZE {
-                    for i in 0..how_full {
+                    for b in batch.iter().take(how_full) {
                         // Safety: fill_batch filled up at least `how_full` items so if we iterate
                         // until there this is safe
-                        self.push(unsafe { batch[i].assume_init_read() })
+                        self.push(unsafe { b.assume_init_read() });
                     }
 
                     // then we're done!
@@ -405,12 +419,12 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
                 }
 
                 // else the batch is full, and we can transmute it to an init slice
-                let batch = unsafe { mem::transmute_copy::<[MaybeUninit<T>; BATCH_SIZE], [T; BATCH_SIZE]>(&batch) };
+                let batch = unsafe {
+                    mem::transmute_copy::<[MaybeUninit<T>; BATCH_SIZE], [T; BATCH_SIZE]>(&batch)
+                };
 
                 // SAFETY: if CAP < Self::BATCH_SIZE we woudn't be here
-                unsafe {
-                    self.extend_from_arr_batch(batch)
-                }
+                unsafe { self.extend_from_arr_batch(batch) }
             }
         }
     }
@@ -419,13 +433,14 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
 impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
     /// NOTE: correctness (but not soundness) of extend depends on `size_hint` on iter being correct.
     #[inline]
-    fn extend<A: IntoIterator<Item=T>>(&mut self, iter: A) {
-        const BATCH_SIZE: usize = 32;
+    fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
+        const BATCH_SIZE: usize = 128;
 
         let mut iter = iter.into_iter();
 
         let (lower, _) = iter.size_hint();
 
+        // WARNING: ONLY USE WHEN WORKING ON A CLEARED RINGBUFFER
         macro_rules! finish_iter {
             ($iter: ident) => {
                 let mut index = 0;
@@ -438,8 +453,10 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
                     }
                 }
 
-                if index <= CAP-1 {
-                    self.writeptr = index + 1;
+                if index < CAP {
+                    // we set writepointer to however many elements we managed to write (up to CAP-1)
+                    // WARNING: ONLY WORKS WHEN WORKING ON A CLEARED RINGBUFFER
+                    self.writeptr = index;
                 } else {
                     self.writeptr = CAP;
                     self.extend_batched::<BATCH_SIZE>($iter);
@@ -457,8 +474,13 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
             let num_we_can_drop = lower - CAP;
 
             let mut iter = iter.skip(num_we_can_drop);
+
+            // WARNING: ONLY WORKS WHEN WORKING ON A CLEARED RINGBUFFER
             finish_iter!(iter);
         } else if self.is_empty() {
+            self.clear();
+
+            // WARNING: ONLY WORKS WHEN WORKING ON A CLEARED RINGBUFFER
             finish_iter!(iter);
         } else {
             self.extend_batched::<BATCH_SIZE>(iter);
@@ -543,7 +565,7 @@ impl<T, const CAP: usize> Default for ConstGenericRingBuffer<T, CAP> {
 }
 
 impl<RB, const CAP: usize> FromIterator<RB> for ConstGenericRingBuffer<RB, CAP> {
-    fn from_iter<T: IntoIterator<Item=RB>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
             res.push(i);
@@ -569,8 +591,8 @@ impl<T, const CAP: usize> IndexMut<usize> for ConstGenericRingBuffer<T, CAP> {
 
 #[cfg(test)]
 mod tests {
-    use core::ops::Range;
     use super::*;
+    use core::ops::Range;
 
     #[test]
     fn test_not_power_of_two() {
@@ -649,7 +671,7 @@ mod tests {
             match self.1 {
                 SizeHint::TooHigh => (lower + 10, upper),
                 SizeHint::TooLow => (lower - 10, upper),
-                SizeHint::Good => (lower, upper)
+                SizeHint::Good => (lower, upper),
             }
         }
     }
@@ -664,7 +686,8 @@ mod tests {
     struct WeirdIntoIterator<T: IntoIterator>(pub T, SizeHint);
 
     impl<T: IntoIterator> IntoIterator for WeirdIntoIterator<T>
-        where <T as IntoIterator>::IntoIter: Sized
+    where
+        <T as IntoIterator>::IntoIter: Sized,
     {
         type Item = <T as IntoIterator>::Item;
         type IntoIter = WeirdIterator<T>;
@@ -676,50 +699,62 @@ mod tests {
 
     #[test]
     fn test_verify_extend() {
-        const CAP: usize = 16;
+        extern crate std;
 
-        for start in 0..5 {
-            for size in [SizeHint::TooLow, SizeHint::Good, SizeHint::TooHigh] {
-                let mut rb = ConstGenericRingBuffer::<usize, CAP>::new();
-                for i in 0..start {
-                    rb.push(i);
+        macro_rules! for_cap {
+            ($cap: expr) => {{
+                const CAP: usize = $cap;
+
+                for start in 0..5 {
+                    for size in [SizeHint::TooLow, SizeHint::Good, SizeHint::TooHigh] {
+                        std::println!("{start} {size:?}");
+
+                        let mut rb = ConstGenericRingBuffer::<usize, CAP>::new();
+                        for i in 0..start {
+                            rb.push(i);
+                        }
+
+                        rb.extend(WeirdIterator::<Range<usize>>(0..CAP, size));
+                        rb.push(17);
+                        rb.push(18);
+                        rb.push(19);
+
+                        for _ in 0..CAP {
+                            let _ = rb.dequeue();
+                        }
+
+                        let mut rb = ConstGenericRingBuffer::<usize, CAP>::new();
+                        for i in 0..start {
+                            rb.push(i);
+                        }
+
+                        rb.extend(WeirdIterator::<Range<usize>>(0..(CAP + 1), size));
+                        rb.push(18);
+                        rb.push(19);
+
+                        for _ in 0..CAP {
+                            let _ = rb.dequeue();
+                        }
+
+                        let mut rb = ConstGenericRingBuffer::<usize, CAP>::new();
+                        for i in 0..start {
+                            rb.push(i);
+                        }
+
+                        rb.extend(WeirdIterator::<Range<usize>>(0..(CAP + 2), size));
+                        rb.push(19);
+
+                        for _ in 0..CAP {
+                            let _ = rb.dequeue();
+                        }
+                    }
                 }
-
-                rb.extend(WeirdIterator::<Range<usize>>(0..CAP, size));
-                rb.push(17);
-                rb.push(18);
-                rb.push(19);
-
-                for _ in 0..CAP {
-                    let _ = rb.dequeue();
-                }
-
-                let mut rb = ConstGenericRingBuffer::<usize, CAP>::new();
-                for i in 0..start {
-                    rb.push(i);
-                }
-
-                rb.extend(WeirdIterator::<Range<usize>>(0..(CAP + 1), size));
-                rb.push(18);
-                rb.push(19);
-
-                for _ in 0..CAP {
-                    let _ = rb.dequeue();
-                }
-
-                let mut rb = ConstGenericRingBuffer::<usize, CAP>::new();
-                for i in 0..start {
-                    rb.push(i);
-                }
-
-                rb.extend(WeirdIterator::<Range<usize>>(0..(CAP + 2), size));
-                rb.push(19);
-
-                for _ in 0..CAP {
-                    let _ = rb.dequeue();
-                }
-            }
+            };};
         }
+
+        for_cap!(17);
+        for_cap!(70);
+        for_cap!(128);
     }
 
     #[cfg(test)]
@@ -768,14 +803,14 @@ mod tests {
                 ConstGenericRingBuffer::<i32, 3>::from(
                     vec![1, 2, 3].into_iter().collect::<VecDeque<_>>()
                 )
-                    .to_vec(),
+                .to_vec(),
                 vec![1, 2, 3]
             );
             assert_eq!(
                 ConstGenericRingBuffer::<i32, 3>::from(
                     vec![1, 2, 3].into_iter().collect::<LinkedList<_>>()
                 )
-                    .to_vec(),
+                .to_vec(),
                 vec![1, 2, 3]
             );
             assert_eq!(
