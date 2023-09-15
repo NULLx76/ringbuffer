@@ -86,6 +86,41 @@ pub unsafe trait RingBuffer<T>:
         self.push(value);
     }
 
+    /// alias for [`extend`](RingBuffer::extend).
+    #[inline]
+    fn enqueue_many<I: IntoIterator<Item=T>>(&mut self, items: I) {
+        self.extend(items);
+    }
+
+    /// Clones and appends all elements in a slice to the `Vec`.
+    ///
+    /// Iterates over the slice `other`, clones each element, and then appends
+    /// it to this `RingBuffer`. The `other` slice is traversed in-order.
+    ///
+    /// Depending on the RingBuffer implementation, may be faster than inserting items in a loop
+    ///
+    /// Note that this function is same as [`extend`] except that it is
+    /// specialized to work with slices instead. If and when Rust gets
+    /// specialization this function will likely be deprecated (but still
+    /// available).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
+    ///
+    /// let mut rb = ConstGenericRingBuffer::<_, 6>::new();
+    /// rb.push(1);
+    ///
+    /// rb.extend_from_slice(&[2, 3, 4]);
+    /// assert_eq!(rb.to_vec(), vec![1, 2, 3, 4]);
+    /// ```
+    ///
+    /// [`extend`]: RingBuffer::extend
+    fn extend_from_slice(&mut self, other: &[T]) where T: Clone {
+        self.extend(other.into_iter().cloned())
+    }
+
     /// dequeues the top item off the ringbuffer, and moves this item out.
     fn dequeue(&mut self) -> Option<T>;
 
@@ -137,9 +172,7 @@ pub unsafe trait RingBuffer<T>:
     /// assert_eq!(vec2.to_vec(), &[]);
     /// ```
     fn append(&mut self, other: &mut Self) {
-        for i in other.drain() {
-            self.push(i);
-        }
+        self.extend(other.drain());
     }
 
     /// Sets every element in the ringbuffer to the value returned by f.
