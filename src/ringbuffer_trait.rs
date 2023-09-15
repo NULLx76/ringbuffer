@@ -30,7 +30,9 @@ pub unsafe trait RingBuffer<T>:
     }
 
     /// Raw pointer version of len
-    /// Safety: ONLY SAFE WHEN self is a *mut to to an implementor of RingBuffer
+    ///
+    /// # Safety
+    /// ONLY SAFE WHEN self is a *mut to to an implementor of `RingBuffer`
     #[doc(hidden)]
     unsafe fn ptr_len(rb: *const Self) -> usize;
 
@@ -54,7 +56,9 @@ pub unsafe trait RingBuffer<T>:
     }
 
     /// Raw pointer version of capacity.
-    /// Safety: ONLY SAFE WHEN self is a *mut to to an implementor of RingBuffer
+    ///
+    /// # Safety
+    /// ONLY SAFE WHEN self is a *mut to to an implementor of `RingBuffer`
     #[doc(hidden)]
     unsafe fn ptr_capacity(rb: *const Self) -> usize;
 
@@ -137,7 +141,9 @@ pub unsafe trait RingBuffer<T>:
     }
 
     /// same as [`get_mut`](RingBuffer::get_mut) but on raw pointers.
-    /// Safety: ONLY SAFE WHEN self is a *mut to to an implementor of RingBuffer
+    ///
+    /// # Safety
+    /// ONLY SAFE WHEN self is a *mut to to an implementor of `RingBuffer`
     #[doc(hidden)]
     unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T>;
 
