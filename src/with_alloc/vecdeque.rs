@@ -173,7 +173,12 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
         (*rb).0.len()
     }
 
+    #[inline]
     unsafe fn ptr_capacity(rb: *const Self) -> usize {
+        (*rb).0.capacity()
+    }
+    #[inline]
+    unsafe fn ptr_buffer_size(rb: *const Self) -> usize {
         (*rb).0.capacity()
     }
 
@@ -199,7 +204,15 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
         self.0.clear();
     }
 
-    fn get(&self, index: isize) -> Option<&T> {
+    fn get(&self, index: usize) -> Option<&T> {
+        if self.is_empty() {
+            None
+        } else {
+            self.0.get(crate::mask_modulo(self.0.len(), index))
+        }
+    }
+
+    fn get_signed(&self, index: isize) -> Option<&T> {
         if self.is_empty() {
             None
         } else if index >= 0 {
@@ -213,7 +226,7 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
         }
     }
 
-    unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T> {
+    unsafe fn ptr_get_mut_signed(rb: *mut Self, index: isize) -> Option<*mut T> {
         #[allow(trivial_casts)]
         if RingBuffer::ptr_len(rb) == 0 {
             None
@@ -230,6 +243,16 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
         }
         .map(|i| i as *mut T)
     }
+
+    unsafe fn ptr_get_mut(rb: *mut Self, index: usize) -> Option<*mut T> {
+        #[allow(trivial_casts)]
+        if RingBuffer::ptr_len(rb) == 0 {
+            None
+        } else {
+            (*rb).0.get_mut(index)
+        }
+        .map(|i| i as *mut T)
+    }
 }
 
 impl<T> Extend<T> for GrowableAllocRingBuffer<T> {
@@ -238,16 +261,16 @@ impl<T> Extend<T> for GrowableAllocRingBuffer<T> {
     }
 }
 
-impl<T> Index<isize> for GrowableAllocRingBuffer<T> {
+impl<T> Index<usize> for GrowableAllocRingBuffer<T> {
     type Output = T;
 
-    fn index(&self, index: isize) -> &Self::Output {
+    fn index(&self, index: usize) -> &Self::Output {
         self.get(index).expect("index out of bounds")
     }
 }
 
-impl<T> IndexMut<isize> for GrowableAllocRingBuffer<T> {
-    fn index_mut(&mut self, index: isize) -> &mut Self::Output {
+impl<T> IndexMut<usize> for GrowableAllocRingBuffer<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }
 }
