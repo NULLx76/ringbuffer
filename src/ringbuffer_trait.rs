@@ -19,7 +19,9 @@ use alloc::vec::Vec;
 /// implementation, since these safety guarantees are necessary for
 /// [`iter_mut`](RingBuffer::iter_mut) to work
 pub unsafe trait RingBuffer<T>:
-    Sized + IntoIterator<Item = T> + Extend<T> + Index<isize, Output = T> + IndexMut<isize>
+    Sized + IntoIterator<Item = T> + Extend<T> +
+        Index<isize, Output = T> + IndexMut<isize> +
+        Index<usize, Output = T> + IndexMut<usize>
 {
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.
