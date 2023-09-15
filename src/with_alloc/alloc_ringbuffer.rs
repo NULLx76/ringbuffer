@@ -39,8 +39,13 @@ use core::ptr;
 #[derive(Debug)]
 pub struct AllocRingBuffer<T> {
     buf: *mut T,
+
+    // the size of the allocation. Next power of 2 up from the capacity
     size: usize,
+    // maximum number of elements actually allowed in the ringbuffer.
+    // Always less than or equal than the size
     capacity: usize,
+
     readptr: usize,
     writeptr: usize,
 }
@@ -291,9 +296,10 @@ impl<T> AllocRingBuffer<T> {
         Self::new(cap)
     }
 
-    /// Creates a `AllocRingBuffer` with a certain capacity. The capacity must be a power of two.
+    /// Creates a `AllocRingBuffer` with a certain capacity. The capacity must not be zero.
+    ///
     /// # Panics
-    /// Panics when capacity is zero or not a power of two
+    /// Panics when capacity is zero
     #[inline]
     #[must_use]
     pub fn new(capacity: usize) -> Self {
@@ -312,6 +318,7 @@ impl<T> AllocRingBuffer<T> {
 }
 
 /// Get a reference from the buffer without checking it is initialized.
+///
 /// Caller must be sure the index is in bounds, or this will panic.
 #[inline]
 unsafe fn get_unchecked<'a, T>(rb: *const AllocRingBuffer<T>, index: usize) -> &'a T {
@@ -322,6 +329,7 @@ unsafe fn get_unchecked<'a, T>(rb: *const AllocRingBuffer<T>, index: usize) -> &
 }
 
 /// Get a mut reference from the buffer without checking it is initialized.
+///
 /// Caller must be sure the index is in bounds, or this will panic.
 #[inline]
 unsafe fn get_unchecked_mut<T>(rb: *mut AllocRingBuffer<T>, index: usize) -> *mut T {
