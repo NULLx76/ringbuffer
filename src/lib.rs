@@ -33,6 +33,7 @@ pub use with_const_generics::ConstGenericRingBuffer;
 
 /// Used internally. Computes the bitmask used to properly wrap the ringbuffers.
 #[inline]
+#[cfg(feature = "alloc")]
 const fn mask_and(cap: usize, index: usize) -> usize {
     debug_assert!(cap.is_power_of_two());
     index & (cap - 1)
