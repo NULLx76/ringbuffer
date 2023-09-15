@@ -1,5 +1,6 @@
-#![no_coverage]
-use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion};
+#![cfg(not(tarpaulin_include))]
+
+use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion, BatchSize};
 use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBuffer};
 
 fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
@@ -180,6 +181,47 @@ fn criterion_benchmark(c: &mut Criterion) {
         8192,
         8195
     ];
+
+    c.bench_function("extend too many", extend_too_many);
+    c.bench_function("extend many too many", extend_many_too_many);
+    c.bench_function("extend exact cap", extend_exact_cap);
+    c.bench_function("extend too few", extend_too_few);
+}
+
+fn extend_many_too_many(b: &mut Bencher) {
+    let rb = ConstGenericRingBuffer::new::<8192>();
+    let input = (0..16384).collect::<Vec<_>>();
+
+    b.iter_batched(&|| rb.clone(), |mut r| {
+        black_box(r.extend(black_box(input.as_slice())))
+    }, BatchSize::SmallInput);
+}
+
+fn extend_too_many(b: &mut Bencher) {
+    let rb = ConstGenericRingBuffer::new::<8192>();
+    let input = (0..10000).collect::<Vec<_>>();
+
+    b.iter_batched(&|| rb.clone(), |mut r| {
+        black_box(r.extend(black_box(input.as_slice())))
+    }, BatchSize::SmallInput);
+}
+
+fn extend_exact_cap(b: &mut Bencher) {
+    let rb = ConstGenericRingBuffer::new::<8192>();
+    let input = (0..8192).collect::<Vec<_>>();
+
+    b.iter_batched(&|| rb.clone(), |mut r| {
+        black_box(r.extend(black_box(input.as_slice())))
+    }, BatchSize::SmallInput);
+}
+
+fn extend_too_few(b: &mut Bencher) {
+    let rb = ConstGenericRingBuffer::new::<8192>();
+    let input = (0..4096).collect::<Vec<_>>();
+
+    b.iter_batched(&|| rb.clone(), |mut r| {
+        black_box(r.extend(black_box(input.as_slice())))
+    }, BatchSize::LargeInput);
 }
 
 criterion_group!(benches, criterion_benchmark);
