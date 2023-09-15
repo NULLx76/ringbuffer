@@ -30,7 +30,9 @@ pub unsafe trait RingBuffer<T>:
     }
 
     /// Raw pointer version of len
-    /// Safety: ONLY SAFE WHEN self is a *mut to to an implementor of RingBuffer
+    ///
+    /// # Safety
+    /// ONLY SAFE WHEN self is a *mut to to an implementor of `RingBuffer`
     #[doc(hidden)]
     unsafe fn ptr_len(rb: *const Self) -> usize;
 
@@ -54,7 +56,9 @@ pub unsafe trait RingBuffer<T>:
     }
 
     /// Raw pointer version of capacity.
-    /// Safety: ONLY SAFE WHEN self is a *mut to to an implementor of RingBuffer
+    ///
+    /// # Safety
+    /// ONLY SAFE WHEN self is a *mut to to an implementor of `RingBuffer`
     #[doc(hidden)]
     unsafe fn ptr_capacity(rb: *const Self) -> usize;
 
@@ -137,17 +141,11 @@ pub unsafe trait RingBuffer<T>:
     }
 
     /// same as [`get_mut`](RingBuffer::get_mut) but on raw pointers.
-    /// Safety: ONLY SAFE WHEN self is a *mut to to an implementor of RingBuffer
+    ///
+    /// # Safety
+    /// ONLY SAFE WHEN self is a *mut to to an implementor of `RingBuffer`
     #[doc(hidden)]
     unsafe fn ptr_get_mut(rb: *mut Self, index: isize) -> Option<*mut T>;
-
-    /// Gets a value relative to the start of the array (rarely useful, usually you want [`Self::get`])
-    #[deprecated = "cannot find a valid usecase for this, hard to implement for some ringbuffers"]
-    fn get_absolute(&self, index: usize) -> Option<&T>;
-
-    /// Gets a value mutably relative to the start of the array (rarely useful, usually you want [`Self::get_mut`])
-    #[deprecated = "cannot find a valid usecase for this, hard to implement for some ringbuffers"]
-    fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T>;
 
     /// Returns the value at the current index.
     /// This is the value that will be overwritten by the next push and also the value pushed
@@ -465,26 +463,6 @@ macro_rules! impl_ringbuffer_ext {
                         $crate::mask(Self::ptr_capacity(rb), normalized_index as usize),
                     )
                 }
-            })
-        }
-
-        #[inline]
-        fn get_absolute(&self, index: usize) -> Option<&T> {
-            let read = $mask(self.capacity(), self.$readptr);
-            let write = $mask(self.capacity(), self.$writeptr);
-            (index >= read && index < write).then(|| unsafe {
-                // SAFETY: index has been checked against $mask to be within bounds
-                $get_unchecked(self, index)
-            })
-        }
-
-        #[inline]
-        fn get_absolute_mut(&mut self, index: usize) -> Option<&mut T> {
-            (index >= $mask(self.capacity(), self.$readptr)
-                && index < $mask(self.capacity(), self.$writeptr))
-            .then(move || unsafe {
-                // SAFETY: index has been checked against $mask to be within bounds
-                &mut *$get_unchecked_mut(self, index)
             })
         }
 

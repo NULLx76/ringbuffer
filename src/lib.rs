@@ -696,28 +696,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
-    fn run_test_get_absolute() {
-        fn test_get_absolute(mut b: impl RingBuffer<i32>) {
-            b.push(0);
-            b.push(1);
-
-            // [0, ...]
-            //      ^
-            // [0, 1, ...]
-            //         ^
-            // get[0] = 0
-            // get[1] = 1
-            assert_eq!(b.get_absolute(0).unwrap(), &0);
-            assert_eq!(b.get_absolute(1).unwrap(), &1);
-            assert!(b.get_absolute(2).is_none());
-        }
-
-        test_get_absolute(AllocRingBuffer::with_capacity(8));
-        test_get_absolute(ConstGenericRingBuffer::<i32, 8>::new());
-    }
-
-    #[test]
     fn run_test_from_iterator() {
         fn test_from_iterator<T: RingBuffer<i32> + FromIterator<i32>>() {
             let b: T = std::iter::repeat(1).take(1024).collect();
@@ -1272,6 +1250,15 @@ mod tests {
         next_back_test_mut(AllocRingBuffer::new(8));
         next_back_test_mut(GrowableAllocRingBuffer::with_capacity(8));
     }
+
+    #[test]
+    fn test_fill() {
+        let mut b = AllocRingBuffer::from([vec![1], vec![2]]);
+        b.fill(vec![2]);
+        assert_eq!(b.dequeue(), Some(vec![2]));
+        assert_eq!(b.dequeue(), Some(vec![2]));
+    }
+
     #[test]
     fn run_test_fill() {
         fn test_fill(mut rb: impl RingBuffer<i32>) {
