@@ -1,3 +1,4 @@
+#![no_coverage]
 use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion};
 use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBuffer};
 
@@ -40,8 +41,8 @@ fn benchmark_push_dequeue<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new
             rb.push(2);
             black_box(());
 
-            assert_eq!(black_box(rb.get(-1)), Some(&2));
-            assert_eq!(black_box(rb.get(-2)), Some(&1));
+            assert_eq!(black_box(rb.get_signed(-1)), Some(&2));
+            assert_eq!(black_box(rb.get_signed(-2)), Some(&1));
         }
 
         rb
@@ -55,7 +56,7 @@ fn benchmark_various<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) 
         for i in 0..100_000 {
             rb.push(i);
             black_box(());
-            black_box(rb.get(-1));
+            black_box(rb.back());
         }
 
         rb

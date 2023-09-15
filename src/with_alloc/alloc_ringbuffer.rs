@@ -7,7 +7,7 @@ use crate::ringbuffer_trait::{
 extern crate alloc;
 
 // We need boxes, so depend on alloc
-use crate::{mask, GrowableAllocRingBuffer};
+use crate::{mask_and, GrowableAllocRingBuffer};
 use core::ptr;
 
 /// The `AllocRingBuffer` is a `RingBuffer` which is based on a Vec. This means it allocates at runtime
@@ -24,7 +24,7 @@ use core::ptr;
 /// buffer.push(5);
 ///
 /// // The last item we pushed is 5
-/// assert_eq!(buffer.get(-1), Some(&5));
+/// assert_eq!(buffer.back(), Some(&5));
 ///
 /// // Second entry is now 42.
 /// buffer.push(42);
@@ -221,13 +221,19 @@ unsafe impl<T> RingBuffer<T> for AllocRingBuffer<T> {
         (*rb).capacity
     }
 
+    #[inline]
+    unsafe fn ptr_buffer_size(rb: *const Self) -> usize {
+        (*rb).size
+    }
+
     impl_ringbuffer!(readptr, writeptr);
 
     #[inline]
     fn push(&mut self, value: T) {
         if self.is_full() {
+            // mask with and is allowed here because size is always a power of two
             let previous_value =
-                unsafe { ptr::read(get_unchecked_mut(self, mask(self.size, self.readptr))) };
+                unsafe { ptr::read(get_unchecked_mut(self, mask_and(self.size, self.readptr))) };
 
             // make sure we drop whatever is being overwritten
             // SAFETY: the buffer is full, so this must be initialized
@@ -240,7 +246,8 @@ unsafe impl<T> RingBuffer<T> for AllocRingBuffer<T> {
             self.readptr += 1;
         }
 
-        let index = mask(self.size, self.writeptr);
+        // mask with and is allowed here because size is always a power of two
+        let index = mask_and(self.size, self.writeptr);
 
         unsafe {
             ptr::write(get_unchecked_mut(self, index), value);
@@ -253,7 +260,8 @@ unsafe impl<T> RingBuffer<T> for AllocRingBuffer<T> {
         if self.is_empty() {
             None
         } else {
-            let index = mask(self.size, self.readptr);
+            // mask with and is allowed here because size is always a power of two
+            let index = mask_and(self.size, self.readptr);
             let res = unsafe { get_unchecked_mut(self, index) };
             self.readptr += 1;
 
@@ -264,7 +272,7 @@ unsafe impl<T> RingBuffer<T> for AllocRingBuffer<T> {
         }
     }
 
-    impl_ringbuffer_ext!(get_unchecked, get_unchecked_mut, readptr, writeptr, mask);
+    impl_ringbuffer_ext!(get_unchecked, get_unchecked_mut, readptr, writeptr, mask_and);
 
     #[inline]
     fn fill_with<F: FnMut() -> T>(&mut self, mut f: F) {
@@ -340,32 +348,17 @@ unsafe fn get_unchecked_mut<T>(rb: *mut AllocRingBuffer<T>, index: usize) -> *mu
     p.cast()
 }
 
-impl<T> Index<isize> for AllocRingBuffer<T> {
-    type Output = T;
-
-    fn index(&self, index: isize) -> &Self::Output {
-        self.get(index).expect("index out of bounds")
-    }
-}
-
-impl<T> IndexMut<isize> for AllocRingBuffer<T> {
-    fn index_mut(&mut self, index: isize) -> &mut Self::Output {
-        self.get_mut(index).expect("index out of bounds")
-    }
-}
-
-
 impl<T> Index<usize> for AllocRingBuffer<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
-        self.get(index as isize).expect("index out of bounds")
+        self.get(index).expect("index out of bounds")
     }
 }
 
 impl<T> IndexMut<usize> for AllocRingBuffer<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        self.get_mut(index as isize).expect("index out of bounds")
+        self.get_mut(index).expect("index out of bounds")
     }
 }
 
@@ -430,7 +423,7 @@ mod tests {
         let expected = [0, 0, 1, 2];
 
         for i in 0..4 {
-            let actual = buf[i as isize];
+            let actual = buf[i];
             let expected = expected[i];
             assert_eq!(actual, expected);
         }
@@ -447,7 +440,7 @@ mod tests {
         let expected = [2, 3, 4, 5, 6, 7, 8, 9];
 
         for i in 0..8 {
-            let actual = buf[i as isize];
+            let actual = buf[i];
             let expected = expected[i];
             assert_eq!(actual, expected);
         }
