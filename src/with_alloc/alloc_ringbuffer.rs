@@ -151,7 +151,7 @@ impl<T> Drop for AllocRingBuffer<T> {
     fn drop(&mut self) {
         self.drain().for_each(drop);
 
-        let layout = alloc::alloc::Layout::array::<T>(self.capacity).unwrap();
+        let layout = alloc::alloc::Layout::array::<T>(self.size).unwrap();
         unsafe {
             alloc::alloc::dealloc(self.buf as *mut u8, layout);
         }
