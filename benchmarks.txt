@@ -1,0 +1,314 @@
+single-ops/push empty: [alloc] non-power-of-two
+                        time:   [2.2171 ns 2.2190 ns 2.2209 ns]
+                        change: [-2.1304% +0.0959% +2.5258%] (p = 0.94 > 0.05)
+                        No change in performance detected.
+Found 5068 outliers among 40000 measurements (12.67%)
+  1 (0.00%) low mild
+  2149 (5.37%) high mild
+  2918 (7.29%) high severe
+single-ops/push empty: [const-generic] non-power-of-two
+                        time:   [1.4038 ns 1.4055 ns 1.4071 ns]
+                        change: [-0.3491% +1.4592% +3.3064%] (p = 0.13 > 0.05)
+                        No change in performance detected.
+Found 5435 outliers among 40000 measurements (13.59%)
+  2465 (6.16%) high mild
+  2970 (7.42%) high severe
+single-ops/push empty: [growable] non-power-of-two
+                        time:   [1.7230 ns 1.7247 ns 1.7264 ns]
+                        change: [-3.8615% -0.7609% +2.2804%] (p = 0.66 > 0.05)
+                        No change in performance detected.
+Found 5144 outliers among 40000 measurements (12.86%)
+  2319 (5.80%) high mild
+  2825 (7.06%) high severe
+single-ops/push empty: [alloc] power-of-two
+                        time:   [1.9350 ns 1.9371 ns 1.9391 ns]
+                        change: [-3.6773% -1.1380% +1.2111%] (p = 0.42 > 0.05)
+                        No change in performance detected.
+Found 5095 outliers among 40000 measurements (12.74%)
+  2350 (5.88%) high mild
+  2745 (6.86%) high severe
+single-ops/push empty: [const-generic] power-of-two
+                        time:   [1.5533 ns 1.5566 ns 1.5598 ns]
+                        change: [-4.8134% -2.9662% -1.2320%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 2308 outliers among 40000 measurements (5.77%)
+  1517 (3.79%) high mild
+  791 (1.98%) high severe
+single-ops/push empty: [growable] power-of-two
+                        time:   [1.9730 ns 1.9753 ns 1.9776 ns]
+                        change: [-1.6385% +1.2771% +4.1091%] (p = 0.41 > 0.05)
+                        No change in performance detected.
+Found 5231 outliers among 40000 measurements (13.08%)
+  2217 (5.54%) high mild
+  3014 (7.54%) high severe
+Benchmarking single-ops/push full: [alloc] non-power-of-two: Warming up for 5.0000 s
+Warning: Unable to complete 40000 samples in 60.0s. You may wish to increase target time to 62.2s, enable flat sampling, or reduce sample count to 27780.
+single-ops/push full: [alloc] non-power-of-two
+                        time:   [2.2195 ns 2.2222 ns 2.2250 ns]
+                        change: [-3.6735% -0.0019% +3.5666%] (p = 0.99 > 0.05)
+                        No change in performance detected.
+Found 5154 outliers among 40000 measurements (12.88%)
+  1 (0.00%) low mild
+  2060 (5.15%) high mild
+  3093 (7.73%) high severe
+single-ops/push full: [const-generic] non-power-of-two
+                        time:   [1.8389 ns 1.8417 ns 1.8444 ns]
+                        change: [-7.5073% -5.9821% -4.2554%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 4448 outliers among 40000 measurements (11.12%)
+  2064 (5.16%) high mild
+  2384 (5.96%) high severe
+Benchmarking single-ops/push full: [growable] non-power-of-two: Warming up for 5.0000 s
+Warning: Unable to complete 40000 samples in 60.0s. You may wish to increase target time to 110.9s, enable flat sampling, or reduce sample count to 20800.
+single-ops/push full: [growable] non-power-of-two
+                        time:   [45.465 ns 45.486 ns 45.508 ns]
+                        change: [-1.0386% -0.7004% -0.3403%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 7744 outliers among 40000 measurements (19.36%)
+  4737 (11.84%) low severe
+  1945 (4.86%) low mild
+  859 (2.15%) high mild
+  203 (0.51%) high severe
+Benchmarking single-ops/push full: [alloc] power-of-two: Warming up for 5.0000 s
+Warning: Unable to complete 40000 samples in 60.0s. You may wish to increase target time to 70.9s, enable flat sampling, or reduce sample count to 26020.
+single-ops/push full: [alloc] power-of-two
+                        time:   [2.4978 ns 2.5010 ns 2.5043 ns]
+                        change: [-5.5180% -1.5653% +2.6720%] (p = 0.45 > 0.05)
+                        No change in performance detected.
+Found 4662 outliers among 40000 measurements (11.65%)
+  26 (0.07%) low severe
+  488 (1.22%) low mild
+  883 (2.21%) high mild
+  3265 (8.16%) high severe
+single-ops/push full: [const-generic] power-of-two
+                        time:   [2.1352 ns 2.1402 ns 2.1458 ns]
+                        change: [-21.074% -19.522% -17.381%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 4147 outliers among 40000 measurements (10.37%)
+  3 (0.01%) low severe
+  13 (0.03%) low mild
+  1855 (4.64%) high mild
+  2276 (5.69%) high severe
+Benchmarking single-ops/push full: [growable] power-of-two: Warming up for 5.0000 s
+Warning: Unable to complete 40000 samples in 60.0s. You may wish to increase target time to 158.9s, enable flat sampling, or reduce sample count to 17380.
+single-ops/push full: [growable] power-of-two
+                        time:   [45.138 ns 45.150 ns 45.162 ns]
+                        change: [+1.6296% +1.9816% +2.3989%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 7365 outliers among 40000 measurements (18.41%)
+  6387 (15.97%) high mild
+  978 (2.44%) high severe
+single-ops/dequeue with item: [alloc] non-power-of-two
+                        time:   [1.9709 ns 1.9728 ns 1.9747 ns]
+                        change: [-2.9691% -0.9493% +1.2088%] (p = 0.38 > 0.05)
+                        No change in performance detected.
+Found 5038 outliers among 40000 measurements (12.60%)
+  2169 (5.42%) high mild
+  2869 (7.17%) high severe
+single-ops/dequeue with item: [const-generic] non-power-of-two
+                        time:   [1.6940 ns 1.6966 ns 1.6992 ns]
+                        change: [-1.0007% -0.0600% +0.9255%] (p = 0.90 > 0.05)
+                        No change in performance detected.
+Found 3384 outliers among 40000 measurements (8.46%)
+  1815 (4.54%) high mild
+  1569 (3.92%) high severe
+single-ops/dequeue with item: [growable] non-power-of-two
+                        time:   [1.7228 ns 1.7282 ns 1.7372 ns]
+                        change: [-3.1990% +0.0436% +3.3303%] (p = 0.99 > 0.05)
+                        No change in performance detected.
+Found 5127 outliers among 40000 measurements (12.82%)
+  2384 (5.96%) high mild
+  2743 (6.86%) high severe
+single-ops/dequeue with item: [alloc] power-of-two
+                        time:   [1.7149 ns 1.7175 ns 1.7202 ns]
+                        change: [-3.7510% -0.4551% +2.5486%] (p = 0.81 > 0.05)
+                        No change in performance detected.
+Found 4400 outliers among 40000 measurements (11.00%)
+  2109 (5.27%) high mild
+  2291 (5.73%) high severe
+single-ops/dequeue with item: [const-generic] power-of-two
+                        time:   [1.5067 ns 1.5094 ns 1.5120 ns]
+                        change: [-22.281% -15.774% -10.977%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 3546 outliers among 40000 measurements (8.87%)
+  1822 (4.55%) high mild
+  1724 (4.31%) high severe
+single-ops/dequeue with item: [growable] power-of-two
+                        time:   [1.8362 ns 1.8390 ns 1.8418 ns]
+                        change: [-2.9027% +0.2452% +3.0412%] (p = 0.89 > 0.05)
+                        No change in performance detected.
+Found 4389 outliers among 40000 measurements (10.97%)
+  2151 (5.38%) high mild
+  2238 (5.59%) high severe
+single-ops/dequeue empty: [alloc] non-power-of-two
+                        time:   [818.30 ps 819.69 ps 821.13 ps]
+                        change: [-3.5637% +0.7797% +5.9616%] (p = 0.74 > 0.05)
+                        No change in performance detected.
+Found 5517 outliers among 40000 measurements (13.79%)
+  2201 (5.50%) high mild
+  3316 (8.29%) high severe
+single-ops/dequeue empty: [const-generic] non-power-of-two
+                        time:   [947.50 ps 949.45 ps 951.45 ps]
+                        change: [-1.9480% +0.4418% +3.2377%] (p = 0.76 > 0.05)
+                        No change in performance detected.
+Found 3704 outliers among 40000 measurements (9.26%)
+  1 (0.00%) low mild
+  1778 (4.45%) high mild
+  1925 (4.81%) high severe
+single-ops/dequeue empty: [growable] non-power-of-two
+                        time:   [756.13 ps 757.70 ps 759.30 ps]
+                        change: [-4.3287% +0.3643% +5.0731%] (p = 0.90 > 0.05)
+                        No change in performance detected.
+Found 5731 outliers among 40000 measurements (14.33%)
+  2134 (5.33%) high mild
+  3597 (8.99%) high severe
+single-ops/dequeue empty: [alloc] power-of-two
+                        time:   [825.04 ps 826.37 ps 827.74 ps]
+                        change: [-7.2408% -1.8290% +3.3766%] (p = 0.52 > 0.05)
+                        No change in performance detected.
+Found 5520 outliers among 40000 measurements (13.80%)
+  1919 (4.80%) high mild
+  3601 (9.00%) high severe
+single-ops/dequeue empty: [const-generic] power-of-two
+                        time:   [1.4789 ns 1.4841 ns 1.4893 ns]
+                        change: [-2.2150% +0.2400% +2.5669%] (p = 0.86 > 0.05)
+                        No change in performance detected.
+Found 2207 outliers among 40000 measurements (5.52%)
+  1706 (4.26%) high mild
+  501 (1.25%) high sever1.48ns  e
+single-ops/dequeue empty: [growable] power-of-two
+                        time:   [745.35 ps 746.82 ps 748.32 ps]
+                        change: [-5.3157% +0.2962% +7.5298%] (p = 0.94 > 0.05)
+                        No change in performance detected.
+Found 5479 outliers among 40000 measurements (13.70%)
+  1794 (4.49%) high mild
+  3685 (9.21%) high severe
+
+batch/fill: [alloc] non-power-of-two
+                        time:   [1.9029 µs 1.9037 µs 1.9045 µs]
+                        change: [-1.2312% -0.4263% +0.4084%] (p = 0.32 > 0.05)
+                        No change in performance detected.
+Found 147 outliers among 1000 measurements (14.70%)
+  43 (4.30%) high mild
+  104 (10.40%) high severe
+batch/fill: [const-generic] non-power-of-two
+                        time:   [1.2678 µs 1.2684 µs 1.2690 µs]
+                        change: [-2.3283% -1.0501% +0.2622%] (p = 0.09 > 0.05)
+                        No change in performance detected.
+Found 129 outliers among 1000 measurements (12.90%)
+  50 (5.00%) high mild
+  79 (7.90%) high severe
+batch/fill: [growable] non-power-of-two
+                        time:   [1.1570 µs 1.1585 µs 1.1601 µs]
+                        change: [-1.5585% -0.6117% +0.4033%] (p = 0.24 > 0.05)
+                        No change in performance detected.
+Found 122 outliers among 1000 measurements (12.20%)
+  25 (2.50%) high mild
+  97 (9.70%) high severe
+batch/fill: [alloc] power-of-two
+                        time:   [1.1047 µs 1.1053 µs 1.1059 µs]
+                        change: [-1.8509% -0.4286% +1.1297%] (p = 0.57 > 0.05)
+                        No change in performance detected.
+Found 119 outliers among 1000 measurements (11.90%)
+  17 (1.70%) high mild
+  102 (10.20%) high severe
+batch/fill: [const-generic] power-of-two
+                        time:   [1.0121 µs 1.0127 µs 1.0133 µs]
+                        change: [-1.2907% -0.2821% +0.7342%] (p = 0.62 > 0.05)
+                        No change in performance detected.
+Found 111 outliers among 1000 measurements (11.10%)
+  52 (5.20%) high mild
+  59 (5.90%) high severe
+batch/fill: [growable] power-of-two
+                        time:   [1.1807 µs 1.1824 µs 1.1840 µs]
+                        change: [-0.7709% +0.1560% +1.0762%] (p = 0.76 > 0.05)
+                        No change in performance detected.
+Found 118 outliers among 1000 measurements (11.80%)
+  19 (1.90%) high mild
+  99 (9.90%) high severe
+batch/over fill: [alloc] non-power-of-two
+                        time:   [3.8041 µs 3.8102 µs 3.8165 µs]
+                        change: [-0.6518% -0.0744% +0.4735%] (p = 0.80 > 0.05)
+                        No change in performance detected.
+Found 73 outliers among 1000 measurements (7.30%)
+  38 (3.80%) high mild
+  35 (3.50%) high severe
+batch/over fill: [const-generic] non-power-of-two
+                        time:   [2.5193 µs 2.5255 µs 2.5338 µs]
+                        change: [-0.2462% +0.3881% +0.9729%] (p = 0.24 > 0.05)
+                        No change in performance detected.
+Found 105 outliers among 1000 measurements (10.50%)
+  50 (5.00%) high mild
+  55 (5.50%) high severe
+batch/over fill: [growable] non-power-of-two
+                        time:   [2.5351 µs 2.5415 µs 2.5486 µs]
+                        change: [-0.4974% +0.0559% +0.6021%] (p = 0.84 > 0.05)
+                        No change in performance detected.
+Found 115 outliers among 1000 measurements (11.50%)
+  25 (2.50%) high mild
+  90 (9.00%) high severe
+batch/over fill: [alloc] power-of-two
+                        time:   [2.4303 µs 2.4316 µs 2.4330 µs]
+                        change: [-0.9993% -0.1030% +0.7939%] (p = 0.82 > 0.05)
+                        No change in performance detected.
+Found 157 outliers among 1000 measurements (15.70%)
+  78 (7.80%) high mild
+  79 (7.90%) high severe
+batch/over fill: [const-generic] power-of-two
+                        time:   [2.2951 µs 2.2964 µs 2.2978 µs]
+                        change: [+0.0424% +0.5226% +1.0120%] (p = 0.04 < 0.05)
+                        Change within noise threshold.
+Found 94 outliers among 1000 measurements (9.40%)
+  47 (4.70%) high mild
+  47 (4.70%) high severe
+batch/over fill: [growable] power-of-two
+                        time:   [2.5752 µs 2.5788 µs 2.5824 µs]
+                        change: [-0.5484% -0.0277% +0.5390%] (p = 0.91 > 0.05)
+                        No change in performance detected.
+Found 88 outliers among 1000 measurements (8.80%)
+  2 (0.20%) high mild
+  86 (8.60%) high severe
+batch/drain: [alloc] non-power-of-two
+                        time:   [1.8829 µs 1.8839 µs 1.8851 µs]
+                        change: [-0.7758% +0.0096% +0.9608%] (p = 0.98 > 0.05)
+                        No change in performance detected.
+Found 128 outliers among 1000 measurements (12.80%)
+  52 (5.20%) high mild
+  76 (7.60%) high severe
+batch/drain: [const-generic] non-power-of-two
+                        time:   [919.48 ns 929.11 ns 939.39 ns]
+                        change: [-9.3230% -7.6811% -6.1789%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 20 outliers among 1000 measurements (2.00%)
+  18 (1.80%) high mild
+  2 (0.20%) high severe
+Benchmarking batch/drain: [growable] non-power-of-two: Collecting 1000 samples in estimated 60.227 s (28M iterations)
+batch/drain: [growable] non-power-of-two
+                        time:   [1.3952 µs 1.3959 µs 1.3967 µs]
+                        change: [-26.598% -25.889% -25.222%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 119 outliers among 1000 measurements (11.90%)
+  45 (4.50%) high mild
+  74 (7.40%) high severe
+batch/drain: [alloc] power-of-two
+                        time:   [832.98 ns 835.50 ns 838.36 ns]
+                        change: [-25.845% -25.060% -24.298%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 151 outliers among 1000 measurements (15.10%)
+  50 (5.00%) high mild
+  101 (10.10%) high severe
+batch/drain: [const-generic] power-of-two
+                        time:   [605.55 ns 610.90 ns 617.00 ns]
+                        change: [-25.743% -24.437% -22.831%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 133 outliers among 1000 measurements (13.30%)
+  43 (4.30%) high mild
+  90 (9.00%) high severe
+batch/drain: [growable] power-of-two
+                        time:   [1.4447 µs 1.4467 µs 1.4492 µs]
+                        change: [-25.692% -25.022% -24.274%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 130 outliers among 1000 measurements (13.00%)
+  40 (4.00%) high mild
+  90 (9.00%) high severe
+
