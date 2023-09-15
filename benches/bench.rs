@@ -73,7 +73,7 @@ macro_rules! generate_benches {
     (non_power_two, $c: tt, $rb: tt, $ty: tt, $fn: tt, $bmfunc: tt, $($i:tt),*) => {
         $(
             $c.bench_function(&format!("{} {} 1M capacity not power of two {}", stringify!($rb), stringify!($bmfunc), stringify!($i)), |b| $bmfunc(b, || {
-                $rb::<$ty, _>::$fn($i)
+                $rb::<$ty>::$fn($i)
             }));
         )*
     };
@@ -87,19 +87,6 @@ macro_rules! generate_benches {
     };
 }
 
-fn benchmark_non_power_of_two<const L: usize>(b: &mut Bencher) {
-    b.iter(|| {
-        let mut rb = AllocRingBuffer::with_capacity_non_power_of_two(L);
-
-        for i in 0..1_000_000 {
-            rb.push(i);
-            black_box(());
-        }
-
-        rb
-    })
-}
-
 fn criterion_benchmark(c: &mut Criterion) {
     // TODO: Improve benchmarks
     // * What are representative operations
@@ -111,7 +98,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         c,
         AllocRingBuffer,
         i32,
-        with_capacity,
+        new,
         benchmark_push,
         16,
         1024,
@@ -135,7 +122,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         c,
         AllocRingBuffer,
         i32,
-        with_capacity,
+        new,
         benchmark_various,
         16,
         1024,
@@ -159,7 +146,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         c,
         AllocRingBuffer,
         i32,
-        with_capacity,
+        new,
         benchmark_push_dequeue,
         16,
         1024,
@@ -183,7 +170,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         c,
         AllocRingBuffer,
         i32,
-        with_capacity_non_power_of_two,
+        new,
         benchmark_various,
         16,
         17,

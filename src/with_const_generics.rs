@@ -5,9 +5,6 @@ use core::mem;
 use core::mem::MaybeUninit;
 use core::ops::{Index, IndexMut};
 
-#[cfg(feature = "alloc")]
-use crate::with_alloc::alloc_ringbuffer::RingbufferSize;
-
 /// The `ConstGenericRingBuffer` struct is a `RingBuffer` implementation which does not require `alloc` but
 /// uses const generics instead.
 ///
@@ -126,10 +123,8 @@ impl<T, const CAP: usize> From<crate::GrowableAllocRingBuffer<T>>
 }
 
 #[cfg(feature = "alloc")]
-impl<T, const CAP: usize, SIZE: RingbufferSize> From<crate::AllocRingBuffer<T, SIZE>>
-    for ConstGenericRingBuffer<T, CAP>
-{
-    fn from(mut value: crate::AllocRingBuffer<T, SIZE>) -> Self {
+impl<T, const CAP: usize> From<crate::AllocRingBuffer<T>> for ConstGenericRingBuffer<T, CAP> {
+    fn from(mut value: crate::AllocRingBuffer<T>) -> Self {
         value.drain().collect()
     }
 }

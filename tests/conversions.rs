@@ -45,7 +45,7 @@ convert_tests!(
 
         alloc_from_cgrb: {let a = ConstGenericRingBuffer::from(['1', '2']); a},
         alloc_from_garb: {let a = GrowableAllocRingBuffer::from(['1', '2']); a},
-    ] => AllocRingBuffer::<_, _>
+    ] => AllocRingBuffer::<_>
 );
 
 convert_tests!(

@@ -1,6 +1,6 @@
 extern crate ringbuffer;
 
-use ringbuffer::{ConstGenericRingBuffer, RingBufferWrite};
+use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
 
 fn main() {
     let mut buf = ConstGenericRingBuffer::new::<0>();
