@@ -45,10 +45,15 @@ pub struct AllocRingBuffer<T> {
     writeptr: usize,
 }
 
+// SAFETY: all methods that require mutable access take &mut,
+// being send and sync was the old behavior but broke when we switched to *mut T.
+unsafe impl<T: Sync> Sync for AllocRingBuffer<T> {}
+unsafe impl<T: Send> Send for AllocRingBuffer<T> {}
+
 impl<T, const N: usize> From<[T; N]> for AllocRingBuffer<T> {
     fn from(value: [T; N]) -> Self {
         let mut rb = Self::new(value.len());
-        rb.extend(value.into_iter());
+        rb.extend(value);
         rb
     }
 }
@@ -92,7 +97,7 @@ impl<T: Clone, const CAP: usize> From<&mut [T; CAP]> for AllocRingBuffer<T> {
 impl<T> From<alloc::vec::Vec<T>> for AllocRingBuffer<T> {
     fn from(value: alloc::vec::Vec<T>) -> Self {
         let mut res = AllocRingBuffer::new(value.len());
-        res.extend(value.into_iter());
+        res.extend(value);
         res
     }
 }
@@ -100,7 +105,7 @@ impl<T> From<alloc::vec::Vec<T>> for AllocRingBuffer<T> {
 impl<T> From<alloc::collections::VecDeque<T>> for AllocRingBuffer<T> {
     fn from(value: alloc::collections::VecDeque<T>) -> Self {
         let mut res = AllocRingBuffer::new(value.len());
-        res.extend(value.into_iter());
+        res.extend(value);
         res
     }
 }
@@ -108,7 +113,7 @@ impl<T> From<alloc::collections::VecDeque<T>> for AllocRingBuffer<T> {
 impl<T> From<alloc::collections::LinkedList<T>> for AllocRingBuffer<T> {
     fn from(value: alloc::collections::LinkedList<T>) -> Self {
         let mut res = AllocRingBuffer::new(value.len());
-        res.extend(value.into_iter());
+        res.extend(value);
         res
     }
 }

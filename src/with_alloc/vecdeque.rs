@@ -62,7 +62,7 @@ impl<T: Clone, const CAP: usize> From<&mut [T; CAP]> for GrowableAllocRingBuffer
 impl<T> From<alloc::vec::Vec<T>> for GrowableAllocRingBuffer<T> {
     fn from(value: alloc::vec::Vec<T>) -> Self {
         let mut res = GrowableAllocRingBuffer::new();
-        res.extend(value.into_iter());
+        res.extend(value);
         res
     }
 }
@@ -70,7 +70,7 @@ impl<T> From<alloc::vec::Vec<T>> for GrowableAllocRingBuffer<T> {
 impl<T> From<alloc::collections::LinkedList<T>> for GrowableAllocRingBuffer<T> {
     fn from(value: alloc::collections::LinkedList<T>) -> Self {
         let mut res = GrowableAllocRingBuffer::new();
-        res.extend(value.into_iter());
+        res.extend(value);
         res
     }
 }
@@ -229,14 +229,6 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
             (*rb).0.get_mut(index)
         }
         .map(|i| i as *mut T)
-    }
-
-    fn get_absolute(&self, _index: usize) -> Option<&T> {
-        unimplemented!()
-    }
-
-    fn get_absolute_mut(&mut self, _index: usize) -> Option<&mut T> {
-        unimplemented!()
     }
 }
 
