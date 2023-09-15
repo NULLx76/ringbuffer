@@ -33,7 +33,9 @@ pub use with_const_generics::ConstGenericRingBuffer;
 
 /// Used internally. Computes the bitmask used to properly wrap the ringbuffers.
 #[inline]
-const fn mask(cap: usize, index: usize) -> usize {
+#[cfg(feature = "alloc")]
+const fn mask_and(cap: usize, index: usize) -> usize {
+    debug_assert!(cap.is_power_of_two());
     index & (cap - 1)
 }
 
@@ -63,7 +65,7 @@ mod tests {
         fn test_neg_index(mut b: impl RingBuffer<usize>) {
             for i in 0..capacity + 2 {
                 b.push(i);
-                assert_eq!(b.get(-1), Some(&i));
+                assert_eq!(b.get_signed(-1), Some(&i));
             }
         }
 
@@ -213,6 +215,60 @@ mod tests {
         test_iter(AllocRingBuffer::new(8));
         test_iter(GrowableAllocRingBuffer::with_capacity(8));
         test_iter(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
+    #[test]
+    fn run_test_forward_iter_non_power_of_two() {
+        fn test_iter(mut b: impl RingBuffer<i32>) {
+            b.push(1);
+            b.push(2);
+            b.push(3);
+            b.push(4);
+            b.push(5);
+            b.push(6);
+            b.push(7);
+
+            let mut iter = b.iter();
+            assert_eq!(&1, iter.next().unwrap());
+            assert_eq!(&2, iter.next().unwrap());
+            assert_eq!(&3, iter.next().unwrap());
+            assert_eq!(&4, iter.next().unwrap());
+            assert_eq!(&5, iter.next().unwrap());
+            assert_eq!(&6, iter.next().unwrap());
+            assert_eq!(&7, iter.next().unwrap());
+            assert_eq!(None, iter.next());
+        }
+
+        test_iter(AllocRingBuffer::new(7));
+        test_iter(GrowableAllocRingBuffer::with_capacity(7));
+        test_iter(ConstGenericRingBuffer::<i32, 7>::new());
+    }
+
+    #[test]
+    fn run_test_iter_non_power_of_two() {
+        fn test_iter(mut b: impl RingBuffer<i32>) {
+            b.push(1);
+            b.push(2);
+            b.push(3);
+            b.push(4);
+            b.push(5);
+            b.push(6);
+            b.push(7);
+
+            let mut iter = b.iter();
+            assert_eq!(&1, iter.next().unwrap());
+            assert_eq!(&7, iter.next_back().unwrap());
+            assert_eq!(&2, iter.next().unwrap());
+            assert_eq!(&3, iter.next().unwrap());
+            assert_eq!(&6, iter.next_back().unwrap());
+            assert_eq!(&5, iter.next_back().unwrap());
+            assert_eq!(&4, iter.next().unwrap());
+            assert_eq!(None, iter.next());
+        }
+
+        test_iter(AllocRingBuffer::new(7));
+        test_iter(GrowableAllocRingBuffer::with_capacity(7));
+        test_iter(ConstGenericRingBuffer::<i32, 7>::new());
     }
 
     #[test]
@@ -510,6 +566,33 @@ mod tests {
     }
 
     #[test]
+    fn run_test_get() {
+        fn test_index(mut b: impl RingBuffer<i32>) {
+            b.push(0);
+            b.push(1);
+            b.push(2);
+            b.push(3);
+            b.push(4);
+            b.push(5);
+            b.push(6);
+            b.push(7);
+
+            assert_eq!(b.get(0), Some(&0));
+            assert_eq!(b.get(1), Some(&1));
+            assert_eq!(b.get(2), Some(&2));
+            assert_eq!(b.get(3), Some(&3));
+            assert_eq!(b.get(4), Some(&4));
+            assert_eq!(b.get(5), Some(&5));
+            assert_eq!(b.get(6), Some(&6));
+            assert_eq!(b.get(7), Some(&7));
+        }
+
+        test_index(AllocRingBuffer::new(8));
+        test_index(GrowableAllocRingBuffer::with_capacity(8));
+        test_index(ConstGenericRingBuffer::<i32, 8>::new());
+    }
+
+    #[test]
     fn run_test_index_mut() {
         fn test_index_mut(mut b: impl RingBuffer<i32>) {
             b.push(2);
@@ -557,11 +640,6 @@ mod tests {
             b.push(0);
             b.push(1);
 
-            // [0, ...]
-            //      ^
-            // [0, 1, ...]
-            //         ^
-            // get[(index + 0) % len] = 0 (wrap to 0 because len == 2)
             // get[(index + 1) % len] = 1
             assert_eq!(b.get(0).unwrap(), &0);
             assert_eq!(b.get(1).unwrap(), &1);
@@ -729,12 +807,12 @@ mod tests {
             //         ^
             // get[(index + -1) % len] = 1
             // get[(index + -2) % len] = 0 (wrap to 1 because len == 2)
-            assert_eq!(b.get(-1).unwrap(), &1);
-            assert_eq!(b.get(-2).unwrap(), &0);
+            assert_eq!(b.get_signed(-1).unwrap(), &1);
+            assert_eq!(b.get_signed(-2).unwrap(), &0);
 
             // Wraps around
-            assert_eq!(b.get(-3).unwrap(), &1);
-            assert_eq!(b.get(-4).unwrap(), &0);
+            assert_eq!(b.get_signed(-3).unwrap(), &1);
+            assert_eq!(b.get_signed(-4).unwrap(), &0);
         }
 
         test_get_relative_negative(AllocRingBuffer::new(8));
@@ -980,11 +1058,11 @@ mod tests {
         fn test_large_negative_index(mut b: impl RingBuffer<i32>) {
             b.push(1);
             b.push(2);
-            assert_eq!(b.get(1), Some(&2));
-            assert_eq!(b.get(0), Some(&1));
-            assert_eq!(b.get(-1), Some(&2));
-            assert_eq!(b.get(-2), Some(&1));
-            assert_eq!(b.get(-3), Some(&2));
+            assert_eq!(b.get_signed(1), Some(&2));
+            assert_eq!(b.get_signed(0), Some(&1));
+            assert_eq!(b.get_signed(-1), Some(&2));
+            assert_eq!(b.get_signed(-2), Some(&1));
+            assert_eq!(b.get_signed(-3), Some(&2));
         }
 
         test_large_negative_index(AllocRingBuffer::new(2));
@@ -997,11 +1075,11 @@ mod tests {
         fn test_large_negative_index(mut b: impl RingBuffer<i32>) {
             b.push(1);
             b.push(2);
-            assert_eq!(b.get_mut(1), Some(&mut 2));
-            assert_eq!(b.get_mut(0), Some(&mut 1));
-            assert_eq!(b.get_mut(-1), Some(&mut 2));
-            assert_eq!(b.get_mut(-2), Some(&mut 1));
-            assert_eq!(b.get_mut(-3), Some(&mut 2));
+            assert_eq!(b.get_mut_signed(1), Some(&mut 2));
+            assert_eq!(b.get_mut_signed(0), Some(&mut 1));
+            assert_eq!(b.get_mut_signed(-1), Some(&mut 2));
+            assert_eq!(b.get_mut_signed(-2), Some(&mut 1));
+            assert_eq!(b.get_mut_signed(-3), Some(&mut 2));
         }
 
         test_large_negative_index(AllocRingBuffer::new(2));
@@ -1076,9 +1154,9 @@ mod tests {
             b.push(1);
             b.push(2);
 
-            assert_eq!(b.get(-1), Some(&2));
-            assert_eq!(b.get(-2), Some(&1));
-            assert_eq!(b.get(-3), Some(&2));
+            assert_eq!(b.get_signed(-1), Some(&2));
+            assert_eq!(b.get_signed(-2), Some(&1));
+            assert_eq!(b.get_signed(-3), Some(&2));
         }
 
         test_push_dequeue_push_full_get(AllocRingBuffer::new(2));
@@ -1109,9 +1187,9 @@ mod tests {
         b.push(1);
         b.push(2);
 
-        assert_eq!(b.get(-1), Some(&2));
-        assert_eq!(b.get(-2), Some(&1));
-        assert_eq!(b.get(-3), Some(&0))
+        assert_eq!(b.get_signed(-1), Some(&2));
+        assert_eq!(b.get_signed(-2), Some(&1));
+        assert_eq!(b.get_signed(-3), Some(&0))
     }
 
     #[test]
@@ -1135,8 +1213,8 @@ mod tests {
                 rb.push(1);
                 rb.push(2);
 
-                assert_eq!(rb.get(-1), Some(&2));
-                assert_eq!(rb.get(-2), Some(&1));
+                assert_eq!(rb.get_signed(-1), Some(&2));
+                assert_eq!(rb.get_signed(-2), Some(&1));
             }
         }
 
