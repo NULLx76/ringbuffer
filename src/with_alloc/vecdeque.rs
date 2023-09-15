@@ -252,6 +252,21 @@ impl<T> IndexMut<isize> for GrowableAllocRingBuffer<T> {
     }
 }
 
+impl<T> Index<usize> for GrowableAllocRingBuffer<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index as isize).expect("index out of bounds")
+    }
+}
+
+impl<T> IndexMut<usize> for GrowableAllocRingBuffer<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.get_mut(index as isize).expect("index out of bounds")
+    }
+}
+
+
 impl<T> FromIterator<T> for GrowableAllocRingBuffer<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         Self(VecDeque::from_iter(iter))

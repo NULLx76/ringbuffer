@@ -347,6 +347,21 @@ impl<T, const CAP: usize> IndexMut<isize> for ConstGenericRingBuffer<T, CAP> {
     }
 }
 
+impl<T, const CAP: usize> Index<usize> for ConstGenericRingBuffer<T, CAP> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index as isize).expect("index out of bounds")
+    }
+}
+
+impl<T, const CAP: usize> IndexMut<usize> for ConstGenericRingBuffer<T, CAP> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.get_mut(index as isize).expect("index out of bounds")
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;

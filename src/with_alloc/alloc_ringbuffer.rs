@@ -354,6 +354,22 @@ impl<T> IndexMut<isize> for AllocRingBuffer<T> {
     }
 }
 
+
+impl<T> Index<usize> for AllocRingBuffer<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index as isize).expect("index out of bounds")
+    }
+}
+
+impl<T> IndexMut<usize> for AllocRingBuffer<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.get_mut(index as isize).expect("index out of bounds")
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use crate::{AllocRingBuffer, RingBuffer};
