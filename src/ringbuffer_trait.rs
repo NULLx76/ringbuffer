@@ -2,6 +2,7 @@ use core::ops::{Index, IndexMut};
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
+
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
@@ -19,8 +20,10 @@ use alloc::vec::Vec;
 /// implementation, since these safety guarantees are necessary for
 /// [`iter_mut`](RingBuffer::iter_mut) to work
 pub unsafe trait RingBuffer<T>:
-    Sized + IntoIterator<Item = T> + Extend<T> + Index<usize, Output = T> + IndexMut<usize>
-{
+    Sized +
+    IntoIterator<Item=T> +
+    Extend<T> +
+    Index<usize, Output=T> + IndexMut<usize> {
     /// Returns the length of the internal buffer.
     /// This length grows up to the capacity and then stops growing.
     /// This is because when the length is reached, new items are appended at the start.
@@ -119,21 +122,41 @@ pub unsafe trait RingBuffer<T>:
         RingBufferDrainingIterator::new(self)
     }
 
+    /// Moves all the elements of `other` into `self`, leaving `other` empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
+    ///
+    /// let mut vec = ConstGenericRingBuffer::<_, 6>::from(vec![1, 2, 3]);
+    /// let mut vec2 = ConstGenericRingBuffer::<_, 6>::from(vec![4, 5, 6]);
+    ///
+    /// vec.append(&mut vec2);
+    /// assert_eq!(vec.to_vec(), &[1, 2, 3, 4, 5, 6]);
+    /// assert_eq!(vec2.to_vec(), &[]);
+    /// ```
+    fn append(&mut self, other: &mut Self) {
+        for i in other.drain() {
+            self.push(i);
+        }
+    }
+
     /// Sets every element in the ringbuffer to the value returned by f.
     fn fill_with<F: FnMut() -> T>(&mut self, f: F);
 
     /// Sets every element in the ringbuffer to it's default value
     fn fill_default(&mut self)
-    where
-        T: Default,
+        where
+            T: Default,
     {
         self.fill_with(Default::default);
     }
 
     /// Sets every element in the ringbuffer to `value`
     fn fill(&mut self, value: T)
-    where
-        T: Clone,
+        where
+            T: Clone,
     {
         self.fill_with(|| value.clone());
     }
@@ -233,16 +256,16 @@ pub unsafe trait RingBuffer<T>:
     /// Converts the buffer to a vector. This Copies all elements in the ringbuffer.
     #[cfg(feature = "alloc")]
     fn to_vec(&self) -> Vec<T>
-    where
-        T: Clone,
+        where
+            T: Clone,
     {
         self.iter().cloned().collect()
     }
 
     /// Returns true if elem is in the ringbuffer.
     fn contains(&self, elem: &T) -> bool
-    where
-        T: PartialEq,
+        where
+            T: PartialEq,
     {
         self.iter().any(|i| i == elem)
     }
@@ -339,7 +362,7 @@ mod iter {
     impl<'rb, T: 'rb, RB: RingBuffer<T> + 'rb> ExactSizeIterator for RingBufferMutIterator<'rb, T, RB> {}
 
     impl<'rb, T: 'rb, RB: RingBuffer<T> + 'rb> DoubleEndedIterator
-        for RingBufferMutIterator<'rb, T, RB>
+    for RingBufferMutIterator<'rb, T, RB>
     {
         #[inline]
         fn next_back(&mut self) -> Option<Self::Item> {
