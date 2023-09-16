@@ -394,7 +394,10 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
 
     #[inline]
     #[cfg(feature = "batched_extend")]
-    fn extend_batched<const BATCH_SIZE: usize>(&mut self, mut other: impl Iterator<Item = T>) {
+    fn extend_batched_internal<const BATCH_SIZE: usize>(
+        &mut self,
+        mut other: impl Iterator<Item = T>,
+    ) {
         // SAFETY: if CAP < Self::BATCH_SIZE we can't run extend_from_arr_batch so we catch that here
         if CAP < BATCH_SIZE {
             for i in other {
@@ -454,15 +457,18 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
             self.writeptr = index;
         } else {
             self.writeptr = CAP;
-            self.extend_batched::<BATCH_SIZE>(iter);
+            self.extend_batched_internal::<BATCH_SIZE>(iter);
         }
     }
-}
 
-impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
-    /// NOTE: correctness (but not soundness) of extend depends on `size_hint` on iter being correct.
-    #[inline]
-    fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
+    /// Alias of [`Extend::extend`](ConstGenericRingBuffer::extend) but can take a custom batch size.
+    ///
+    /// We found that `30` works well for us, which is the batch size we use in `extend`,
+    /// but on different architectures this may not be true.
+    pub fn custom_extend_batched<const BATCH_SIZE: usize>(
+        &mut self,
+        iter: impl IntoIterator<Item = T>,
+    ) {
         #[cfg(not(feature = "batched_extend"))]
         {
             for i in iter {
@@ -472,8 +478,6 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
 
         #[cfg(feature = "batched_extend")]
         {
-            const BATCH_SIZE: usize = 30;
-
             let iter = iter.into_iter();
 
             let (lower, _) = iter.size_hint();
@@ -497,9 +501,20 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
                 // Safety: clear above
                 unsafe { self.finish_iter::<BATCH_SIZE>(iter) };
             } else {
-                self.extend_batched::<BATCH_SIZE>(iter);
+                self.extend_batched_internal::<BATCH_SIZE>(iter);
             }
         }
+    }
+}
+
+impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
+    /// NOTE: correctness (but not soundness) of extend depends on `size_hint` on iter being correct.
+    #[inline]
+    fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
+        /// good number, found through benchmarking.
+        /// gives ~30% performance boost over not batching
+        const BATCH_SIZE: usize = 30;
+        self.custom_extend_batched::<BATCH_SIZE>(iter);
     }
 }
 

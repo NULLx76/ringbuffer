@@ -95,12 +95,9 @@ pub unsafe trait RingBuffer<T>:
     /// Iterates over the slice `other`, clones each element, and then appends
     /// it to this `RingBuffer`. The `other` slice is traversed in-order.
     ///
-    /// Depending on the `RingBuffer` implementation, may be faster than inserting items in a loop
-    ///
-    /// Note that this function is same as [`extend`] except that it is
-    /// specialized to work with slices instead. If and when Rust gets
-    /// specialization this function will likely be deprecated (but still
-    /// available).
+    /// Depending on the `RingBuffer` implementation, may be faster than inserting items in a loop.
+    /// `ConstGenericRingBuffer` is especially optimised in this regard.
+    /// See also: [`ConstGenericRingBuffer::custom_extend_batched`](crate::with_const_generics::ConstGenericRingBuffer::custom_extend_batched)
     ///
     /// # Examples
     ///
