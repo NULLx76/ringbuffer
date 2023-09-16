@@ -428,6 +428,29 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
             }
         }
     }
+
+    /// # Safety
+    /// ONLY USE WHEN WORKING ON A CLEARED RINGBUFFER
+    unsafe fn finish_iter<const BATCH_SIZE: usize>(&mut self, mut iter: impl Iterator<Item = T>) {
+        let mut index = 0;
+        for i in iter.by_ref() {
+            self.buf[index] = MaybeUninit::new(i);
+            index += 1;
+
+            if index > CAP - 1 {
+                break;
+            }
+        }
+
+        if index < CAP {
+            // we set writepointer to however many elements we managed to write (up to CAP-1)
+            // WARNING: ONLY WORKS WHEN WORKING ON A CLEARED RINGBUFFER
+            self.writeptr = index;
+        } else {
+            self.writeptr = CAP;
+            self.extend_batched::<BATCH_SIZE>(iter);
+        }
+    }
 }
 
 impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
@@ -436,33 +459,9 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
     fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
         const BATCH_SIZE: usize = 128;
 
-        let mut iter = iter.into_iter();
+        let iter = iter.into_iter();
 
         let (lower, _) = iter.size_hint();
-
-        // WARNING: ONLY USE WHEN WORKING ON A CLEARED RINGBUFFER
-        macro_rules! finish_iter {
-            ($iter: ident) => {
-                let mut index = 0;
-                while let Some(i) = $iter.next() {
-                    self.buf[index] = MaybeUninit::new(i);
-                    index += 1;
-
-                    if index > CAP - 1 {
-                        break;
-                    }
-                }
-
-                if index < CAP {
-                    // we set writepointer to however many elements we managed to write (up to CAP-1)
-                    // WARNING: ONLY WORKS WHEN WORKING ON A CLEARED RINGBUFFER
-                    self.writeptr = index;
-                } else {
-                    self.writeptr = CAP;
-                    self.extend_batched::<BATCH_SIZE>($iter);
-                }
-            };
-        }
 
         if lower >= CAP {
             // if there are more elements in our iterator than we have size in the ringbuffer
@@ -473,15 +472,15 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
             // so we need to drop until the number of elements in the iterator is exactly CAP
             let num_we_can_drop = lower - CAP;
 
-            let mut iter = iter.skip(num_we_can_drop);
+            let iter = iter.skip(num_we_can_drop);
 
-            // WARNING: ONLY WORKS WHEN WORKING ON A CLEARED RINGBUFFER
-            finish_iter!(iter);
+            // Safety: clear above
+            unsafe { self.finish_iter::<BATCH_SIZE>(iter) };
         } else if self.is_empty() {
             self.clear();
 
-            // WARNING: ONLY WORKS WHEN WORKING ON A CLEARED RINGBUFFER
-            finish_iter!(iter);
+            // Safety: clear above
+            unsafe { self.finish_iter::<BATCH_SIZE>(iter) };
         } else {
             self.extend_batched::<BATCH_SIZE>(iter);
         }
@@ -592,6 +591,7 @@ impl<T, const CAP: usize> IndexMut<usize> for ConstGenericRingBuffer<T, CAP> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::hint::black_box;
     use core::ops::Range;
 
     #[test]
@@ -656,9 +656,9 @@ mod tests {
         }
     }
 
-    struct WeirdIterator<T: IntoIterator>(<T as IntoIterator>::IntoIter, SizeHint);
+    struct Weirderator<T: IntoIterator>(<T as IntoIterator>::IntoIter, SizeHint);
 
-    impl<T: IntoIterator> Iterator for WeirdIterator<T> {
+    impl<T: IntoIterator> Iterator for Weirderator<T> {
         type Item = <T as IntoIterator>::Item;
 
         fn next(&mut self) -> Option<Self::Item> {
@@ -683,17 +683,35 @@ mod tests {
         Good,
     }
 
-    struct WeirdIntoIterator<T: IntoIterator>(pub T, SizeHint);
+    struct IntoWeirderator<T: IntoIterator>(pub T, SizeHint);
 
-    impl<T: IntoIterator> IntoIterator for WeirdIntoIterator<T>
+    impl<T: IntoIterator> IntoIterator for IntoWeirderator<T>
     where
         <T as IntoIterator>::IntoIter: Sized,
     {
         type Item = <T as IntoIterator>::Item;
-        type IntoIter = WeirdIterator<T>;
+        type IntoIter = Weirderator<T>;
 
         fn into_iter(self) -> Self::IntoIter {
-            WeirdIterator(self.0.into_iter(), self.1)
+            Weirderator(self.0.into_iter(), self.1)
+        }
+    }
+
+    #[test]
+    // tests whether we correctly drop items when the batch crosses the boundary
+    fn boundary_drop_extend() {
+        for n in 50..300 {
+            let mut a = ConstGenericRingBuffer::<_, 128>::new();
+
+            for i in 0..n {
+                a.push(i);
+            }
+
+            a.extend(0..n);
+
+            for _ in 0..128 {
+                let _ = black_box(a.dequeue());
+            }
         }
     }
 
@@ -714,7 +732,7 @@ mod tests {
                             rb.push(i);
                         }
 
-                        rb.extend(WeirdIterator::<Range<usize>>(0..CAP, size));
+                        rb.extend(Weirderator::<Range<usize>>(0..CAP, size));
                         rb.push(17);
                         rb.push(18);
                         rb.push(19);
@@ -728,7 +746,7 @@ mod tests {
                             rb.push(i);
                         }
 
-                        rb.extend(WeirdIterator::<Range<usize>>(0..(CAP + 1), size));
+                        rb.extend(Weirderator::<Range<usize>>(0..(CAP + 1), size));
                         rb.push(18);
                         rb.push(19);
 
@@ -741,7 +759,7 @@ mod tests {
                             rb.push(i);
                         }
 
-                        rb.extend(WeirdIterator::<Range<usize>>(0..(CAP + 2), size));
+                        rb.extend(Weirderator::<Range<usize>>(0..(CAP + 2), size));
                         rb.push(19);
 
                         for _ in 0..CAP {
