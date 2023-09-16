@@ -235,7 +235,7 @@ fn extend_too_few(b: &mut Bencher) {
 
 fn extend_after_one(b: &mut Bencher) {
     let mut rb = ConstGenericRingBuffer::new::<8192>();
-    rb.push(0);
+    rb.push(&0);
     let input = (0..4096).collect::<Vec<_>>();
 
     b.iter_batched(

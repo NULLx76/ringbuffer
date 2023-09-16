@@ -248,6 +248,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     /// # Safety
     /// Only safe when old != new
     #[inline]
+    #[cfg(feature = "batched_extend")]
     unsafe fn split_pointer_move(
         &mut self,
         old: usize,
@@ -273,6 +274,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     /// # Safety
     /// Only safe when `CAP` >= `BATCH_SIZE`
     #[inline]
+    #[cfg(feature = "batched_extend")]
     unsafe fn extend_from_arr_batch<const BATCH_SIZE: usize>(&mut self, data: [T; BATCH_SIZE]) {
         debug_assert!(CAP >= BATCH_SIZE);
 
@@ -374,6 +376,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     }
 
     #[inline]
+    #[cfg(feature = "batched_extend")]
     fn fill_batch<const BATCH_SIZE: usize>(
         batch: &mut [MaybeUninit<T>; BATCH_SIZE],
         iter: &mut impl Iterator<Item = T>,
@@ -390,6 +393,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     }
 
     #[inline]
+    #[cfg(feature = "batched_extend")]
     fn extend_batched<const BATCH_SIZE: usize>(&mut self, mut other: impl Iterator<Item = T>) {
         // SAFETY: if CAP < Self::BATCH_SIZE we can't run extend_from_arr_batch so we catch that here
         if CAP < BATCH_SIZE {
@@ -431,6 +435,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
 
     /// # Safety
     /// ONLY USE WHEN WORKING ON A CLEARED RINGBUFFER
+    #[cfg(feature = "batched_extend")]
     #[inline]
     unsafe fn finish_iter<const BATCH_SIZE: usize>(&mut self, mut iter: impl Iterator<Item = T>) {
         let mut index = 0;
@@ -458,33 +463,42 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
     /// NOTE: correctness (but not soundness) of extend depends on `size_hint` on iter being correct.
     #[inline]
     fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
-        const BATCH_SIZE: usize = 1;
-        // const BATCH_SIZE: usize = 1024;
+        #[cfg(not(feature = "batched_extend"))]
+        {
+            for i in iter {
+                self.push(i);
+            }
+        }
 
-        let iter = iter.into_iter();
+        #[cfg(feature = "batched_extend")]
+        {
+            const BATCH_SIZE: usize = 30;
 
-        let (lower, _) = iter.size_hint();
+            let iter = iter.into_iter();
 
-        if lower >= CAP {
-            // if there are more elements in our iterator than we have size in the ringbuffer
-            // drain the ringbuffer
-            self.clear();
+            let (lower, _) = iter.size_hint();
 
-            // we need exactly CAP elements.
-            // so we need to drop until the number of elements in the iterator is exactly CAP
-            let num_we_can_drop = lower - CAP;
+            if lower >= CAP {
+                // if there are more elements in our iterator than we have size in the ringbuffer
+                // drain the ringbuffer
+                self.clear();
 
-            let iter = iter.skip(num_we_can_drop);
+                // we need exactly CAP elements.
+                // so we need to drop until the number of elements in the iterator is exactly CAP
+                let num_we_can_drop = lower - CAP;
 
-            // Safety: clear above
-            unsafe { self.finish_iter::<BATCH_SIZE>(iter) };
-        } else if self.is_empty() {
-            self.clear();
+                let iter = iter.skip(num_we_can_drop);
 
-            // Safety: clear above
-            unsafe { self.finish_iter::<BATCH_SIZE>(iter) };
-        } else {
-            self.extend_batched::<BATCH_SIZE>(iter);
+                // Safety: clear above
+                unsafe { self.finish_iter::<BATCH_SIZE>(iter) };
+            } else if self.is_empty() {
+                self.clear();
+
+                // Safety: clear above
+                unsafe { self.finish_iter::<BATCH_SIZE>(iter) };
+            } else {
+                self.extend_batched::<BATCH_SIZE>(iter);
+            }
         }
     }
 }

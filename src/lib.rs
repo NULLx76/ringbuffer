@@ -1356,8 +1356,8 @@ mod tests {
         }
 
         test_fill(AllocRingBuffer::new(4));
-        // test_fill(GrowableAllocRingBuffer::with_capacity(4));
-        // test_fill(ConstGenericRingBuffer::<i32, 4>::new());
+        test_fill(GrowableAllocRingBuffer::with_capacity(4));
+        test_fill(ConstGenericRingBuffer::<i32, 4>::new());
     }
 
     mod test_dropping {

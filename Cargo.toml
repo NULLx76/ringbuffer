@@ -18,9 +18,11 @@ criterion = "0.4.0"
 compiletest_rs = "0.10.0"
 
 [features]
-default = ["alloc"]
+default = ["alloc", "batched_extend"]
 # disable the alloc based ringbuffer, to make RingBuffers work in no_alloc environments
 alloc = []
+
+batched_extend = []
 
 [[bench]]
 name = "bench"
