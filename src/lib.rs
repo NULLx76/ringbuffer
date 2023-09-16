@@ -64,7 +64,7 @@ mod tests {
         const capacity: usize = 8;
         fn test_neg_index(mut b: impl RingBuffer<usize>) {
             for i in 0..capacity + 2 {
-                b.push(i);
+                let _ = b.push(i);
                 assert_eq!(b.get_signed(-1), Some(&i));
             }
         }
@@ -114,9 +114,9 @@ mod tests {
     fn run_test_len() {
         fn test_len(mut b: impl RingBuffer<i32>) {
             assert_eq!(0, b.len());
-            b.push(1);
+            let _ = b.push(1);
             assert_eq!(1, b.len());
-            b.push(2);
+            let _ = b.push(2);
             assert_eq!(2, b.len())
         }
 
@@ -129,14 +129,14 @@ mod tests {
     fn run_test_len_wrap() {
         fn test_len_wrap(mut b: impl RingBuffer<i32>) {
             assert_eq!(0, b.len());
-            b.push(1);
+            let _ = b.push(1);
             assert_eq!(1, b.len());
-            b.push(2);
+            let _ = b.push(2);
             assert_eq!(2, b.len());
             // Now we are wrapping
-            b.push(3);
+            let _ = b.push(3);
             assert_eq!(2, b.len());
-            b.push(4);
+            let _ = b.push(4);
             assert_eq!(2, b.len());
         }
 
@@ -1033,15 +1033,15 @@ mod tests {
     #[test]
     fn run_test_enqueue_dequeue_push() {
         fn test_enqueue_dequeue_push(mut b: impl RingBuffer<i32>) {
-            b.enqueue(0);
-            b.enqueue(1);
+            b.push(0);
+            b.push(1);
 
             assert_eq!(b.dequeue(), Some(0));
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), None);
 
-            b.enqueue(0);
-            b.enqueue(1);
+            b.push(0);
+            b.push(1);
 
             assert_eq!(b.dequeue(), Some(0));
             assert_eq!(b.dequeue(), Some(1));
