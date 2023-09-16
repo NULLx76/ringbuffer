@@ -163,7 +163,7 @@ impl<T: Clone> Clone for AllocRingBuffer<T> {
         debug_assert_ne!(self.capacity, 0);
 
         let mut new = Self::new(self.capacity);
-        self.iter().cloned().for_each(|i| new.push(i));
+        new.extend(self.iter().cloned());
         new
     }
 }
@@ -229,20 +229,15 @@ unsafe impl<T> RingBuffer<T> for AllocRingBuffer<T> {
     impl_ringbuffer!(readptr, writeptr);
 
     #[inline]
-    fn push(&mut self, value: T) {
+    fn enqueue(&mut self, value: T) -> Option<T> {
+        let mut ret = None;
+
         if self.is_full() {
             // mask with and is allowed here because size is always a power of two
             let previous_value =
                 unsafe { ptr::read(get_unchecked_mut(self, mask_and(self.size, self.readptr))) };
 
-            // make sure we drop whatever is being overwritten
-            // SAFETY: the buffer is full, so this must be initialized
-            //       : also, index has been masked
-            // make sure we drop because it won't happen automatically
-            unsafe {
-                drop(previous_value);
-            }
-
+            ret = Some(previous_value);
             self.readptr += 1;
         }
 
@@ -254,6 +249,8 @@ unsafe impl<T> RingBuffer<T> for AllocRingBuffer<T> {
         }
 
         self.writeptr += 1;
+
+        ret
     }
 
     fn dequeue(&mut self) -> Option<T> {
@@ -392,7 +389,7 @@ mod tests {
         // messes up
         for _ in 0..100 {
             for i in 0..NUM_VALS {
-                rb.enqueue(i);
+                let _ = rb.enqueue(i);
             }
             assert!(rb.is_full());
 
@@ -420,7 +417,9 @@ mod tests {
     #[test]
     fn test_extend() {
         let mut buf = AllocRingBuffer::<u8>::new(4);
-        (0..4).for_each(|_| buf.push(0));
+        (0..4).for_each(|_| {
+            let _ = buf.push(0);
+        });
 
         let new_data = [0, 1, 2];
         buf.extend(new_data);
@@ -437,7 +436,9 @@ mod tests {
     #[test]
     fn test_extend_with_overflow() {
         let mut buf = AllocRingBuffer::<u8>::new(8);
-        (0..8).for_each(|_| buf.push(0));
+        (0..8).for_each(|_| {
+            let _ = buf.push(0);
+        });
 
         let new_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         buf.extend(new_data);
