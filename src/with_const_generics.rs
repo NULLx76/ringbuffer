@@ -431,6 +431,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
 
     /// # Safety
     /// ONLY USE WHEN WORKING ON A CLEARED RINGBUFFER
+    #[inline]
     unsafe fn finish_iter<const BATCH_SIZE: usize>(&mut self, mut iter: impl Iterator<Item = T>) {
         let mut index = 0;
         for i in iter.by_ref() {
@@ -457,7 +458,8 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
     /// NOTE: correctness (but not soundness) of extend depends on `size_hint` on iter being correct.
     #[inline]
     fn extend<A: IntoIterator<Item = T>>(&mut self, iter: A) {
-        const BATCH_SIZE: usize = 128;
+        const BATCH_SIZE: usize = 1;
+        // const BATCH_SIZE: usize = 1024;
 
         let iter = iter.into_iter();
 

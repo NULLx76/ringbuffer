@@ -186,6 +186,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("extend many too many", extend_many_too_many);
     c.bench_function("extend exact cap", extend_exact_cap);
     c.bench_function("extend too few", extend_too_few);
+    c.bench_function("extend after one", extend_after_one);
 }
 
 fn extend_many_too_many(b: &mut Bencher) {
@@ -223,6 +224,18 @@ fn extend_exact_cap(b: &mut Bencher) {
 
 fn extend_too_few(b: &mut Bencher) {
     let rb = ConstGenericRingBuffer::new::<8192>();
+    let input = (0..4096).collect::<Vec<_>>();
+
+    b.iter_batched(
+        &|| rb.clone(),
+        |mut r| black_box(r.extend(black_box(input.as_slice()))),
+        BatchSize::LargeInput,
+    );
+}
+
+fn extend_after_one(b: &mut Bencher) {
+    let mut rb = ConstGenericRingBuffer::new::<8192>();
+    rb.push(0);
     let input = (0..4096).collect::<Vec<_>>();
 
     b.iter_batched(
