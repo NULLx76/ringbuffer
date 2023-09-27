@@ -265,7 +265,7 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
     impl_ringbuffer!(readptr, writeptr);
 
     #[inline]
-    fn push(&mut self, value: T) {
+    fn enqueue(&mut self, value: T) {
         if self.is_full() {
             let previous_value = mem::replace(
                 &mut self.buf[crate::mask_modulo(CAP, self.readptr)],

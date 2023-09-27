@@ -229,7 +229,7 @@ unsafe impl<T> RingBuffer<T> for AllocRingBuffer<T> {
     impl_ringbuffer!(readptr, writeptr);
 
     #[inline]
-    fn push(&mut self, value: T) {
+    fn enqueue(&mut self, value: T) {
         if self.is_full() {
             // mask with and is allowed here because size is always a power of two
             let previous_value =
