@@ -972,6 +972,7 @@ mod tests {
 
     #[test]
     fn run_test_skip() {
+        #[allow(deprecated)]
         fn test_skip(mut b: impl RingBuffer<i32>) {
             b.push(0);
             b.push(1);
@@ -991,6 +992,7 @@ mod tests {
 
     #[test]
     fn run_test_skip_2() {
+        #[allow(deprecated)]
         fn test_skip2(mut rb: impl RingBuffer<i32>) {
             rb.skip();
             rb.skip();
