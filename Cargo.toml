@@ -2,7 +2,7 @@
 name = "ringbuffer"
 version = "0.15.0"
 authors = [
-    "Victor Roest <victor@xirion.net>",
+    "Vivian Roest <vivian@xirion.net>",
     "Jonathan Dönszelmann <jonabent@gmail.com>",
 ]
 edition = "2021"
