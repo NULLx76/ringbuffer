@@ -2,6 +2,7 @@ use core::ops::{Index, IndexMut};
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
+
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
@@ -83,6 +84,41 @@ pub unsafe trait RingBuffer<T>:
         self.push(value);
     }
 
+    /// alias for [`extend`](RingBuffer::extend).
+    #[inline]
+    fn enqueue_many<I: IntoIterator<Item = T>>(&mut self, items: I) {
+        self.extend(items);
+    }
+
+    /// Clones and appends all elements in a slice to the `Vec`.
+    ///
+    /// Iterates over the slice `other`, clones each element, and then appends
+    /// it to this `RingBuffer`. The `other` slice is traversed in-order.
+    ///
+    /// Depending on the `RingBuffer` implementation, may be faster than inserting items in a loop.
+    /// `ConstGenericRingBuffer` is especially optimised in this regard.
+    /// See also: [`ConstGenericRingBuffer::custom_extend_batched`](crate::with_const_generics::ConstGenericRingBuffer::custom_extend_batched)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
+    ///
+    /// let mut rb = ConstGenericRingBuffer::<_, 6>::new();
+    /// rb.push(1);
+    ///
+    /// rb.extend_from_slice(&[2, 3, 4]);
+    /// assert_eq!(rb.to_vec(), vec![1, 2, 3, 4]);
+    /// ```
+    ///
+    /// [`extend`]: RingBuffer::extend
+    fn extend_from_slice(&mut self, other: &[T])
+    where
+        T: Clone,
+    {
+        self.extend(other.iter().cloned());
+    }
+
     /// dequeues the top item off the ringbuffer, and moves this item out.
     fn dequeue(&mut self) -> Option<T>;
 
@@ -117,6 +153,24 @@ pub unsafe trait RingBuffer<T>:
     /// ```
     fn drain(&mut self) -> RingBufferDrainingIterator<T, Self> {
         RingBufferDrainingIterator::new(self)
+    }
+
+    /// Moves all the elements of `other` into `self`, leaving `other` empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
+    ///
+    /// let mut vec = ConstGenericRingBuffer::<_, 6>::from(vec![1, 2, 3]);
+    /// let mut vec2 = ConstGenericRingBuffer::<_, 6>::from(vec![4, 5, 6]);
+    ///
+    /// vec.append(&mut vec2);
+    /// assert_eq!(vec.to_vec(), &[1, 2, 3, 4, 5, 6]);
+    /// assert_eq!(vec2.to_vec(), &[]);
+    /// ```
+    fn append(&mut self, other: &mut Self) {
+        self.extend(other.drain());
     }
 
     /// Sets every element in the ringbuffer to the value returned by f.
