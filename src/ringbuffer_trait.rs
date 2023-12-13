@@ -76,12 +76,18 @@ pub unsafe trait RingBuffer<T>:
     unsafe fn ptr_buffer_size(rb: *const Self) -> usize;
 
     /// Pushes a value onto the buffer. Cycles around if capacity is reached.
-    fn push(&mut self, value: T);
+    ///
+    /// Does not return the oldest item in the buffer if the buffer is full, to more closely match the api of `push` on `Vec` and `VecDeque`.
+    /// If that property is desired, use [`dequeue`](RingBuffer::dequeue)
+    #[inline]
+    fn push(&mut self, value: T) {
+        let _ = self.enqueue(value);
+    }
 
     /// alias for [`push`](RingBuffer::push), forming a more natural counterpart to [`dequeue`](RingBuffer::dequeue)
-    fn enqueue(&mut self, value: T) {
-        self.push(value);
-    }
+    ///
+    /// If the buffer is full, returns the oldest item in the buffer that was just removed to make room for the pushed value.
+    fn enqueue(&mut self, value: T) -> Option<T>;
 
     /// dequeues the top item off the ringbuffer, and moves this item out.
     fn dequeue(&mut self) -> Option<T>;
