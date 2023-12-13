@@ -75,13 +75,17 @@ pub unsafe trait RingBuffer<T>:
     #[doc(hidden)]
     unsafe fn ptr_buffer_size(rb: *const Self) -> usize;
 
-    /// Pushes a value onto the buffer. Cycles around if capacity is reached.
-    fn push(&mut self, value: T);
-
-    /// alias for [`push`](RingBuffer::push), forming a more natural counterpart to [`dequeue`](RingBuffer::dequeue)
-    fn enqueue(&mut self, value: T) {
-        self.push(value);
+    /// Alias for [`enqueue`](RingBuffer::enqueue)
+    fn push(&mut self, value: T) {
+        self.enqueue(value);
     }
+
+    /// Adds a value onto the buffer.
+    ///
+    /// Cycles around if capacity is reached.
+    /// Forms a more natural counterpart to [`dequeue`](RingBuffer::dequeue).
+    /// An alias is provided with [`push`](RingBuffer::push).
+    fn enqueue(&mut self, value: T);
 
     /// dequeues the top item off the ringbuffer, and moves this item out.
     fn dequeue(&mut self) -> Option<T>;
@@ -89,6 +93,7 @@ pub unsafe trait RingBuffer<T>:
     /// dequeues the top item off the queue, but does not return it. Instead it is dropped.
     /// If the ringbuffer is empty, this function is a nop.
     #[inline]
+    #[deprecated = "use dequeue instead"]
     fn skip(&mut self) {
         let _ = self.dequeue();
     }
