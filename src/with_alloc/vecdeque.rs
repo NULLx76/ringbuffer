@@ -282,3 +282,16 @@ impl<T> FromIterator<T> for GrowableAllocRingBuffer<T> {
         Self(VecDeque::from_iter(iter))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extend_from_slice() {
+        let mut buf = GrowableAllocRingBuffer::new();
+        let elems = [1, 2, 3];
+        buf.extend_from_slice(&elems);
+        assert_eq!(buf.to_vec().as_slice(), elems)
+    }
+}
