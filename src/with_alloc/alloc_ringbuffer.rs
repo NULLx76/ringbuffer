@@ -474,4 +474,12 @@ mod tests {
         assert_eq!(buf.capacity, 4);
         assert_eq!(buf.to_vec(), alloc::vec![1, 2, 3, 4]);
     }
+
+    #[test]
+    fn test_extend_from_slice() {
+        let mut buf = AllocRingBuffer::new(3);
+        let elems = [1, 2, 3];
+        buf.extend_from_slice(&elems);
+        assert_eq!(buf.to_vec().as_slice(), elems)
+    }
 }
