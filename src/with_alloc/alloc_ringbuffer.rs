@@ -21,19 +21,19 @@ use core::ptr;
 /// let mut buffer = AllocRingBuffer::new(2);
 ///
 /// // First entry of the buffer is now 5.
-/// buffer.push(5);
+/// buffer.enqueue(5);
 ///
-/// // The last item we pushed is 5
+/// // The last item we enqueued is 5
 /// assert_eq!(buffer.back(), Some(&5));
 ///
 /// // Second entry is now 42.
-/// buffer.push(42);
+/// buffer.enqueue(42);
 ///
 /// assert_eq!(buffer.peek(), Some(&5));
 /// assert!(buffer.is_full());
 ///
-/// // Because capacity is reached the next push will be the first item of the buffer.
-/// buffer.push(1);
+/// // Because capacity is reached the next enqueue will be the first item of the buffer.
+/// buffer.enqueue(1);
 /// assert_eq!(buffer.to_vec(), vec![42, 1]);
 /// ```
 #[derive(Debug)]
@@ -163,7 +163,7 @@ impl<T: Clone> Clone for AllocRingBuffer<T> {
         debug_assert_ne!(self.capacity, 0);
 
         let mut new = Self::new(self.capacity);
-        self.iter().cloned().for_each(|i| new.push(i));
+        self.iter().cloned().for_each(|i| new.enqueue(i));
         new
     }
 }
@@ -210,7 +210,7 @@ impl<T> Extend<T> for AllocRingBuffer<T> {
         let iter = iter.into_iter();
 
         for i in iter {
-            self.push(i);
+            self.enqueue(i);
         }
     }
 }
@@ -420,7 +420,7 @@ mod tests {
     #[test]
     fn test_extend() {
         let mut buf = AllocRingBuffer::<u8>::new(4);
-        (0..4).for_each(|_| buf.push(0));
+        (0..4).for_each(|_| buf.enqueue(0));
 
         let new_data = [0, 1, 2];
         buf.extend(new_data);
@@ -437,7 +437,7 @@ mod tests {
     #[test]
     fn test_extend_with_overflow() {
         let mut buf = AllocRingBuffer::<u8>::new(8);
-        (0..8).for_each(|_| buf.push(0));
+        (0..8).for_each(|_| buf.enqueue(0));
 
         let new_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         buf.extend(new_data);
