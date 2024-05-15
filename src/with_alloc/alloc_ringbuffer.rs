@@ -153,7 +153,7 @@ impl<T> Drop for AllocRingBuffer<T> {
 
         let layout = alloc::alloc::Layout::array::<T>(self.size).unwrap();
         unsafe {
-            alloc::alloc::dealloc(self.buf as *mut u8, layout);
+            alloc::alloc::dealloc(self.buf.cast(), layout);
         }
     }
 }
@@ -187,6 +187,8 @@ impl<T> IntoIterator for AllocRingBuffer<T> {
     }
 }
 
+#[allow(clippy::into_iter_without_iter)]
+// iter() is implemented on the trait
 impl<'a, T> IntoIterator for &'a AllocRingBuffer<T> {
     type Item = &'a T;
     type IntoIter = RingBufferIterator<'a, T, AllocRingBuffer<T>>;
@@ -196,6 +198,8 @@ impl<'a, T> IntoIterator for &'a AllocRingBuffer<T> {
     }
 }
 
+#[allow(clippy::into_iter_without_iter)]
+// iter_mut() is implemented on the trait
 impl<'a, T> IntoIterator for &'a mut AllocRingBuffer<T> {
     type Item = &'a mut T;
     type IntoIter = RingBufferMutIterator<'a, T, AllocRingBuffer<T>>;
@@ -320,7 +324,7 @@ impl<T> AllocRingBuffer<T> {
         assert_ne!(capacity, 0, "Capacity must be greater than 0");
         let size = capacity.next_power_of_two();
         let layout = alloc::alloc::Layout::array::<T>(size).unwrap();
-        let buf = unsafe { alloc::alloc::alloc(layout) as *mut T };
+        let buf = unsafe { alloc::alloc::alloc(layout).cast() };
         Self {
             buf,
             size,

@@ -176,7 +176,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
         ConstGenericRingBuffer<T, CAP>: From<ConstGenericRingBuffer<T, N>>,
     {
         #[allow(clippy::let_unit_value)]
-        let _ = Self::ERROR_CAPACITY_IS_NOT_ALLOWED_TO_BE_ZERO;
+        let () = Self::ERROR_CAPACITY_IS_NOT_ALLOWED_TO_BE_ZERO;
 
         // allow here since we are constructing an array of MaybeUninit<T>
         // which explicitly *is* defined behavior
@@ -223,6 +223,8 @@ impl<T, const CAP: usize> IntoIterator for ConstGenericRingBuffer<T, CAP> {
     }
 }
 
+#[allow(clippy::into_iter_without_iter)]
+// iter() is implemented on the trait
 impl<'a, T, const CAP: usize> IntoIterator for &'a ConstGenericRingBuffer<T, CAP> {
     type Item = &'a T;
     type IntoIter = RingBufferIterator<'a, T, ConstGenericRingBuffer<T, CAP>>;
@@ -232,6 +234,8 @@ impl<'a, T, const CAP: usize> IntoIterator for &'a ConstGenericRingBuffer<T, CAP
     }
 }
 
+#[allow(clippy::into_iter_without_iter)]
+// iter_mut() is implemented on the trait
 impl<'a, T, const CAP: usize> IntoIterator for &'a mut ConstGenericRingBuffer<T, CAP> {
     type Item = &'a mut T;
     type IntoIter = RingBufferMutIterator<'a, T, ConstGenericRingBuffer<T, CAP>>;
