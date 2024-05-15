@@ -75,9 +75,12 @@ pub unsafe trait RingBuffer<T>:
     #[doc(hidden)]
     unsafe fn ptr_buffer_size(rb: *const Self) -> usize;
 
-    /// Alias for [`enqueue`](RingBuffer::enqueue)
+
+    /// Alias for [`enqueue`]
+    #[deprecated = "use enqueue instead"]
+    #[inline]
     fn push(&mut self, value: T) {
-        self.enqueue(value);
+        self.enqueue(value)
     }
 
     /// Adds a value onto the buffer.
