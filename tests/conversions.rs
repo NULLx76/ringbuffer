@@ -15,7 +15,7 @@ macro_rules! convert_test {
 
             let mut b: $to = a.into();
             assert_eq!(b.to_vec(), vec!['1', '2']);
-            b.push('3');
+            b.enqueue('3');
             assert_eq!(b, b);
         }
     };
@@ -123,13 +123,13 @@ fn test_extra_conversions_const() {
 fn test_const_generic_new_parameter() {
     // Can we specify size only on the method?
     let mut a = ConstGenericRingBuffer::new::<2>();
-    a.push(5);
+    a.enqueue(5);
 
     // Can we specify size in both positions?
     let mut a = ConstGenericRingBuffer::<i32, 50>::new::<50>();
-    a.push(5);
+    a.enqueue(5);
 
     // Can we specify size only on the struct?
     let mut a = ConstGenericRingBuffer::<i32, 50>::new();
-    a.push(5);
+    a.enqueue(5);
 }
