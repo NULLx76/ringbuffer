@@ -186,7 +186,7 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
         self.pop_front()
     }
 
-    fn push(&mut self, value: T) {
+    fn enqueue(&mut self, value: T) {
         self.push_back(value);
     }
 
@@ -216,9 +216,10 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
         if self.is_empty() {
             None
         } else if index >= 0 {
-            self.0.get(crate::mask_modulo(self.0.len(), index as usize))
+            self.0
+                .get(crate::mask_modulo(self.0.len(), index.unsigned_abs()))
         } else {
-            let positive_index = -index as usize - 1;
+            let positive_index = index.unsigned_abs() - 1;
             let masked = crate::mask_modulo(self.0.len(), positive_index);
             let index = self.0.len() - 1 - masked;
 
@@ -231,11 +232,11 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
         if RingBuffer::ptr_len(rb) == 0 {
             None
         } else if index >= 0 {
-            (*rb).0.get_mut(index as usize)
+            (*rb).0.get_mut(index.unsigned_abs())
         } else {
             let len = Self::ptr_len(rb);
 
-            let positive_index = -index as usize + 1;
+            let positive_index = index.unsigned_abs() + 1;
             let masked = crate::mask_modulo(len, positive_index);
             let index = len - 1 - masked;
 

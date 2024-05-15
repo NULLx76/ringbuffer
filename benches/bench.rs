@@ -7,7 +7,7 @@ fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
         let mut rb = new();
 
         for i in 0..1_000_000 {
-            rb.push(i);
+            rb.enqueue(i);
             black_box(());
         }
 
@@ -20,25 +20,25 @@ fn benchmark_push_dequeue<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new
         let mut rb = new();
 
         for _i in 0..100_000 {
-            rb.push(1);
+            rb.enqueue(1);
             black_box(());
-            rb.push(2);
-            black_box(());
-
-            assert_eq!(black_box(rb.dequeue()), Some(1));
-            assert_eq!(black_box(rb.dequeue()), Some(2));
-
-            rb.push(1);
-            black_box(());
-            rb.push(2);
+            rb.enqueue(2);
             black_box(());
 
             assert_eq!(black_box(rb.dequeue()), Some(1));
             assert_eq!(black_box(rb.dequeue()), Some(2));
 
-            rb.push(1);
+            rb.enqueue(1);
             black_box(());
-            rb.push(2);
+            rb.enqueue(2);
+            black_box(());
+
+            assert_eq!(black_box(rb.dequeue()), Some(1));
+            assert_eq!(black_box(rb.dequeue()), Some(2));
+
+            rb.enqueue(1);
+            black_box(());
+            rb.enqueue(2);
             black_box(());
 
             assert_eq!(black_box(rb.get_signed(-1)), Some(&2));
@@ -54,7 +54,7 @@ fn benchmark_various<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) 
         let mut rb = new();
 
         for i in 0..100_000 {
-            rb.push(i);
+            rb.enqueue(i);
             black_box(());
             black_box(rb.back());
         }
