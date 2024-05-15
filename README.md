@@ -27,25 +27,22 @@ MSRV: Rust 1.59
 ```rust
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 
-fn main() {
-    let mut buffer = AllocRingBuffer::with_capacity(2);
+let mut buffer = AllocRingBuffer::with_capacity(2);
 
-    // First entry of the buffer is now 5.
-    buffer.push(5);
+// First entry of the buffer is now 5.
+buffer.push(5);
 
-    // The last item we pushed is 5
-    assert_eq!(buffer.back(), Some(&5));
+// The last item we pushed is 5
+assert_eq!(buffer.back(), Some(&5));
 
-    // Second entry is now 42.
-    buffer.push(42);
-    assert_eq!(buffer.peek(), Some(&5));
-    assert!(buffer.is_full());
+// Second entry is now 42.
+buffer.push(42);
+assert_eq!(buffer.peek(), Some(&5));
+assert!(buffer.is_full());
 
-    // Because capacity is reached the next push will be the first item of the buffer.
-    buffer.push(1);
-    assert_eq!(buffer.to_vec(), vec![42, 1]);
-}
-
+// Because capacity is reached the next push will be the first item of the buffer.
+buffer.push(1);
+assert_eq!(buffer.to_vec(), vec![42, 1]);
 ```
 
 # Features
