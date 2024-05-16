@@ -64,7 +64,7 @@ mod tests {
         const capacity: usize = 8;
         fn test_neg_index(mut b: impl RingBuffer<usize>) {
             for i in 0..capacity + 2 {
-                b.enqueue(i);
+                let _ = b.enqueue(i);
                 assert_eq!(b.get_signed(-1), Some(&i));
             }
         }
@@ -114,10 +114,10 @@ mod tests {
     fn run_test_len() {
         fn test_len(mut b: impl RingBuffer<i32>) {
             assert_eq!(0, b.len());
-            b.enqueue(1);
+            let _ = b.enqueue(1);
             assert_eq!(1, b.len());
-            b.enqueue(2);
-            assert_eq!(2, b.len())
+            let _ = b.enqueue(2);
+            assert_eq!(2, b.len());
         }
 
         test_len(AllocRingBuffer::new(8));
@@ -129,14 +129,14 @@ mod tests {
     fn run_test_len_wrap() {
         fn test_len_wrap(mut b: impl RingBuffer<i32>) {
             assert_eq!(0, b.len());
-            b.enqueue(1);
+            let _ = b.enqueue(1);
             assert_eq!(1, b.len());
-            b.enqueue(2);
+            let _ = b.enqueue(2);
             assert_eq!(2, b.len());
             // Now we are wrapping
-            b.enqueue(3);
+            let _ = b.enqueue(3);
             assert_eq!(2, b.len());
-            b.enqueue(4);
+            let _ = b.enqueue(4);
             assert_eq!(2, b.len());
         }
 
@@ -146,20 +146,20 @@ mod tests {
         // the growable ringbuffer actually should grow instead of wrap
         let mut grb = GrowableAllocRingBuffer::with_capacity(2);
         assert_eq!(0, grb.len());
-        grb.enqueue(0);
+        let _ = grb.enqueue(0);
         assert_eq!(1, grb.len());
-        grb.enqueue(1);
+        let _ = grb.enqueue(1);
         assert_eq!(2, grb.len());
-        grb.enqueue(2);
+        let _ = grb.enqueue(2);
         assert_eq!(3, grb.len());
     }
 
     #[test]
     fn run_test_clear() {
         fn test_clear(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
 
             b.clear();
             assert!(b.is_empty());
@@ -175,9 +175,9 @@ mod tests {
     fn run_test_empty() {
         fn test_empty(mut b: impl RingBuffer<i32>) {
             assert!(b.is_empty());
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
             assert!(!b.is_empty());
 
             b.clear();
@@ -193,13 +193,13 @@ mod tests {
     #[test]
     fn run_test_iter() {
         fn test_iter(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
-            b.enqueue(4);
-            b.enqueue(5);
-            b.enqueue(6);
-            b.enqueue(7);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
+            let _ = b.enqueue(4);
+            let _ = b.enqueue(5);
+            let _ = b.enqueue(6);
+            let _ = b.enqueue(7);
 
             let mut iter = b.iter();
             assert_eq!(&1, iter.next().unwrap());
@@ -220,13 +220,13 @@ mod tests {
     #[test]
     fn run_test_forward_iter_non_power_of_two() {
         fn test_iter(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
-            b.enqueue(4);
-            b.enqueue(5);
-            b.enqueue(6);
-            b.enqueue(7);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
+            let _ = b.enqueue(4);
+            let _ = b.enqueue(5);
+            let _ = b.enqueue(6);
+            let _ = b.enqueue(7);
 
             let mut iter = b.iter();
             assert_eq!(&1, iter.next().unwrap());
@@ -247,13 +247,13 @@ mod tests {
     #[test]
     fn run_test_iter_non_power_of_two() {
         fn test_iter(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
-            b.enqueue(4);
-            b.enqueue(5);
-            b.enqueue(6);
-            b.enqueue(7);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
+            let _ = b.enqueue(4);
+            let _ = b.enqueue(5);
+            let _ = b.enqueue(6);
+            let _ = b.enqueue(7);
 
             let mut iter = b.iter();
             assert_eq!(&1, iter.next().unwrap());
@@ -278,13 +278,13 @@ mod tests {
             B: RingBuffer<i32>,
             for<'a> &'a B: IntoIterator<Item = &'a i32, IntoIter = RingBufferIterator<'a, i32, B>>,
         {
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
-            b.enqueue(4);
-            b.enqueue(5);
-            b.enqueue(6);
-            b.enqueue(7);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
+            let _ = b.enqueue(4);
+            let _ = b.enqueue(5);
+            let _ = b.enqueue(6);
+            let _ = b.enqueue(7);
 
             let mut iter = (&b).into_iter();
             assert_eq!(&1, iter.next().unwrap());
@@ -305,13 +305,13 @@ mod tests {
     #[test]
     fn run_test_into_iter() {
         fn test_iter(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
-            b.enqueue(4);
-            b.enqueue(5);
-            b.enqueue(6);
-            b.enqueue(7);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
+            let _ = b.enqueue(4);
+            let _ = b.enqueue(5);
+            let _ = b.enqueue(6);
+            let _ = b.enqueue(7);
 
             let mut iter = b.into_iter();
             assert_eq!(1, iter.next().unwrap());
@@ -333,9 +333,9 @@ mod tests {
     #[test]
     fn run_test_iter_with_lifetimes() {
         fn test_iter<'a>(string: &'a str, mut b: impl RingBuffer<&'a str>) {
-            b.enqueue(&string[0..1]);
-            b.enqueue(&string[1..2]);
-            b.enqueue(&string[2..3]);
+            let _ = b.enqueue(&string[0..1]);
+            let _ = b.enqueue(&string[1..2]);
+            let _ = b.enqueue(&string[2..3]);
 
             let mut iter = b.iter();
             assert_eq!(&&string[0..1], iter.next().unwrap());
@@ -355,9 +355,9 @@ mod tests {
     #[test]
     fn run_test_double_iter() {
         fn test_double_iter(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
 
             let mut iter1 = b.iter();
             let mut iter2 = b.iter();
@@ -378,10 +378,10 @@ mod tests {
     #[test]
     fn run_test_iter_wrap() {
         fn test_iter_wrap(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
             // Wrap
-            b.enqueue(3);
+            let _ = b.enqueue(3);
 
             let mut iter = b.iter();
             assert_eq!(&2, iter.next().unwrap());
@@ -394,10 +394,10 @@ mod tests {
         // the growable ringbuffer shouldn't actually stop growing
         let mut b = GrowableAllocRingBuffer::with_capacity(2);
 
-        b.enqueue(1);
-        b.enqueue(2);
+        let _ = b.enqueue(1);
+        let _ = b.enqueue(2);
         // No wrap
-        b.enqueue(3);
+        let _ = b.enqueue(3);
 
         let mut iter = b.iter();
         assert_eq!(&1, iter.next().unwrap());
@@ -409,15 +409,15 @@ mod tests {
     #[test]
     fn run_test_iter_mut() {
         fn test_iter_mut(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
 
             for el in b.iter_mut() {
                 *el += 1;
             }
 
-            assert_eq!(vec![2, 3, 4], b.to_vec())
+            assert_eq!(vec![2, 3, 4], b.to_vec());
         }
 
         test_iter_mut(AllocRingBuffer::new(8));
@@ -433,15 +433,15 @@ mod tests {
             for<'a> &'a mut B:
                 IntoIterator<Item = &'a mut i32, IntoIter = RingBufferMutIterator<'a, i32, B>>,
         {
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
 
             for el in &mut b {
                 *el += 1;
             }
 
-            assert_eq!(vec![2, 3, 4], b.to_vec())
+            assert_eq!(vec![2, 3, 4], b.to_vec());
         }
 
         test_iter_mut(AllocRingBuffer::new(8));
@@ -452,15 +452,15 @@ mod tests {
     #[test]
     fn test_iter_mut_wrap() {
         fn run_test_iter_mut_wrap(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
 
             for i in b.iter_mut() {
                 *i += 1;
             }
 
-            assert_eq!(vec![3, 4], b.to_vec())
+            assert_eq!(vec![3, 4], b.to_vec());
         }
 
         run_test_iter_mut_wrap(AllocRingBuffer::new(2));
@@ -469,23 +469,23 @@ mod tests {
         // The growable ringbuffer actually shouldn't wrap
         let mut b = GrowableAllocRingBuffer::with_capacity(2);
 
-        b.enqueue(1);
-        b.enqueue(2);
-        b.enqueue(3);
+        let _ = b.enqueue(1);
+        let _ = b.enqueue(2);
+        let _ = b.enqueue(3);
 
         for i in b.iter_mut() {
             *i += 1;
         }
 
-        assert_eq!(vec![2, 3, 4], b.to_vec())
+        assert_eq!(vec![2, 3, 4], b.to_vec());
     }
 
     #[test]
     fn test_iter_mut_miri_fail() {
         fn run_test_iter_mut_wrap(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
 
             let buf = b.iter_mut().collect::<Vec<_>>();
 
@@ -493,7 +493,7 @@ mod tests {
                 *i += 1;
             }
 
-            assert_eq!(vec![3, 4], b.to_vec())
+            assert_eq!(vec![3, 4], b.to_vec());
         }
 
         run_test_iter_mut_wrap(AllocRingBuffer::new(2));
@@ -501,9 +501,9 @@ mod tests {
 
         // the growable ringbuffer actually shouldn't wrap
         let mut b = GrowableAllocRingBuffer::with_capacity(2);
-        b.enqueue(1);
-        b.enqueue(2);
-        b.enqueue(3);
+        let _ = b.enqueue(1);
+        let _ = b.enqueue(2);
+        let _ = b.enqueue(3);
 
         let buf = b.iter_mut().collect::<Vec<_>>();
 
@@ -511,17 +511,17 @@ mod tests {
             *i += 1;
         }
 
-        assert_eq!(vec![2, 3, 4], b.to_vec())
+        assert_eq!(vec![2, 3, 4], b.to_vec());
     }
 
     #[test]
     fn run_test_to_vec() {
         fn test_to_vec(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
 
-            assert_eq!(vec![1, 2, 3], b.to_vec())
+            assert_eq!(vec![1, 2, 3], b.to_vec());
         }
 
         test_to_vec(AllocRingBuffer::new(8));
@@ -532,12 +532,12 @@ mod tests {
     #[test]
     fn run_test_to_vec_wrap() {
         fn test_to_vec_wrap(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
             // Wrap
-            b.enqueue(3);
+            let _ = b.enqueue(3);
 
-            assert_eq!(vec![2, 3], b.to_vec())
+            assert_eq!(vec![2, 3], b.to_vec());
         }
 
         test_to_vec_wrap(AllocRingBuffer::new(2));
@@ -546,18 +546,18 @@ mod tests {
         // The growable ringbuffer should actually remember all items
         let mut b = GrowableAllocRingBuffer::with_capacity(2);
 
-        b.enqueue(1);
-        b.enqueue(2);
-        b.enqueue(3);
+        let _ = b.enqueue(1);
+        let _ = b.enqueue(2);
+        let _ = b.enqueue(3);
 
-        assert_eq!(vec![1, 2, 3], b.to_vec())
+        assert_eq!(vec![1, 2, 3], b.to_vec());
     }
 
     #[test]
     fn run_test_index() {
         fn test_index(mut b: impl RingBuffer<i32>) {
-            b.enqueue(2);
-            assert_eq!(b[0], 2)
+            let _ = b.enqueue(2);
+            assert_eq!(b[0], 2);
         }
 
         test_index(AllocRingBuffer::new(8));
@@ -568,14 +568,14 @@ mod tests {
     #[test]
     fn run_test_get() {
         fn test_index(mut b: impl RingBuffer<i32>) {
-            b.enqueue(0);
-            b.enqueue(1);
-            b.enqueue(2);
-            b.enqueue(3);
-            b.enqueue(4);
-            b.enqueue(5);
-            b.enqueue(6);
-            b.enqueue(7);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
+            let _ = b.enqueue(3);
+            let _ = b.enqueue(4);
+            let _ = b.enqueue(5);
+            let _ = b.enqueue(6);
+            let _ = b.enqueue(7);
 
             assert_eq!(b.get(0), Some(&0));
             assert_eq!(b.get(1), Some(&1));
@@ -595,7 +595,7 @@ mod tests {
     #[test]
     fn run_test_index_mut() {
         fn test_index_mut(mut b: impl RingBuffer<i32>) {
-            b.enqueue(2);
+            let _ = b.enqueue(2);
 
             assert_eq!(b[0], 2);
 
@@ -612,8 +612,8 @@ mod tests {
     #[test]
     fn run_test_peek_some() {
         fn test_peek_some(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             assert_eq!(b.peek(), Some(&1));
         }
@@ -637,8 +637,8 @@ mod tests {
     #[test]
     fn run_test_get_relative() {
         fn test_get_relative(mut b: impl RingBuffer<i32>) {
-            b.enqueue(0);
-            b.enqueue(1);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
 
             // get[(index + 1) % len] = 1
             assert_eq!(b.get(0).unwrap(), &0);
@@ -657,9 +657,9 @@ mod tests {
     #[test]
     fn run_test_wrapping_get_relative() {
         fn test_wrapping_get_relative(mut b: impl RingBuffer<i32>) {
-            b.enqueue(0);
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             // [0, ...]
             //      ^
@@ -678,9 +678,9 @@ mod tests {
 
         // the growable ringbuffer actually shouldn't wrap
         let mut b = GrowableAllocRingBuffer::with_capacity(2);
-        b.enqueue(0);
-        b.enqueue(1);
-        b.enqueue(2);
+        let _ = b.enqueue(0);
+        let _ = b.enqueue(1);
+        let _ = b.enqueue(2);
 
         assert_eq!(b.get(0).unwrap(), &0);
         assert_eq!(b.get(1).unwrap(), &1);
@@ -701,8 +701,8 @@ mod tests {
     #[test]
     fn run_test_get_relative_mut() {
         fn test_get_relative_mut(mut b: impl RingBuffer<i32>) {
-            b.enqueue(0);
-            b.enqueue(1);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
 
             // [0, ...]
             //      ^
@@ -725,9 +725,9 @@ mod tests {
     #[test]
     fn run_test_wrapping_get_relative_mut() {
         fn test_wrapping_get_relative_mut(mut b: impl RingBuffer<i32>) {
-            b.enqueue(0);
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             *b.get_mut(0).unwrap() = 3;
 
@@ -749,9 +749,9 @@ mod tests {
         // the growable ringbuffer actually shouldn't wrap
         let mut b = GrowableAllocRingBuffer::with_capacity(2);
 
-        b.enqueue(0);
-        b.enqueue(1);
-        b.enqueue(2);
+        let _ = b.enqueue(0);
+        let _ = b.enqueue(1);
+        let _ = b.enqueue(2);
 
         *b.get_mut(0).unwrap() = 3;
 
@@ -776,7 +776,7 @@ mod tests {
         fn test_from_iterator<T: RingBuffer<i32> + FromIterator<i32>>() {
             let b: T = std::iter::repeat(1).take(1024).collect();
             assert_eq!(b.len(), 1024);
-            assert_eq!(b.to_vec(), vec![1; 1024])
+            assert_eq!(b.to_vec(), vec![1; 1024]);
         }
 
         test_from_iterator::<GrowableAllocRingBuffer<i32>>();
@@ -788,7 +788,7 @@ mod tests {
         fn test_from_iterator_wrap<T: RingBuffer<i32> + FromIterator<i32>>() {
             let b: T = std::iter::repeat(1).take(8000).collect();
             assert_eq!(b.len(), b.capacity());
-            assert_eq!(b.to_vec(), vec![1; b.capacity()])
+            assert_eq!(b.to_vec(), vec![1; b.capacity()]);
         }
 
         test_from_iterator_wrap::<GrowableAllocRingBuffer<i32>>();
@@ -798,8 +798,8 @@ mod tests {
     #[test]
     fn run_test_get_relative_negative() {
         fn test_get_relative_negative(mut b: impl RingBuffer<i32>) {
-            b.enqueue(0);
-            b.enqueue(1);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
 
             // [0, ...]
             //      ^
@@ -822,8 +822,8 @@ mod tests {
     #[test]
     fn run_test_contains() {
         fn test_contains(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             assert!(b.contains(&1));
             assert!(b.contains(&2));
@@ -838,9 +838,9 @@ mod tests {
     fn run_test_is_full() {
         fn test_is_full(mut b: impl RingBuffer<i32>) {
             assert!(!b.is_full());
-            b.enqueue(1);
+            let _ = b.enqueue(1);
             assert!(!b.is_full());
-            b.enqueue(2);
+            let _ = b.enqueue(2);
             assert!(b.is_full());
         }
 
@@ -852,8 +852,8 @@ mod tests {
     #[test]
     fn run_test_front_some() {
         fn test_front_some(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             assert_eq!(b.front(), Some(&1));
         }
@@ -877,8 +877,8 @@ mod tests {
     #[test]
     fn run_test_back_some() {
         fn test_back_some(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             assert_eq!(b.back(), Some(&2));
         }
@@ -902,8 +902,8 @@ mod tests {
     #[test]
     fn run_test_front_some_mut() {
         fn test_front_some_mut(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             assert_eq!(b.front_mut(), Some(&mut 1));
         }
@@ -927,8 +927,8 @@ mod tests {
     #[test]
     fn run_test_back_some_mut() {
         fn test_back_some_mut(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             assert_eq!(b.back_mut(), Some(&mut 2));
         }
@@ -952,8 +952,8 @@ mod tests {
     #[test]
     fn run_test_dequeue() {
         fn run_test_dequeue(mut b: impl RingBuffer<i32>) {
-            b.enqueue(0);
-            b.enqueue(1);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
 
             assert_eq!(b.len(), 2);
 
@@ -974,15 +974,15 @@ mod tests {
     fn run_test_skip() {
         #[allow(deprecated)]
         fn test_skip(mut b: impl RingBuffer<i32>) {
-            b.enqueue(0);
-            b.enqueue(1);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
 
             assert_eq!(b.len(), 2);
 
             b.skip();
             b.skip();
 
-            assert_eq!(b.len(), 0)
+            assert_eq!(b.len(), 0);
         }
 
         test_skip(AllocRingBuffer::new(8));
@@ -997,7 +997,7 @@ mod tests {
             rb.skip();
             rb.skip();
             rb.skip();
-            rb.enqueue(1);
+            let _ = rb.enqueue(1);
             assert_eq!(rb.dequeue(), Some(1));
             assert_eq!(rb.dequeue(), None);
             rb.skip();
@@ -1036,15 +1036,15 @@ mod tests {
     #[test]
     fn run_test_enqueue_dequeue_enqueue() {
         fn test_enqueue_dequeue_enqueue(mut b: impl RingBuffer<i32>) {
-            b.enqueue(0);
-            b.enqueue(1);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
 
             assert_eq!(b.dequeue(), Some(0));
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), None);
 
-            b.enqueue(0);
-            b.enqueue(1);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
 
             assert_eq!(b.dequeue(), Some(0));
             assert_eq!(b.dequeue(), Some(1));
@@ -1059,8 +1059,8 @@ mod tests {
     #[test]
     fn large_negative_index() {
         fn test_large_negative_index(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
             assert_eq!(b.get_signed(1), Some(&2));
             assert_eq!(b.get_signed(0), Some(&1));
             assert_eq!(b.get_signed(-1), Some(&2));
@@ -1076,8 +1076,8 @@ mod tests {
     #[test]
     fn large_negative_index_mut() {
         fn test_large_negative_index(mut b: impl RingBuffer<i32>) {
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
             assert_eq!(b.get_mut_signed(1), Some(&mut 2));
             assert_eq!(b.get_mut_signed(0), Some(&mut 1));
             assert_eq!(b.get_mut_signed(-1), Some(&mut 2));
@@ -1093,17 +1093,17 @@ mod tests {
     #[test]
     fn run_test_enqueue_dequeue_enqueue_full() {
         fn test_enqueue_dequeue_enqueue_full(mut b: impl RingBuffer<i32>) {
-            b.enqueue(0);
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), Some(2));
             assert_eq!(b.dequeue(), None);
 
-            b.enqueue(0);
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), Some(2));
@@ -1115,18 +1115,18 @@ mod tests {
 
         // the growable ringbuffer should actually keep growing and dequeue all items
         let mut b = GrowableAllocRingBuffer::with_capacity(2);
-        b.enqueue(0);
-        b.enqueue(1);
-        b.enqueue(2);
+        let _ = b.enqueue(0);
+        let _ = b.enqueue(1);
+        let _ = b.enqueue(2);
 
         assert_eq!(b.dequeue(), Some(0));
         assert_eq!(b.dequeue(), Some(1));
         assert_eq!(b.dequeue(), Some(2));
         assert_eq!(b.dequeue(), None);
 
-        b.enqueue(0);
-        b.enqueue(1);
-        b.enqueue(2);
+        let _ = b.enqueue(0);
+        let _ = b.enqueue(1);
+        let _ = b.enqueue(2);
 
         assert_eq!(b.dequeue(), Some(0));
         assert_eq!(b.dequeue(), Some(1));
@@ -1137,25 +1137,25 @@ mod tests {
     #[test]
     fn run_test_enqueue_dequeue_enqueue_full_get() {
         fn test_enqueue_dequeue_enqueue_full_get(mut b: impl RingBuffer<i32>) {
-            b.enqueue(0);
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), Some(2));
             assert_eq!(b.dequeue(), None);
 
-            b.enqueue(0);
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             assert_eq!(b.dequeue(), Some(1));
             assert_eq!(b.dequeue(), Some(2));
             assert_eq!(b.dequeue(), None);
 
-            b.enqueue(0);
-            b.enqueue(1);
-            b.enqueue(2);
+            let _ = b.enqueue(0);
+            let _ = b.enqueue(1);
+            let _ = b.enqueue(2);
 
             assert_eq!(b.get_signed(-1), Some(&2));
             assert_eq!(b.get_signed(-2), Some(&1));
@@ -1168,31 +1168,31 @@ mod tests {
         // the growable ringbuffer should actually keep growing and dequeue all items
         let mut b = GrowableAllocRingBuffer::with_capacity(2);
 
-        b.enqueue(0);
-        b.enqueue(1);
-        b.enqueue(2);
+        let _ = b.enqueue(0);
+        let _ = b.enqueue(1);
+        let _ = b.enqueue(2);
 
         assert_eq!(b.dequeue(), Some(0));
         assert_eq!(b.dequeue(), Some(1));
         assert_eq!(b.dequeue(), Some(2));
         assert_eq!(b.dequeue(), None);
 
-        b.enqueue(0);
-        b.enqueue(1);
-        b.enqueue(2);
+        let _ = b.enqueue(0);
+        let _ = b.enqueue(1);
+        let _ = b.enqueue(2);
 
         assert_eq!(b.dequeue(), Some(0));
         assert_eq!(b.dequeue(), Some(1));
         assert_eq!(b.dequeue(), Some(2));
         assert_eq!(b.dequeue(), None);
 
-        b.enqueue(0);
-        b.enqueue(1);
-        b.enqueue(2);
+        let _ = b.enqueue(0);
+        let _ = b.enqueue(1);
+        let _ = b.enqueue(2);
 
         assert_eq!(b.get_signed(-1), Some(&2));
         assert_eq!(b.get_signed(-2), Some(&1));
-        assert_eq!(b.get_signed(-3), Some(&0))
+        assert_eq!(b.get_signed(-3), Some(&0));
     }
 
     #[test]
@@ -1201,20 +1201,20 @@ mod tests {
     fn run_test_enqueue_dequeue_enqueue_full_get_rep() {
         fn test_enqueue_dequeue_enqueue_full_get_rep(mut rb: impl RingBuffer<i32>) {
             for _ in 0..100_000 {
-                rb.enqueue(1);
-                rb.enqueue(2);
+                let _ = rb.enqueue(1);
+                let _ = rb.enqueue(2);
 
                 assert_eq!(rb.dequeue(), Some(1));
                 assert_eq!(rb.dequeue(), Some(2));
 
-                rb.enqueue(1);
-                rb.enqueue(2);
+                let _ = rb.enqueue(1);
+                let _ = rb.enqueue(2);
 
                 assert_eq!(rb.dequeue(), Some(1));
                 assert_eq!(rb.dequeue(), Some(2));
 
-                rb.enqueue(1);
-                rb.enqueue(2);
+                let _ = rb.enqueue(1);
+                let _ = rb.enqueue(2);
 
                 assert_eq!(rb.get_signed(-1), Some(&2));
                 assert_eq!(rb.get_signed(-2), Some(&1));
@@ -1229,18 +1229,18 @@ mod tests {
     #[test]
     fn run_test_clone() {
         fn test_clone(mut rb: impl RingBuffer<i32> + Clone + Eq + Debug) {
-            rb.enqueue(42);
-            rb.enqueue(32);
-            rb.enqueue(22);
+            let _ = rb.enqueue(42);
+            let _ = rb.enqueue(32);
+            let _ = rb.enqueue(22);
 
             let mut other = rb.clone();
 
             assert_eq!(rb, other);
 
-            rb.enqueue(11);
-            rb.enqueue(12);
-            other.enqueue(11);
-            other.enqueue(12);
+            let _ = rb.enqueue(11);
+            let _ = rb.enqueue(12);
+            let _ = other.enqueue(11);
+            let _ = other.enqueue(12);
 
             assert_eq!(rb, other);
         }
@@ -1255,7 +1255,7 @@ mod tests {
         fn test_default_fill(mut rb: impl RingBuffer<i32>) {
             for i in 0..rb.capacity() {
                 for _ in 0..i {
-                    rb.enqueue(1);
+                    let _ = rb.enqueue(1);
                 }
 
                 assert_eq!(rb.len(), i);
@@ -1281,12 +1281,12 @@ mod tests {
         let mut alloc_b = ConstGenericRingBuffer::<i32, 4>::new();
 
         assert!(alloc_a.eq(&alloc_b));
-        alloc_a.enqueue(1);
+        let _ = alloc_a.enqueue(1);
         assert!(!alloc_b.eq(&alloc_a));
-        alloc_b.enqueue(1);
+        let _ = alloc_b.enqueue(1);
         assert!(alloc_a.eq(&alloc_b));
-        alloc_a.enqueue(4);
-        alloc_b.enqueue(2);
+        let _ = alloc_a.enqueue(4);
+        let _ = alloc_b.enqueue(2);
         assert!(!alloc_b.eq(&alloc_a));
     }
 
@@ -1294,7 +1294,7 @@ mod tests {
     fn run_next_back_test() {
         fn next_back_test(mut rb: impl RingBuffer<i32>) {
             for i in 1..=4 {
-                rb.enqueue(i);
+                let _ = rb.enqueue(i);
             }
 
             let mut it = rb.iter();
@@ -1314,7 +1314,7 @@ mod tests {
     fn run_next_back_test_mut() {
         fn next_back_test_mut(mut rb: impl RingBuffer<i32>) {
             for i in 1..=4 {
-                rb.enqueue(i);
+                let _ = rb.enqueue(i);
             }
 
             let mut it = rb.iter_mut();
@@ -1343,7 +1343,7 @@ mod tests {
         fn test_fill(mut rb: impl RingBuffer<i32>) {
             for i in 0..rb.capacity() {
                 for _ in 0..i {
-                    rb.enqueue(1);
+                    let _ = rb.enqueue(1);
                 }
 
                 assert_eq!(rb.len(), i);
@@ -1395,8 +1395,8 @@ mod tests {
                         parent: Some(unsafe { dt.as_ref() }.unwrap().borrow_mut()),
                     };
                     let mut rb = { $constructor };
-                    rb.enqueue(d);
-                    rb.enqueue(Dropee { parent: None });
+                    let _ = rb.enqueue(d);
+                    let _ = rb.enqueue(Dropee { parent: None });
                 }
                 {
                     // Safety:
@@ -1432,13 +1432,13 @@ mod tests {
         macro_rules! test_clone {
             ($e: expr) => {
                 let mut e1 = $e;
-                e1.enqueue(1);
-                e1.enqueue(2);
+                let _ = e1.enqueue(1);
+                let _ = e1.enqueue(2);
 
                 let mut e2 = e1.clone();
 
-                e2.enqueue(11);
-                e2.enqueue(12);
+                let _ = e2.enqueue(11);
+                let _ = e2.enqueue(12);
 
                 assert_eq!(e1.to_vec(), vec![1, 2]);
                 assert_eq!(e2.to_vec(), vec![1, 2, 11, 12]);

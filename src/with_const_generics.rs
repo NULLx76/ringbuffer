@@ -138,7 +138,7 @@ impl<T, const CAP: usize> Drop for ConstGenericRingBuffer<T, CAP> {
 impl<T: Clone, const CAP: usize> Clone for ConstGenericRingBuffer<T, CAP> {
     fn clone(&self) -> Self {
         let mut new = ConstGenericRingBuffer::<T, CAP>::new();
-        self.iter().cloned().for_each(|i| new.enqueue(i));
+        new.extend(self.iter().cloned());
         new
     }
 }
@@ -250,7 +250,7 @@ impl<T, const CAP: usize> Extend<T> for ConstGenericRingBuffer<T, CAP> {
         let iter = iter.into_iter();
 
         for i in iter {
-            self.enqueue(i);
+            let _ = self.enqueue(i);
         }
     }
 }
@@ -269,7 +269,9 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
     impl_ringbuffer!(readptr, writeptr);
 
     #[inline]
-    fn enqueue(&mut self, value: T) {
+    fn enqueue(&mut self, value: T) -> Option<T> {
+        let mut ret = None;
+
         if self.is_full() {
             let previous_value = mem::replace(
                 &mut self.buf[crate::mask_modulo(CAP, self.readptr)],
@@ -279,14 +281,14 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
             // SAFETY: the buffer is full, so this must be initialized
             //       : also, index has been masked
             // make sure we drop because it won't happen automatically
-            unsafe {
-                drop(previous_value.assume_init());
-            }
+            ret = Some(unsafe { previous_value.assume_init() });
             self.readptr += 1;
         }
         let index = crate::mask_modulo(CAP, self.writeptr);
         self.buf[index] = MaybeUninit::new(value);
         self.writeptr += 1;
+
+        ret
     }
 
     fn dequeue(&mut self) -> Option<T> {
@@ -335,7 +337,7 @@ impl<RB, const CAP: usize> FromIterator<RB> for ConstGenericRingBuffer<RB, CAP> 
     fn from_iter<T: IntoIterator<Item = RB>>(iter: T) -> Self {
         let mut res = Self::default();
         for i in iter {
-            res.enqueue(i);
+            let _ = res.enqueue(i);
         }
 
         res
@@ -369,15 +371,15 @@ mod tests {
         // messes up
         for _ in 0..100 {
             for i in 0..NUM_VALS {
-                rb.enqueue(i);
+                let _ = rb.enqueue(i);
             }
             assert!(rb.is_full());
 
             for i in 0..10 {
-                assert_eq!(Some(i + NUM_VALS - rb.capacity()), rb.dequeue())
+                assert_eq!(Some(i + NUM_VALS - rb.capacity()), rb.dequeue());
             }
 
-            assert!(rb.is_empty())
+            assert!(rb.is_empty());
         }
     }
 
@@ -391,7 +393,9 @@ mod tests {
     #[test]
     fn test_extend() {
         let mut buf = ConstGenericRingBuffer::<u8, 4>::new();
-        (0..4).for_each(|_| buf.enqueue(0));
+        (0..4).for_each(|_| {
+            let _ = buf.enqueue(0);
+        });
 
         let new_data = [0, 1, 2];
         buf.extend(new_data);
@@ -408,7 +412,9 @@ mod tests {
     #[test]
     fn test_extend_with_overflow() {
         let mut buf = ConstGenericRingBuffer::<u8, 8>::new();
-        (0..8).for_each(|_| buf.enqueue(0));
+        (0..8).for_each(|_| {
+            let _ = buf.enqueue(0);
+        });
 
         let new_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         buf.extend(new_data);

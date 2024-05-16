@@ -186,8 +186,9 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
         self.pop_front()
     }
 
-    fn enqueue(&mut self, value: T) {
+    fn enqueue(&mut self, value: T) -> Option<T> {
         self.push_back(value);
+        None
     }
 
     fn fill_with<F: FnMut() -> T>(&mut self, mut f: F) {

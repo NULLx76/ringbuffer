@@ -79,7 +79,7 @@ pub unsafe trait RingBuffer<T>:
     #[deprecated = "use enqueue instead"]
     #[inline]
     fn push(&mut self, value: T) {
-        self.enqueue(value);
+        let _ = self.enqueue(value);
     }
 
     /// Adds a value onto the buffer.
@@ -87,7 +87,7 @@ pub unsafe trait RingBuffer<T>:
     /// Cycles around if capacity is reached.
     /// Forms a more natural counterpart to [`dequeue`](RingBuffer::dequeue).
     /// An alias is provided with [`push`](RingBuffer::push).
-    fn enqueue(&mut self, value: T);
+    fn enqueue(&mut self, value: T) -> Option<T>;
 
     /// dequeues the top item off the ringbuffer, and moves this item out.
     fn dequeue(&mut self) -> Option<T>;

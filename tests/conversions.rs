@@ -43,8 +43,8 @@ convert_tests!(
         alloc_from_const_slice: {let a: &[char; 2] = &['1', '2']; a},
         alloc_from_arr: {let a: [char; 2] = ['1', '2']; a},
 
-        alloc_from_cgrb: {let a = ConstGenericRingBuffer::from(['1', '2']); a},
-        alloc_from_garb: {let a = GrowableAllocRingBuffer::from(['1', '2']); a},
+        alloc_from_cgrb: { ConstGenericRingBuffer::from(['1', '2'])},
+        alloc_from_garb: { GrowableAllocRingBuffer::from(['1', '2'])},
     ] => AllocRingBuffer::<_>
 );
 
@@ -59,8 +59,8 @@ convert_tests!(
         growable_alloc_from_const_slice: {let a: &[char; 2] = &['1', '2']; a},
         growable_alloc_from_arr: {let a: [char; 2] = ['1', '2']; a},
 
-        growable_alloc_from_cgrb: {let a = ConstGenericRingBuffer::from(['1', '2']); a},
-        growable_alloc_from_arb: {let a = AllocRingBuffer::from(['1', '2']); a},
+        growable_alloc_from_cgrb: { ConstGenericRingBuffer::from(['1', '2'])},
+        growable_alloc_from_arb: { AllocRingBuffer::from(['1', '2'])},
     ] => GrowableAllocRingBuffer::<_>
 );
 
@@ -75,8 +75,8 @@ convert_tests!(
         const_from_const_slice: {let a: &[char; 2] = &['1', '2']; a},
         const_from_arr: {let a: [char; 2] = ['1', '2']; a},
 
-        const_from_garb: {let a = GrowableAllocRingBuffer::from(['1', '2']); a},
-        const_from_arb: {let a = AllocRingBuffer::from(['1', '2']); a},
+        const_from_garb: { GrowableAllocRingBuffer::from(['1', '2'])},
+        const_from_arb: { AllocRingBuffer::from(['1', '2'])},
     ] => ConstGenericRingBuffer::<_, 2>
 );
 
@@ -123,13 +123,13 @@ fn test_extra_conversions_const() {
 fn test_const_generic_new_parameter() {
     // Can we specify size only on the method?
     let mut a = ConstGenericRingBuffer::new::<2>();
-    a.enqueue(5);
+    let _ = a.enqueue(5);
 
     // Can we specify size in both positions?
     let mut a = ConstGenericRingBuffer::<i32, 50>::new::<50>();
-    a.enqueue(5);
+    let _ = a.enqueue(5);
 
     // Can we specify size only on the struct?
     let mut a = ConstGenericRingBuffer::<i32, 50>::new();
-    a.enqueue(5);
+    let _ = a.enqueue(5);
 }
