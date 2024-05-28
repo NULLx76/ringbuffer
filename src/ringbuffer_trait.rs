@@ -237,6 +237,15 @@ pub unsafe trait RingBuffer<T>:
         RingBufferIterator::new(self)
     }
 
+    /// Extends the ringbuffer with elements from a slice.
+    fn extend_from_slice(&mut self, elements: &[T]) where T: Clone {
+        // Default implementation.
+        // For performance reasons, specific RingBuffers should use an optimized implementation.
+        for element in elements {
+            self.push(element.clone())
+        }
+    }
+
     /// Converts the buffer to a vector. This Copies all elements in the ringbuffer.
     #[cfg(feature = "alloc")]
     fn to_vec(&self) -> Vec<T>
