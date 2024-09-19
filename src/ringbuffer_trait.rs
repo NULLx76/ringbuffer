@@ -1,4 +1,4 @@
-use core::ops::{Index, IndexMut};
+use core::ops::{Index, IndexMut, Range};
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -169,6 +169,11 @@ pub unsafe trait RingBuffer<T>:
         // Safety: self is a RingBuffer
         unsafe { Self::ptr_get_mut(self, index).map(|i| &mut *i) }
     }
+
+    /// Gets values relative to the current index. 0 is the next index to be written to with push.
+    fn get_range<'a>(&'a self, range: Range<usize>) -> impl Iterator<Item = &'a T>
+    where
+        T: 'a;
 
     /// same as [`get_mut`](RingBuffer::get_mut) but on raw pointers.
     ///
