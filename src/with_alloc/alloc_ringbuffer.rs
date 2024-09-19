@@ -299,14 +299,21 @@ unsafe impl<T> RingBuffer<T> for AllocRingBuffer<T> {
     where
         T: 'a,
     {
-        let normalized_index = self.readptr + range.start.rem_euclid(self.len());
-        let index = normalized_index % self.buffer_size();
+        let offset = range.start.rem_euclid(self.len());
+        let normalized_index = self.readptr + offset;
+        let index = crate::mask_modulo(self.buffer_size(), normalized_index);
         let buf = unsafe { slice::from_raw_parts(self.buf, self.capacity()) };
         buf[index..]
             .iter()
             .chain(buf[..index].iter())
-            .take(self.len())
-            .cycle()
+            .take(self.len() - offset)
+            .chain(
+                buf[self.readptr..]
+                    .iter()
+                    .chain(buf[..self.readptr].iter())
+                    .take(self.len())
+                    .cycle(),
+            )
             .take(range.len())
     }
 }

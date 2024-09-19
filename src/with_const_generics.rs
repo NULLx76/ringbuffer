@@ -327,14 +327,22 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
     where
         T: 'a,
     {
-        let normalized_index = self.readptr + range.start.rem_euclid(self.len());
-        let index = normalized_index % self.capacity();
+        let offset = range.start.rem_euclid(self.len());
+        let normalized_index = self.readptr + offset;
+        let index = crate::mask_modulo(self.buffer_size(), normalized_index);
         self.buf[index..]
             .iter()
             .chain(self.buf[..index].iter())
-            .take(self.len())
-            .map(|x| unsafe { x.assume_init_ref() })
-            .cycle()
+            .take(self.len() - offset)
+            .map(|entry| unsafe { entry.assume_init_ref() })
+            .chain(
+                self.buf[self.readptr..]
+                    .iter()
+                    .chain(self.buf[..self.readptr].iter())
+                    .take(self.len())
+                    .map(|entry| unsafe { entry.assume_init_ref() })
+                    .cycle(),
+            )
             .take(range.len())
     }
 }
