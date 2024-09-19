@@ -328,7 +328,7 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
         T: 'a,
     {
         let normalized_index = self.readptr + range.start.rem_euclid(self.len());
-        let index = normalized_index % self.buffer_size();
+        let index = normalized_index % self.capacity();
         self.buf[index..]
             .iter()
             .chain(self.buf[..index].iter())
