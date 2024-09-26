@@ -3,7 +3,7 @@ use crate::RingBuffer;
 use core::iter::FromIterator;
 use core::mem;
 use core::mem::MaybeUninit;
-use core::ops::{Index, IndexMut};
+use core::ops::{Index, IndexMut, Range};
 
 /// The `ConstGenericRingBuffer` struct is a `RingBuffer` implementation which does not require `alloc` but
 /// uses const generics instead.
@@ -320,6 +320,30 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
         self.readptr = 0;
         self.writeptr = CAP;
         self.buf.fill_with(|| MaybeUninit::new(f()));
+    }
+
+    #[inline]
+    fn get_range<'a>(&'a self, range: Range<usize>) -> impl Iterator<Item = &'a T>
+    where
+        T: 'a,
+    {
+        let offset = range.start.rem_euclid(self.len());
+        let normalized_index = self.readptr + offset;
+        let index = crate::mask_modulo(self.buffer_size(), normalized_index);
+        self.buf[index..]
+            .iter()
+            .chain(self.buf[..index].iter())
+            .take(self.len() - offset)
+            .map(|entry| unsafe { entry.assume_init_ref() })
+            .chain(
+                self.buf[self.readptr..]
+                    .iter()
+                    .chain(self.buf[..self.readptr].iter())
+                    .take(self.len())
+                    .map(|entry| unsafe { entry.assume_init_ref() })
+                    .cycle(),
+            )
+            .take(range.len())
     }
 }
 

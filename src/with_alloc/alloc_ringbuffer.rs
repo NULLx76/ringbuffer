@@ -1,4 +1,5 @@
-use core::ops::{Index, IndexMut};
+use alloc::slice;
+use core::ops::{Index, IndexMut, Range};
 
 use crate::ringbuffer_trait::{
     RingBuffer, RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator,
@@ -291,6 +292,29 @@ unsafe impl<T> RingBuffer<T> for AllocRingBuffer<T> {
         for i in 0..self.capacity {
             unsafe { ptr::write(get_unchecked_mut(self, i), f()) };
         }
+    }
+
+    #[inline]
+    fn get_range<'a>(&'a self, range: Range<usize>) -> impl Iterator<Item = &'a T>
+    where
+        T: 'a,
+    {
+        let offset = range.start.rem_euclid(self.len());
+        let normalized_index = self.readptr + offset;
+        let index = crate::mask_modulo(self.buffer_size(), normalized_index);
+        let buf = unsafe { slice::from_raw_parts(self.buf, self.buffer_size()) };
+        buf[index..]
+            .iter()
+            .chain(buf[..index].iter())
+            .take(self.len() - offset)
+            .chain(
+                buf[self.readptr..]
+                    .iter()
+                    .chain(buf[..self.readptr].iter())
+                    .take(self.len())
+                    .cycle(),
+            )
+            .take(range.len())
     }
 }
 

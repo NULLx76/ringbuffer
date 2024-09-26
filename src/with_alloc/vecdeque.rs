@@ -1,7 +1,7 @@
 use crate::ringbuffer_trait::{RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator};
 use crate::{AllocRingBuffer, RingBuffer};
 use alloc::collections::VecDeque;
-use core::ops::{Deref, DerefMut, Index, IndexMut};
+use core::ops::{Deref, DerefMut, Index, IndexMut, Range};
 
 /// A growable ringbuffer. Once capacity is reached, the size is doubled.
 /// Wrapper of the built-in [`VecDeque`] struct.
@@ -254,6 +254,18 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
             (*rb).0.get_mut(index)
         }
         .map(|i| i as *mut T)
+    }
+
+    /// Gets values relative to the current index. 0 is the next index to be written to with push.
+    ///
+    /// # Panics
+    /// Panics if the starting point is greater than the end point
+    /// or if the end point is greater than the length of the deque.
+    fn get_range<'a>(&'a self, range: Range<usize>) -> impl Iterator<Item = &'a T>
+    where
+        T: 'a,
+    {
+        self.0.range(range)
     }
 }
 
