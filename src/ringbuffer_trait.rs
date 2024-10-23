@@ -395,7 +395,7 @@ mod iter {
         }
     }
 
-    impl<'rb, T, RB: RingBuffer<T>> Iterator for RingBufferDrainingIterator<'rb, T, RB> {
+    impl<T, RB: RingBuffer<T>> Iterator for RingBufferDrainingIterator<'_, T, RB> {
         type Item = T;
 
         fn next(&mut self) -> Option<T> {
