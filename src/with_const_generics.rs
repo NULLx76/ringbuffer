@@ -1,8 +1,8 @@
 use crate::ringbuffer_trait::{RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator};
 use crate::RingBuffer;
 use core::iter::FromIterator;
-use core::mem;
 use core::mem::MaybeUninit;
+use core::mem::{self, ManuallyDrop};
 use core::ops::{Index, IndexMut};
 
 /// The `ConstGenericRingBuffer` struct is a `RingBuffer` implementation which does not require `alloc` but
@@ -42,11 +42,14 @@ pub struct ConstGenericRingBuffer<T, const CAP: usize> {
 
 impl<T, const CAP: usize> From<[T; CAP]> for ConstGenericRingBuffer<T, CAP> {
     fn from(value: [T; CAP]) -> Self {
+        let v = ManuallyDrop::new(value);
         Self {
             // Safety:
             // T has the same layout as MaybeUninit<T>
             // [T; N] has the same layout as [MaybeUninit<T>; N]
-            buf: unsafe { mem::transmute_copy(&value) },
+            // Without ManuallyDrop this would be unsound as
+            // transmute_copy doesn't take ownership
+            buf: unsafe { mem::transmute_copy(&v) },
             readptr: 0,
             writeptr: CAP,
         }
@@ -183,7 +186,7 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
         // https://rust-lang.github.io/rust-clippy/master/index.html#uninit_assumed_init
         #[allow(clippy::uninit_assumed_init)]
         Self {
-            buf: unsafe { MaybeUninit::uninit().assume_init() },
+            buf: [const { MaybeUninit::<T>::uninit() }; CAP],
             writeptr: 0,
             readptr: 0,
         }
@@ -280,7 +283,6 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
             // make sure we drop whatever is being overwritten
             // SAFETY: the buffer is full, so this must be initialized
             //       : also, index has been masked
-            // make sure we drop because it won't happen automatically
             ret = Some(unsafe { previous_value.assume_init() });
             self.readptr += 1;
         }
@@ -360,7 +362,10 @@ impl<T, const CAP: usize> IndexMut<usize> for ConstGenericRingBuffer<T, CAP> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{AllocRingBuffer, ConstGenericRingBuffer, GrowableAllocRingBuffer, RingBuffer};
+    use alloc::collections::{LinkedList, VecDeque};
+    use alloc::string::ToString;
+    use alloc::vec;
 
     #[test]
     fn test_not_power_of_two() {
@@ -428,79 +433,71 @@ mod tests {
         }
     }
 
-    #[cfg(test)]
-    mod tests {
-        use crate::{AllocRingBuffer, ConstGenericRingBuffer, GrowableAllocRingBuffer, RingBuffer};
-        use alloc::collections::{LinkedList, VecDeque};
-        use alloc::string::ToString;
-        use alloc::vec;
+    #[test]
+    fn from() {
+        assert_eq!(
+            ConstGenericRingBuffer::<i32, 3>::from([1, 2, 3]).to_vec(),
+            vec![1, 2, 3]
+        );
 
-        #[test]
-        fn from() {
-            assert_eq!(
-                ConstGenericRingBuffer::<i32, 3>::from([1, 2, 3]).to_vec(),
-                vec![1, 2, 3]
-            );
+        let v: &[i32; 3] = &[1, 2, 3];
+        assert_eq!(
+            ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(),
+            vec![1, 2, 3]
+        );
 
-            let v: &[i32; 3] = &[1, 2, 3];
-            assert_eq!(
-                ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(),
-                vec![1, 2, 3]
-            );
+        let v: &[i32] = &[1, 2, 3];
+        assert_eq!(
+            ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(),
+            vec![1, 2, 3]
+        );
 
-            let v: &[i32] = &[1, 2, 3];
-            assert_eq!(
-                ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(),
-                vec![1, 2, 3]
-            );
+        let v: &mut [i32; 3] = &mut [1, 2, 3];
+        assert_eq!(
+            ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(),
+            vec![1, 2, 3]
+        );
 
-            let v: &mut [i32; 3] = &mut [1, 2, 3];
-            assert_eq!(
-                ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(),
-                vec![1, 2, 3]
-            );
+        let v: &mut [i32] = &mut [1, 2, 3];
+        assert_eq!(
+            ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(),
+            vec![1, 2, 3]
+        );
 
-            let v: &mut [i32] = &mut [1, 2, 3];
-            assert_eq!(
-                ConstGenericRingBuffer::<i32, 3>::from(v).to_vec(),
-                vec![1, 2, 3]
-            );
-
-            assert_eq!(
-                ConstGenericRingBuffer::<i32, 3>::from(vec![1, 2, 3]).to_vec(),
-                vec![1, 2, 3]
-            );
-            assert_eq!(
-                ConstGenericRingBuffer::<i32, 3>::from(
-                    vec![1, 2, 3].into_iter().collect::<VecDeque<_>>()
-                )
+        assert_eq!(
+            ConstGenericRingBuffer::<i32, 3>::from(vec![1, 2, 3]).to_vec(),
+            vec![1, 2, 3]
+        );
+        assert_eq!(
+            ConstGenericRingBuffer::<i32, 3>::from(
+                vec![1, 2, 3].into_iter().collect::<VecDeque<_>>()
+            )
+            .to_vec(),
+            vec![1, 2, 3]
+        );
+        assert_eq!(
+            ConstGenericRingBuffer::<i32, 3>::from(
+                vec![1, 2, 3].into_iter().collect::<LinkedList<_>>()
+            )
+            .to_vec(),
+            vec![1, 2, 3]
+        );
+        assert_eq!(
+            ConstGenericRingBuffer::<_, 3>::from("abc".to_string()).to_vec(),
+            vec!['a', 'b', 'c']
+        );
+        assert_eq!(
+            ConstGenericRingBuffer::<_, 3>::from("abc").to_vec(),
+            vec!['a', 'b', 'c']
+        );
+        assert_eq!(
+            ConstGenericRingBuffer::<_, 3>::from(GrowableAllocRingBuffer::from(vec![1, 2, 3]))
                 .to_vec(),
-                vec![1, 2, 3]
-            );
-            assert_eq!(
-                ConstGenericRingBuffer::<i32, 3>::from(
-                    vec![1, 2, 3].into_iter().collect::<LinkedList<_>>()
-                )
-                .to_vec(),
-                vec![1, 2, 3]
-            );
-            assert_eq!(
-                ConstGenericRingBuffer::<_, 3>::from("abc".to_string()).to_vec(),
-                vec!['a', 'b', 'c']
-            );
-            assert_eq!(
-                ConstGenericRingBuffer::<_, 3>::from("abc").to_vec(),
-                vec!['a', 'b', 'c']
-            );
-            assert_eq!(
-                ConstGenericRingBuffer::<_, 3>::from(GrowableAllocRingBuffer::from(vec![1, 2, 3]))
-                    .to_vec(),
-                vec![1, 2, 3]
-            );
-            assert_eq!(
-                ConstGenericRingBuffer::<_, 3>::from(AllocRingBuffer::from(vec![1, 2, 3])).to_vec(),
-                vec![1, 2, 3]
-            );
-        }
+            vec![1, 2, 3]
+        );
+        assert_eq!(
+            ConstGenericRingBuffer::<_, 3>::from(AllocRingBuffer::from(vec![1, 2, 3])).to_vec(),
+            vec![1, 2, 3]
+        );
     }
 }
