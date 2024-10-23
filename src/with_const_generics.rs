@@ -181,10 +181,6 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
         #[allow(clippy::let_unit_value)]
         let () = Self::ERROR_CAPACITY_IS_NOT_ALLOWED_TO_BE_ZERO;
 
-        // allow here since we are constructing an array of MaybeUninit<T>
-        // which explicitly *is* defined behavior
-        // https://rust-lang.github.io/rust-clippy/master/index.html#uninit_assumed_init
-        #[allow(clippy::uninit_assumed_init)]
         Self {
             buf: [const { MaybeUninit::<T>::uninit() }; CAP],
             writeptr: 0,
