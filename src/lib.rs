@@ -1376,7 +1376,7 @@ mod tests {
             parent: Option<RefMut<'a, DropTest>>,
         }
 
-        impl<'a> Drop for Dropee<'a> {
+        impl Drop for Dropee<'_> {
             fn drop(&mut self) {
                 if let Some(parent) = &mut self.parent {
                     parent.flag = true;
