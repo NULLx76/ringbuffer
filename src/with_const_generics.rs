@@ -508,7 +508,7 @@ mod tests {
             let mut buf = ConstGenericRingBuffer::<i32, 3>::new();
             let elems = [1, 2, 3];
             buf.extend_from_slice(&elems);
-            assert_eq!(buf.to_vec().as_slice(), elems)
+            assert_eq!(buf.to_vec().as_slice(), elems);
         }
     }
 }
