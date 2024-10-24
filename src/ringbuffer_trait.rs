@@ -86,7 +86,6 @@ pub unsafe trait RingBuffer<T>:
     ///
     /// Cycles around if capacity is reached.
     /// Forms a more natural counterpart to [`dequeue`](RingBuffer::dequeue).
-    /// An alias is provided with [`push`](RingBuffer::push).
     fn enqueue(&mut self, value: T) -> Option<T>;
 
     /// dequeues the top item off the ringbuffer, and moves this item out.
@@ -235,6 +234,18 @@ pub unsafe trait RingBuffer<T>:
     #[inline]
     fn iter(&self) -> RingBufferIterator<T, Self> {
         RingBufferIterator::new(self)
+    }
+
+    /// Extends the ringbuffer with elements from a slice.
+    fn extend_from_slice(&mut self, elements: &[T])
+    where
+        T: Clone,
+    {
+        // Default implementation.
+        // For performance reasons, specific RingBuffers should use an optimized implementation.
+        for element in elements {
+            let _ = self.enqueue(element.clone());
+        }
     }
 
     /// Converts the buffer to a vector. This Copies all elements in the ringbuffer.
@@ -395,7 +406,7 @@ mod iter {
         }
     }
 
-    impl<'rb, T, RB: RingBuffer<T>> Iterator for RingBufferDrainingIterator<'rb, T, RB> {
+    impl<T, RB: RingBuffer<T>> Iterator for RingBufferDrainingIterator<'_, T, RB> {
         type Item = T;
 
         fn next(&mut self) -> Option<T> {
