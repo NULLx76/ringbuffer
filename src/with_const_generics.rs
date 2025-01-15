@@ -1,9 +1,11 @@
 use crate::ringbuffer_trait::{RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator};
 use crate::RingBuffer;
 use core::iter::FromIterator;
-use core::mem::MaybeUninit;
-use core::mem::{self, ManuallyDrop};
+use core::mem::{self, ManuallyDrop, MaybeUninit};
 use core::ops::{Index, IndexMut};
+
+#[cfg(feature = "serde")]
+use serde::{de::MapAccess, ser::SerializeStruct};
 
 /// The `ConstGenericRingBuffer` struct is a `RingBuffer` implementation which does not require `alloc` but
 /// uses const generics instead.
@@ -38,6 +40,145 @@ pub struct ConstGenericRingBuffer<T, const CAP: usize> {
     buf: [MaybeUninit<T>; CAP],
     readptr: usize,
     writeptr: usize,
+}
+
+#[cfg(feature = "serde")]
+impl<T, const CAP: usize> serde::Serialize for ConstGenericRingBuffer<T, CAP>
+where
+    T: serde::Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // Create a temporary Vec to store the valid elements
+        let mut elements = alloc::vec::Vec::with_capacity(CAP);
+
+        // Handle the case where the buffer might be empty
+        if self.readptr != self.writeptr {
+            let mut read_idx = self.readptr;
+
+            // If writeptr > readptr, elements are contiguous
+            if self.writeptr > self.readptr {
+                for idx in self.readptr..self.writeptr {
+                    unsafe {
+                        elements.push(&*self.buf[idx].as_ptr());
+                    }
+                }
+            } else {
+                // Handle wrapped around case
+                // First read from readptr to end
+                while read_idx < CAP {
+                    unsafe {
+                        elements.push(&*self.buf[read_idx].as_ptr());
+                    }
+                    read_idx += 1;
+                }
+                // Then from start to writeptr
+                read_idx = 0;
+                while read_idx < self.writeptr {
+                    unsafe {
+                        elements.push(&*self.buf[read_idx].as_ptr());
+                    }
+                    read_idx += 1;
+                }
+            }
+        }
+
+        // Serialize the elements along with the buffer metadata
+        let mut state = serializer.serialize_struct("ConstGenericRingBuffer", 3)?;
+        state.serialize_field("elements", &elements)?;
+        state.serialize_field("readptr", &self.readptr)?;
+        state.serialize_field("writeptr", &self.writeptr)?;
+        state.end()
+    }
+}
+#[cfg(feature = "serde")]
+impl<'de, T, const CAP: usize> serde::Deserialize<'de> for ConstGenericRingBuffer<T, CAP>
+where
+    T: serde::Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct RingBufferVisitor<T, const CAP: usize>(core::marker::PhantomData<T>);
+
+        impl<'de, T, const CAP: usize> serde::de::Visitor<'de> for RingBufferVisitor<T, CAP>
+        where
+            T: serde::Deserialize<'de>,
+        {
+            type Value = ConstGenericRingBuffer<T, CAP>;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                formatter.write_str("struct ConstGenericRingBuffer")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut elements: Option<alloc::vec::Vec<T>> = None;
+                let mut readptr: Option<usize> = None;
+                let mut writeptr: Option<usize> = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        "elements" => {
+                            if elements.is_some() {
+                                return Err(serde::de::Error::duplicate_field("elements"));
+                            }
+                            elements = Some(map.next_value()?);
+                        }
+                        "readptr" => {
+                            if readptr.is_some() {
+                                return Err(serde::de::Error::duplicate_field("readptr"));
+                            }
+                            readptr = Some(map.next_value()?);
+                        }
+                        "writeptr" => {
+                            if writeptr.is_some() {
+                                return Err(serde::de::Error::duplicate_field("writeptr"));
+                            }
+                            writeptr = Some(map.next_value()?);
+                        }
+                        _ => {
+                            return Err(serde::de::Error::unknown_field(
+                                key,
+                                &["elements", "readptr", "writeptr"],
+                            ))
+                        }
+                    }
+                }
+
+                let elements =
+                    elements.ok_or_else(|| serde::de::Error::missing_field("elements"))?;
+                let readptr = readptr.ok_or_else(|| serde::de::Error::missing_field("readptr"))?;
+                let writeptr =
+                    writeptr.ok_or_else(|| serde::de::Error::missing_field("writeptr"))?;
+
+                // Create a new ring buffer with uninitialized memory
+                let mut buf: [MaybeUninit<T>; CAP] = unsafe { MaybeUninit::uninit().assume_init() };
+
+                // Initialize elements in the buffer
+                for (idx, element) in elements.into_iter().enumerate() {
+                    buf[idx] = MaybeUninit::new(element);
+                }
+
+                Ok(ConstGenericRingBuffer {
+                    buf,
+                    readptr,
+                    writeptr,
+                })
+            }
+        }
+
+        deserializer.deserialize_struct(
+            "ConstGenericRingBuffer",
+            &["elements", "readptr", "writeptr"],
+            RingBufferVisitor(core::marker::PhantomData),
+        )
+    }
 }
 
 impl<T, const CAP: usize> From<[T; CAP]> for ConstGenericRingBuffer<T, CAP> {
@@ -495,5 +636,20 @@ mod tests {
             ConstGenericRingBuffer::<_, 3>::from(AllocRingBuffer::from(vec![1, 2, 3])).to_vec(),
             vec![1, 2, 3]
         );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serde() {
+        let a: &[i32] = &[];
+        let b = ConstGenericRingBuffer::<i32, 3>::from(a);
+        let c = serde_json::to_string(&b).unwrap();
+        let d = serde_json::from_str(&c).unwrap();
+        assert_eq!(b, d);
+        let a: &[i32] = &[1, 2, 3];
+        let b = ConstGenericRingBuffer::<i32, 3>::from(a);
+        let c = serde_json::to_string(&b).unwrap();
+        let d = serde_json::from_str(&c).unwrap();
+        assert_eq!(b, d);
     }
 }

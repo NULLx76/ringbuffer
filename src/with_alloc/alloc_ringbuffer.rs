@@ -50,6 +50,107 @@ pub struct AllocRingBuffer<T> {
     writeptr: usize,
 }
 
+#[cfg(feature = "serde")]
+impl<T> serde::Serialize for AllocRingBuffer<T>
+where
+    T: serde::Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // Similar to Vec's implementation, we only serialize the actual elements
+        // Create an iterator over the valid elements
+        let len = if self.writeptr >= self.readptr {
+            self.writeptr - self.readptr
+        } else {
+            self.size - self.readptr + self.writeptr
+        };
+
+        // Use serialize_seq like Vec does
+        use serde::ser::SerializeSeq;
+        let mut seq = serializer.serialize_seq(Some(len))?;
+
+        // If data is contiguous
+        if self.writeptr >= self.readptr {
+            for i in self.readptr..self.writeptr {
+                // SAFETY: We know the indices are valid and the data is initialized
+                unsafe {
+                    seq.serialize_element(&*self.buf.add(i))?;
+                }
+            }
+        } else {
+            // Handle wrapped data - first from readptr to end
+            for i in self.readptr..self.size {
+                unsafe {
+                    seq.serialize_element(&*self.buf.add(i))?;
+                }
+            }
+            // Then from start to writeptr
+            for i in 0..self.writeptr {
+                unsafe {
+                    seq.serialize_element(&*self.buf.add(i))?;
+                }
+            }
+        }
+
+        seq.end()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T> serde::Deserialize<'de> for AllocRingBuffer<T>
+where
+    T: serde::Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        // Use the same visitor pattern as Vec
+        struct AllocRingBufferVisitor<T>(core::marker::PhantomData<T>);
+
+        impl<'de, T> serde::de::Visitor<'de> for AllocRingBufferVisitor<T>
+        where
+            T: serde::Deserialize<'de>,
+        {
+            type Value = AllocRingBuffer<T>;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                formatter.write_str("a sequence")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                // Collect elements.
+                let mut elements = alloc::vec::Vec::new();
+                while let Some(element) = seq.next_element()? {
+                    elements.push(element);
+                }
+
+                // Now create a properly sized AllocRingBuffer
+                let mut ringbuffer = AllocRingBuffer::new(elements.len());
+
+                // Copy elements into the ringbuffer
+                unsafe {
+                    ptr::copy_nonoverlapping(elements.as_ptr(), ringbuffer.buf, elements.len());
+                }
+
+                // Update the writeptr to reflect the number of elements
+                ringbuffer.writeptr = elements.len();
+                ringbuffer.readptr = 0;
+
+                Ok(ringbuffer)
+            }
+        }
+
+        // Use seq deserializer like Vec does
+        deserializer.deserialize_seq(AllocRingBufferVisitor(core::marker::PhantomData))
+    }
+}
+
 // SAFETY: all methods that require mutable access take &mut,
 // being send and sync was the old behavior but broke when we switched to *mut T.
 unsafe impl<T: Sync> Sync for AllocRingBuffer<T> {}
@@ -473,5 +574,15 @@ mod tests {
         let buf = AllocRingBuffer::from([1, 2, 3, 4]);
         assert_eq!(buf.capacity, 4);
         assert_eq!(buf.to_vec(), alloc::vec![1, 2, 3, 4]);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serde() {
+        let a: &[i32] = &[1, 2, 3];
+        let b = AllocRingBuffer::<i32>::from(a);
+        let c = serde_json::to_string(&b).unwrap();
+        let d = serde_json::from_str(&c).unwrap();
+        assert_eq!(b, d);
     }
 }
