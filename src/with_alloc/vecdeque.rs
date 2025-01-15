@@ -8,6 +8,7 @@ use core::ops::{Deref, DerefMut, Index, IndexMut};
 ///
 /// The reason this is a wrapper, is that we want `RingBuffers` to implement `Index<isize>`,
 /// which we cannot do for remote types like `VecDeque`
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GrowableAllocRingBuffer<T>(VecDeque<T>);
 

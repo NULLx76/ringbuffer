@@ -13,14 +13,19 @@ keywords = ["ring", "cyclic", "circular", "buffer", "no-std"]
 categories = ["data-structures"]
 license = "MIT"
 
+[dependencies]
+serde = { version = "1.0.217", optional = true, features = ["derive"] }
+
 [dev-dependencies]
 criterion = "0.4.0"
 compiletest_rs = "0.10.0"
+serde_json = "1.0.135"
 
 [features]
 default = ["alloc"]
 # disable the alloc based ringbuffer, to make RingBuffers work in no_alloc environments
 alloc = []
+serde = ["alloc", "dep:serde"]
 
 [[bench]]
 name = "bench"
