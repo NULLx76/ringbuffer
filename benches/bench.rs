@@ -1,4 +1,5 @@
-#![no_coverage]
+#![feature(coverage_attribute)]
+#![coverage(off)]
 use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion};
 use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBuffer};
 
@@ -60,6 +61,16 @@ fn benchmark_various<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) 
         }
 
         rb
+    })
+}
+
+fn benchmark_skip<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
+    let mut rb = new();
+    rb.fill(9);
+    b.iter(|| {
+        for i in 0..rb.len() {
+            assert_eq!(rb.iter().skip(i).next(), Some(&9));
+        }
     })
 }
 
@@ -173,6 +184,32 @@ fn criterion_benchmark(c: &mut Criterion) {
         i32,
         new,
         benchmark_various,
+        16,
+        17,
+        1024,
+        4096,
+        8192,
+        8195
+    ];
+    generate_benches![
+        typed,
+        c,
+        ConstGenericRingBuffer,
+        i32,
+        new,
+        benchmark_skip,
+        16,
+        1024,
+        4096,
+        8192
+    ];
+    generate_benches![
+        called,
+        c,
+        AllocRingBuffer,
+        i32,
+        new,
+        benchmark_skip,
         16,
         17,
         1024,
