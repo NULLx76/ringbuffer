@@ -7,7 +7,7 @@ use crate::ringbuffer_trait::{
 extern crate alloc;
 
 // We need boxes, so depend on alloc
-use crate::{mask_and, GrowableAllocRingBuffer};
+use crate::{impl_ring_buffer_set_len, mask_and, GrowableAllocRingBuffer, SetLen};
 use core::ptr;
 
 /// The `AllocRingBuffer` is a `RingBuffer` which is based on a Vec. This means it allocates at runtime
@@ -38,7 +38,7 @@ use core::ptr;
 /// ```
 #[derive(Debug)]
 pub struct AllocRingBuffer<T> {
-    buf: *mut T,
+    pub(crate) buf: *mut T,
 
     // the size of the allocation. Next power of 2 up from the capacity
     size: usize,
@@ -367,6 +367,10 @@ impl<T> IndexMut<usize> for AllocRingBuffer<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }
+}
+
+impl<T> SetLen for AllocRingBuffer<T> {
+    impl_ring_buffer_set_len!(readptr, writeptr);
 }
 
 #[cfg(test)]

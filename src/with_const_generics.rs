@@ -1,5 +1,5 @@
 use crate::ringbuffer_trait::{RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator};
-use crate::RingBuffer;
+use crate::{impl_ring_buffer_set_len, RingBuffer, SetLen};
 use core::iter::FromIterator;
 use core::mem::MaybeUninit;
 use core::mem::{self, ManuallyDrop};
@@ -35,7 +35,7 @@ use core::ops::{Index, IndexMut};
 /// ```
 #[derive(Debug)]
 pub struct ConstGenericRingBuffer<T, const CAP: usize> {
-    buf: [MaybeUninit<T>; CAP],
+    pub(crate) buf: [MaybeUninit<T>; CAP],
     readptr: usize,
     writeptr: usize,
 }
@@ -354,6 +354,11 @@ impl<T, const CAP: usize> IndexMut<usize> for ConstGenericRingBuffer<T, CAP> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }
+}
+
+
+impl<T, const CAP: usize> SetLen for ConstGenericRingBuffer<T, CAP> {
+    impl_ring_buffer_set_len!(readptr, writeptr);
 }
 
 #[cfg(test)]
