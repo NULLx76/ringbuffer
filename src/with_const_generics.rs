@@ -356,7 +356,6 @@ impl<T, const CAP: usize> IndexMut<usize> for ConstGenericRingBuffer<T, CAP> {
     }
 }
 
-
 impl<T, const CAP: usize> SetLen for ConstGenericRingBuffer<T, CAP> {
     impl_ring_buffer_set_len!(readptr, writeptr);
 }
