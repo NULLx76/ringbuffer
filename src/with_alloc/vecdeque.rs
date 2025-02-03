@@ -255,6 +255,68 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
         }
         .map(|i| i as *mut T)
     }
+
+    unsafe fn ptr_copy_to_slice(rb: *const Self, offset: usize, dst: &mut [T])
+    where
+        T: Copy,
+    {
+        let len = Self::ptr_len(rb);
+        let dst_len = dst.len();
+        assert!(
+            (offset == 0 && len == 0) || offset < len,
+            "offset ({offset}) is out of bounds for the current buffer length ({len})"
+        );
+        assert!(len - offset == dst_len, "destination slice length ({dst_len}) doesn't match buffer length ({len}) when considering the specified offset ({offset})");
+
+        if dst_len == 0 {
+            return;
+        }
+
+        let (front, back) = (*rb).0.as_slices();
+        let first_len = front.len();
+
+        if offset < first_len {
+            let n_in_first = first_len - offset;
+            dst[..n_in_first].copy_from_slice(&front[offset..]);
+
+            if n_in_first < dst_len {
+                dst[n_in_first..].copy_from_slice(&back[..dst_len - n_in_first]);
+            }
+        } else {
+            dst.copy_from_slice(&back[offset - first_len..]);
+        }
+    }
+
+    unsafe fn ptr_copy_from_slice(rb: *mut Self, offset: usize, src: &[T])
+    where
+        T: Copy,
+    {
+        let len = Self::ptr_len(rb);
+        let src_len = src.len();
+        assert!(
+            (offset == 0 && len == 0) || offset < len,
+            "offset ({offset}) is out of bounds for the current buffer length ({len})"
+        );
+        assert!(len - offset == src_len, "source slice length ({src_len}) doesn't match buffer length ({len}) when considering the specified offset ({offset})");
+
+        if src_len == 0 {
+            return;
+        }
+
+        let (front, back) = (*rb).0.as_mut_slices();
+        let first_len = front.len();
+
+        if offset < first_len {
+            let n_in_first = first_len - offset;
+            front[offset..].copy_from_slice(&src[..n_in_first]);
+
+            if n_in_first < src_len {
+                back[..src_len - n_in_first].copy_from_slice(&src[n_in_first..]);
+            }
+        } else {
+            back[offset - first_len..].copy_from_slice(src);
+        }
+    }
 }
 
 impl<T> Extend<T> for GrowableAllocRingBuffer<T> {
