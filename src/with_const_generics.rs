@@ -189,6 +189,16 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     }
 }
 
+/// Get a const pointer to the buffer
+unsafe fn get_base_ptr<T, const N: usize>(rb: *const ConstGenericRingBuffer<T, N>) -> *const T {
+    (*rb).buf.as_ptr().cast()
+}
+
+/// Get a mut pointer to the buffer
+unsafe fn get_base_mut_ptr<T, const N: usize>(rb: *mut ConstGenericRingBuffer<T, N>) -> *mut T {
+    (*rb).buf.as_mut_ptr().cast()
+}
+
 /// Get a reference from the buffer without checking it is initialized
 /// Caller MUST be sure this index is initialized, or undefined behavior will happen
 unsafe fn get_unchecked<'a, T, const N: usize>(
@@ -305,6 +315,8 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
     }
 
     impl_ringbuffer_ext!(
+        get_base_ptr,
+        get_base_mut_ptr,
         get_unchecked,
         get_unchecked_mut,
         readptr,

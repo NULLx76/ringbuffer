@@ -274,6 +274,8 @@ unsafe impl<T> RingBuffer<T> for AllocRingBuffer<T> {
     }
 
     impl_ringbuffer_ext!(
+        get_base_ptr,
+        get_base_mut_ptr,
         get_unchecked,
         get_unchecked_mut,
         readptr,
@@ -330,6 +332,16 @@ impl<T> AllocRingBuffer<T> {
             writeptr: 0,
         }
     }
+}
+
+/// Get a const pointer to the buffer
+unsafe fn get_base_ptr<T>(rb: *const AllocRingBuffer<T>) -> *const T {
+    (*rb).buf.cast()
+}
+
+/// Get a mut pointer to the buffer
+unsafe fn get_base_mut_ptr<T>(rb: *mut AllocRingBuffer<T>) -> *mut T {
+    (*rb).buf
 }
 
 /// Get a reference from the buffer without checking it is initialized.
