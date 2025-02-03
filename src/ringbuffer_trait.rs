@@ -498,7 +498,7 @@ macro_rules! impl_ringbuffer {
 /// Implement various functions on implementors of [`RingBuffer`].
 /// This is to avoid duplicate code.
 macro_rules! impl_ringbuffer_ext {
-    ($get_unchecked: ident, $get_unchecked_mut: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
+    ($get_base_ptr: ident, $get_base_mut_ptr: ident, $get_unchecked: ident, $get_unchecked_mut: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
         #[inline]
         fn get_signed(&self, index: isize) -> Option<&T> {
             use core::ops::Not;
@@ -597,7 +597,7 @@ macro_rules! impl_ringbuffer_ext {
                 return;
             }
 
-            let base: *const T = $get_unchecked(rb, 0);
+            let base: *const T = $get_base_ptr(rb);
             let size = Self::ptr_buffer_size(rb);
             let offset_readptr = (*rb).$readptr + offset;
 
@@ -640,7 +640,7 @@ macro_rules! impl_ringbuffer_ext {
                 return;
             }
 
-            let base: *mut T = $get_unchecked_mut(rb, 0);
+            let base: *mut T = $get_base_mut_ptr(rb);
             let size = Self::ptr_buffer_size(rb);
             let offset_readptr = (*rb).$readptr + offset;
 
