@@ -18,11 +18,11 @@ jobs:
       - name: Generate code coverage
         run: cargo llvm-cov --all-features --html
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: "./target/llvm-cov/html"
       - name: Deploy to Netlify
-        uses: nwtgck/actions-netlify@v2.0
+        uses: nwtgck/actions-netlify@v3.0
         with:
           publish-dir: './target/llvm-cov/html'
           production-branch: main
