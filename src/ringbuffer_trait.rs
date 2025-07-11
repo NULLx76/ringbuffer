@@ -122,7 +122,7 @@ pub unsafe trait RingBuffer<T>:
     /// assert_eq!(rb.len(), 0);
     ///
     /// ```
-    fn drain(&mut self) -> RingBufferDrainingIterator<T, Self> {
+    fn drain(&mut self) -> RingBufferDrainingIterator<'_, T, Self> {
         RingBufferDrainingIterator::new(self)
     }
 
@@ -226,14 +226,14 @@ pub unsafe trait RingBuffer<T>:
     /// Creates a mutable iterator over the buffer starting from the item pushed the longest ago,
     /// and ending at the element most recently pushed.
     #[inline]
-    fn iter_mut(&mut self) -> RingBufferMutIterator<T, Self> {
+    fn iter_mut(&mut self) -> RingBufferMutIterator<'_, T, Self> {
         RingBufferMutIterator::new(self)
     }
 
     /// Creates an iterator over the buffer starting from the item pushed the longest ago,
     /// and ending at the element most recently pushed.
     #[inline]
-    fn iter(&self) -> RingBufferIterator<T, Self> {
+    fn iter(&self) -> RingBufferIterator<'_, T, Self> {
         RingBufferIterator::new(self)
     }
 
@@ -342,6 +342,11 @@ mod iter {
         fn size_hint(&self) -> (usize, Option<usize>) {
             (self.len, Some(self.len))
         }
+
+        fn nth(&mut self, n: usize) -> Option<Self::Item> {
+            self.index = (self.index + n).min(self.len);
+            self.next()
+        }
     }
 
     impl<'rb, T: 'rb, RB: RingBuffer<T>> FusedIterator for RingBufferIterator<'rb, T, RB> {}
@@ -358,6 +363,11 @@ mod iter {
             } else {
                 None
             }
+        }
+
+        fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+            self.len = self.len - n.min(self.len);
+            self.next_back()
         }
     }
 
@@ -401,6 +411,11 @@ mod iter {
                 None
             }
         }
+
+        fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+            self.len = self.len - n.min(self.len);
+            self.next_back()
+        }
     }
 
     impl<'rb, T, RB: RingBuffer<T> + 'rb> Iterator for RingBufferMutIterator<'rb, T, RB> {
@@ -419,6 +434,11 @@ mod iter {
 
         fn size_hint(&self) -> (usize, Option<usize>) {
             (self.len, Some(self.len))
+        }
+
+        fn nth(&mut self, n: usize) -> Option<Self::Item> {
+            self.index = (self.index + n).min(self.len);
+            self.next()
         }
     }
 
