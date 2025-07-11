@@ -1449,4 +1449,61 @@ mod tests {
         test_clone!(GrowableAllocRingBuffer::<_>::new());
         test_clone!(AllocRingBuffer::<_>::new(4));
     }
+
+    #[test]
+    fn iter_nth_override() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let rb = $rb_init([1, 2, 3, 4]);
+                assert_eq!(rb.iter().nth(0), Some(&1));
+                assert_eq!(rb.iter().nth(1), Some(&2));
+                assert_eq!(rb.iter().nth(2), Some(&3));
+                assert_eq!(rb.iter().nth(3), Some(&4));
+                assert_eq!(rb.iter().nth(4), None);
+
+                let mut rb = $rb_init([1, 2, 3, 4]);
+                assert_eq!(rb.iter_mut().nth(0), Some(&mut 1));
+                assert_eq!(rb.iter_mut().nth(1), Some(&mut 2));
+                assert_eq!(rb.iter_mut().nth(2), Some(&mut 3));
+                assert_eq!(rb.iter_mut().nth(3), Some(&mut 4));
+                assert_eq!(rb.iter_mut().nth(4), None);
+
+                let rb = $rb_init([1, 2, 3, 4]);
+                assert_eq!(rb.clone().into_iter().nth(0), Some(1));
+                assert_eq!(rb.clone().into_iter().nth(1), Some(2));
+                assert_eq!(rb.clone().into_iter().nth(2), Some(3));
+                assert_eq!(rb.clone().into_iter().nth(3), Some(4));
+                assert_eq!(rb.clone().into_iter().nth(4), None);
+            };
+        }
+
+        test_concrete!(|values: [i32; 4]| ConstGenericRingBuffer::<_, 4>::from(values));
+        test_concrete!(|values: [i32; 4]| GrowableAllocRingBuffer::<_>::from(values));
+        test_concrete!(|values: [i32; 4]| AllocRingBuffer::<_>::from(values));
+    }
+
+    #[test]
+    fn iter_nth_back_override() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let rb = $rb_init([1, 2, 3, 4]);
+                assert_eq!(rb.iter().nth_back(0), Some(&4));
+                assert_eq!(rb.iter().nth_back(1), Some(&3));
+                assert_eq!(rb.iter().nth_back(2), Some(&2));
+                assert_eq!(rb.iter().nth_back(3), Some(&1));
+                assert_eq!(rb.iter().nth_back(4), None);
+
+                let mut rb = $rb_init([1, 2, 3, 4]);
+                assert_eq!(rb.iter_mut().nth_back(0), Some(&mut 4));
+                assert_eq!(rb.iter_mut().nth_back(1), Some(&mut 3));
+                assert_eq!(rb.iter_mut().nth_back(2), Some(&mut 2));
+                assert_eq!(rb.iter_mut().nth_back(3), Some(&mut 1));
+                assert_eq!(rb.iter_mut().nth_back(4), None);
+            };
+        }
+
+        test_concrete!(|values: [i32; 4]| ConstGenericRingBuffer::<_, 4>::from(values));
+        test_concrete!(|values: [i32; 4]| GrowableAllocRingBuffer::<_>::from(values));
+        test_concrete!(|values: [i32; 4]| AllocRingBuffer::<_>::from(values));
+    }
 }
