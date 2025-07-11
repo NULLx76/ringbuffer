@@ -299,6 +299,11 @@ mod iter {
         fn size_hint(&self) -> (usize, Option<usize>) {
             (self.len, Some(self.len))
         }
+
+        fn nth(&mut self, n: usize) -> Option<Self::Item> {
+            self.index = (self.index + n).min(self.len);
+            self.next()
+        }
     }
 
     impl<'rb, T: 'rb, RB: RingBuffer<T>> FusedIterator for RingBufferIterator<'rb, T, RB> {}
@@ -315,6 +320,11 @@ mod iter {
             } else {
                 None
             }
+        }
+
+        fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+            self.len = self.len - n.min(self.len);
+            self.next_back()
         }
     }
 
@@ -358,6 +368,11 @@ mod iter {
                 None
             }
         }
+
+        fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+            self.len = self.len - n.min(self.len);
+            self.next_back()
+        }
     }
 
     impl<'rb, T, RB: RingBuffer<T> + 'rb> Iterator for RingBufferMutIterator<'rb, T, RB> {
@@ -376,6 +391,11 @@ mod iter {
 
         fn size_hint(&self) -> (usize, Option<usize>) {
             (self.len, Some(self.len))
+        }
+
+        fn nth(&mut self, n: usize) -> Option<Self::Item> {
+            self.index = (self.index + n).min(self.len);
+            self.next()
         }
     }
 
