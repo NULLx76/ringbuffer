@@ -1,5 +1,5 @@
 use crate::ringbuffer_trait::{RingBufferIntoIterator, RingBufferIterator, RingBufferMutIterator};
-use crate::RingBuffer;
+use crate::{impl_ring_buffer_set_len, RingBuffer, SetLen};
 use core::iter::FromIterator;
 use core::mem::MaybeUninit;
 use core::mem::{self, ManuallyDrop};
@@ -35,7 +35,7 @@ use core::ops::{Index, IndexMut};
 /// ```
 #[derive(Debug)]
 pub struct ConstGenericRingBuffer<T, const CAP: usize> {
-    buf: [MaybeUninit<T>; CAP],
+    pub(crate) buf: [MaybeUninit<T>; CAP],
     readptr: usize,
     writeptr: usize,
 }
@@ -189,6 +189,16 @@ impl<T, const CAP: usize> ConstGenericRingBuffer<T, CAP> {
     }
 }
 
+/// Get a const pointer to the buffer
+unsafe fn get_base_ptr<T, const N: usize>(rb: *const ConstGenericRingBuffer<T, N>) -> *const T {
+    (*rb).buf.as_ptr().cast()
+}
+
+/// Get a mut pointer to the buffer
+unsafe fn get_base_mut_ptr<T, const N: usize>(rb: *mut ConstGenericRingBuffer<T, N>) -> *mut T {
+    (*rb).buf.as_mut_ptr().cast()
+}
+
 /// Get a reference from the buffer without checking it is initialized
 /// Caller MUST be sure this index is initialized, or undefined behavior will happen
 unsafe fn get_unchecked<'a, T, const N: usize>(
@@ -305,6 +315,8 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
     }
 
     impl_ringbuffer_ext!(
+        get_base_ptr,
+        get_base_mut_ptr,
         get_unchecked,
         get_unchecked_mut,
         readptr,
@@ -354,6 +366,10 @@ impl<T, const CAP: usize> IndexMut<usize> for ConstGenericRingBuffer<T, CAP> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.get_mut(index).expect("index out of bounds")
     }
+}
+
+impl<T, const CAP: usize> SetLen for ConstGenericRingBuffer<T, CAP> {
+    impl_ring_buffer_set_len!(readptr, writeptr);
 }
 
 #[cfg(test)]

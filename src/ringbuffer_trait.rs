@@ -253,6 +253,49 @@ pub unsafe trait RingBuffer<T>:
     {
         self.iter().any(|i| i == elem)
     }
+
+    /// Efficiently copy items from the ringbuffer to a target slice.
+    ///
+    /// # Panics
+    /// Panics if the buffer length minus the offset is NOT equal to `target.len()`.
+    ///
+    /// # Safety
+    /// ONLY SAFE WHEN self is a *const to to an implementor of `RingBuffer`
+    unsafe fn ptr_copy_to_slice(rb: *const Self, offset: usize, dst: &mut [T])
+    where
+        T: Copy;
+
+    /// Efficiently copy items from the ringbuffer to a target slice.
+    ///
+    /// # Panics
+    /// Panics if the buffer length minus the offset is NOT equal to `target.len()`.
+    fn copy_to_slice(&self, offset: usize, dst: &mut [T])
+    where
+        T: Copy,
+    {
+        unsafe { Self::ptr_copy_to_slice(self, offset, dst) }
+    }
+
+    /// Efficiently copy items from a slice to the ringbuffer.
+    /// # Panics
+    /// Panics if the buffer length minus the offset is NOT equal to `source.len()`.
+    ///
+    /// # Safety
+    /// ONLY SAFE WHEN self is a *mut to to an implementor of `RingBuffer`
+    unsafe fn ptr_copy_from_slice(rb: *mut Self, offset: usize, src: &[T])
+    where
+        T: Copy;
+
+    /// Efficiently copy items from a slice to the ringbuffer.
+    ///
+    /// # Panics
+    /// Panics if the buffer length minus the offset is NOT equal to `source.len()`.
+    fn copy_from_slice(&mut self, offset: usize, src: &[T])
+    where
+        T: Copy,
+    {
+        unsafe { Self::ptr_copy_from_slice(self, offset, src) }
+    }
 }
 
 mod iter {
@@ -475,7 +518,7 @@ macro_rules! impl_ringbuffer {
 /// Implement various functions on implementors of [`RingBuffer`].
 /// This is to avoid duplicate code.
 macro_rules! impl_ringbuffer_ext {
-    ($get_unchecked: ident, $get_unchecked_mut: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
+    ($get_base_ptr: ident, $get_base_mut_ptr: ident, $get_unchecked: ident, $get_unchecked_mut: ident, $readptr: ident, $writeptr: ident, $mask: expr) => {
         #[inline]
         fn get_signed(&self, index: isize) -> Option<&T> {
             use core::ops::Not;
@@ -556,6 +599,95 @@ macro_rules! impl_ringbuffer_ext {
 
             self.$readptr = 0;
             self.$writeptr = 0;
+        }
+
+        unsafe fn ptr_copy_to_slice(rb: *const Self, offset: usize, dst: &mut [T])
+        where
+            T: Copy,
+        {
+            let len = Self::ptr_len(rb);
+            let dst_len = dst.len();
+            assert!(
+                (offset == 0 && len == 0) || offset < len,
+                "offset ({offset}) is out of bounds for the current buffer length ({len})"
+            );
+            assert!(len - offset == dst_len, "destination slice length ({dst_len}) doesn't match buffer length ({len}) when considering the specified offset ({offset})");
+
+            if dst_len == 0 {
+                return;
+            }
+
+            let base: *const T = $get_base_ptr(rb);
+            let size = Self::ptr_buffer_size(rb);
+            let offset_readptr = (*rb).$readptr + offset;
+
+            let from_idx = $mask(size, offset_readptr);
+            let to_idx = $mask(size, offset_readptr + dst_len);
+
+            if from_idx < to_idx {
+                dst.copy_from_slice(unsafe {
+                    // SAFETY: index has been modulo-ed to be within range
+                    // to be within bounds
+                    core::slice::from_raw_parts(base.add(from_idx), dst_len)
+                });
+            } else {
+                dst[..size - from_idx].copy_from_slice(unsafe {
+                    // SAFETY: index has been modulo-ed to be within range
+                    // to be within bounds
+                    core::slice::from_raw_parts(base.add(from_idx), size - from_idx)
+                });
+                dst[size - from_idx..].copy_from_slice(unsafe {
+                    // SAFETY: index has been modulo-ed to be within range
+                    // to be within bounds
+                    core::slice::from_raw_parts(base, to_idx)
+                });
+            }
+        }
+
+        unsafe fn ptr_copy_from_slice(rb: *mut Self, offset: usize, src: &[T])
+        where
+            T: Copy,
+        {
+            let len = Self::ptr_len(rb);
+            let src_len = src.len();
+            assert!(
+                (offset == 0 && len == 0) || offset < len,
+                "offset ({offset}) is out of bounds for the current buffer length ({len})"
+            );
+            assert!(len - offset == src_len, "source slice length ({src_len}) doesn't match buffer length ({len}) when considering the specified offset ({offset})");
+
+            if src_len == 0 {
+                return;
+            }
+
+            let base: *mut T = $get_base_mut_ptr(rb);
+            let size = Self::ptr_buffer_size(rb);
+            let offset_readptr = (*rb).$readptr + offset;
+
+            let from_idx = $mask(size, offset_readptr);
+            let to_idx = $mask(size, offset_readptr + src_len);
+
+            if from_idx < to_idx {
+                unsafe {
+                    // SAFETY: index has been modulo-ed to be within range
+                    // to be within bounds
+                    core::slice::from_raw_parts_mut(base.add(from_idx), src_len)
+                }
+                .copy_from_slice(src);
+            } else {
+                unsafe {
+                    // SAFETY: index has been modulo-ed to be within range
+                    // to be within bounds
+                    core::slice::from_raw_parts_mut(base.add(from_idx), size - from_idx)
+                }
+                .copy_from_slice(&src[..size - from_idx]);
+                unsafe {
+                    // SAFETY: index has been modulo-ed to be within range
+                    // to be within bounds
+                    core::slice::from_raw_parts_mut(base, to_idx)
+                }
+                .copy_from_slice(&src[size - from_idx..]);
+            }
         }
     };
 }

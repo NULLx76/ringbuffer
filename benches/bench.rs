@@ -1,7 +1,7 @@
 #![feature(coverage_attribute)]
 #![coverage(off)]
 use criterion::{black_box, criterion_group, criterion_main, Bencher, Criterion};
-use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBuffer};
+use ringbuffer::{AllocRingBuffer, ConstGenericRingBuffer, RingBuffer, SetLen};
 
 fn benchmark_push<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     b.iter(|| {
@@ -74,6 +74,89 @@ fn benchmark_skip<T: RingBuffer<i32>, F: Fn() -> T>(b: &mut Bencher, new: F) {
     })
 }
 
+fn benchmark_copy_to_slice_vs_extend<T: RingBuffer<i32>, F: Fn() -> T>(
+    rb_size: usize,
+    rb_type: &str,
+    fn_name: &str,
+    c: &mut Criterion,
+    new: F,
+) {
+    let mut group = c.benchmark_group(format!("{fn_name}({rb_type}, {rb_size})"));
+    let mut output = vec![0; rb_size];
+    group.bench_function(format!("CopyTo({rb_type}; {rb_size})"), |b| {
+        let mut rb = new();
+        rb.fill(9);
+        // making sure the read/write pointers wrap around
+        for _ in 0..rb_size / 2 {
+            let _ = rb.dequeue();
+            let _ = rb.enqueue(9);
+        }
+        b.iter(|| {
+            rb.copy_to_slice(0, &mut output);
+            assert_eq!(output[output.len() / 2], 9);
+            assert_eq!(output.len(), rb_size);
+        })
+    });
+    let mut output: Vec<i32> = Vec::with_capacity(rb_size);
+    group.bench_function(format!("ExtendVec({rb_type}; {rb_size})"), |b| {
+        let mut rb = new();
+        rb.fill(9);
+        // making sure the read/write pointers wrap around
+        for _ in 0..rb_size / 2 {
+            let _ = rb.dequeue();
+            let _ = rb.enqueue(9);
+        }
+        b.iter(|| {
+            unsafe { output.set_len(0) };
+            output.extend(rb.iter());
+            assert_eq!(output[output.len() / 2], 9);
+            assert_eq!(output.len(), rb_size);
+        })
+    });
+    group.finish();
+}
+
+fn benchmark_copy_from_slice_vs_extend<T: RingBuffer<i32> + SetLen, F: Fn() -> T>(
+    rb_size: usize,
+    rb_type: &str,
+    fn_name: &str,
+    c: &mut Criterion,
+    new: F,
+) {
+    let mut group = c.benchmark_group(format!("{fn_name}({rb_type}, {rb_size})"));
+    let input = vec![9; rb_size];
+    group.bench_function(format!("CopyFrom({rb_type}; {rb_size})"), |b| {
+        let mut rb = new();
+        rb.fill(0);
+        // making sure the read/write pointers wrap around
+        for _ in 0..rb_size / 2 {
+            let _ = rb.dequeue();
+            let _ = rb.enqueue(0);
+        }
+        for _ in 0..rb_size / 2 {}
+        b.iter(|| {
+            rb.copy_from_slice(0, &input);
+            assert_eq!(rb[rb.len() / 2], 9);
+            assert_eq!(rb.len(), rb_size);
+        })
+    });
+    group.bench_function(format!("ExtendRb({rb_type}; {rb_size})"), |b| {
+        let mut rb = new();
+        // making sure the read/write pointers wrap around
+        for _ in 0..rb_size / 2 {
+            let _ = rb.dequeue();
+            let _ = rb.enqueue(0);
+        }
+        b.iter(|| {
+            unsafe { rb.set_len(0) };
+            rb.extend(input.iter().copied());
+            assert_eq!(rb[rb.len() / 2], 9);
+            assert_eq!(rb.len(), rb_size);
+        })
+    });
+    group.finish();
+}
+
 macro_rules! generate_benches {
     (called, $c: tt, $rb: tt, $ty: tt, $fn: tt, $bmfunc: tt, $($i:tt),*) => {
         $(
@@ -95,6 +178,22 @@ macro_rules! generate_benches {
             $c.bench_function(&format!("{} {} 1M capacity {}", stringify!($rb), stringify!($bmfunc) ,stringify!($i)), |b| $bmfunc(b, || {
                 $rb::<$ty, $i>::$fn()
             }));
+        )*
+    };
+
+    (compare, $c: tt, $rb: tt, $ty: tt, $fn: tt, $bmfunc: tt, $($i:tt),*) => {
+        $(
+            $bmfunc($i, stringify!($rb), stringify!($bmfunc), $c, || {
+                $rb::<$ty>::$fn($i)
+            });
+        )*
+    };
+
+    (compare_typed, $c: tt, $rb: tt, $ty: tt, $fn: tt, $bmfunc: tt, $($i:tt),*) => {
+        $(
+            $bmfunc($i, stringify!($rb), stringify!($bmfunc), $c, || {
+                $rb::<$ty, $i>::$fn()
+            });
         )*
     };
 }
@@ -216,6 +315,119 @@ fn criterion_benchmark(c: &mut Criterion) {
         4096,
         8192,
         8195
+    ];
+    generate_benches![
+        compare,
+        c,
+        AllocRingBuffer,
+        i32,
+        new,
+        benchmark_copy_to_slice_vs_extend,
+        16,
+        1024,
+        4096,
+        8192,
+        1_000_000,
+        1_048_576
+    ];
+    generate_benches![
+        compare_typed,
+        c,
+        ConstGenericRingBuffer,
+        i32,
+        new,
+        benchmark_copy_to_slice_vs_extend,
+        16,
+        1024,
+        4096,
+        8192,
+        1_000_000,
+        1_048_576
+    ];
+    generate_benches![
+        compare,
+        c,
+        AllocRingBuffer,
+        i32,
+        new,
+        benchmark_copy_from_slice_vs_extend,
+        16,
+        1024,
+        4096,
+        8192,
+        1_000_000,
+        1_048_576
+    ];
+    generate_benches![
+        compare_typed,
+        c,
+        ConstGenericRingBuffer,
+        i32,
+        new,
+        benchmark_copy_from_slice_vs_extend,
+        16,
+        1024,
+        4096,
+        8192,
+        1_000_000,
+        1_048_576
+    ];
+
+    generate_benches![
+        compare,
+        c,
+        AllocRingBuffer,
+        i32,
+        new,
+        benchmark_copy_to_slice_vs_extend,
+        16,
+        1024,
+        4096,
+        8192,
+        1_000_000,
+        1_048_576
+    ];
+    generate_benches![
+        compare_typed,
+        c,
+        ConstGenericRingBuffer,
+        i32,
+        new,
+        benchmark_copy_to_slice_vs_extend,
+        16,
+        1024,
+        4096,
+        8192,
+        1_000_000,
+        1_048_576
+    ];
+    generate_benches![
+        compare,
+        c,
+        AllocRingBuffer,
+        i32,
+        new,
+        benchmark_copy_from_slice_vs_extend,
+        16,
+        1024,
+        4096,
+        8192,
+        1_000_000,
+        1_048_576
+    ];
+    generate_benches![
+        compare_typed,
+        c,
+        ConstGenericRingBuffer,
+        i32,
+        new,
+        benchmark_copy_from_slice_vs_extend,
+        16,
+        1024,
+        4096,
+        8192,
+        1_000_000,
+        1_048_576
     ];
 }
 
