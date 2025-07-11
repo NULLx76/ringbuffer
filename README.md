@@ -20,7 +20,7 @@ All of these ringbuffers also implement the [RingBuffer][4] trait for their shar
 [3]: https://docs.rs/ringbuffer/latest/ringbuffer/struct.ConstGenericRingBuffer.html
 [4]: https://docs.rs/ringbuffer/latest/ringbuffer/trait.RingBuffer.html
 
-MSRV: Rust 1.59
+MSRV: Rust 1.79
 
 # Usage
 
