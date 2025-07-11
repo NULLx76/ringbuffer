@@ -122,7 +122,7 @@ pub unsafe trait RingBuffer<T>:
     /// assert_eq!(rb.len(), 0);
     ///
     /// ```
-    fn drain(&mut self) -> RingBufferDrainingIterator<T, Self> {
+    fn drain(&mut self) -> RingBufferDrainingIterator<'_, T, Self> {
         RingBufferDrainingIterator::new(self)
     }
 
@@ -226,14 +226,14 @@ pub unsafe trait RingBuffer<T>:
     /// Creates a mutable iterator over the buffer starting from the item pushed the longest ago,
     /// and ending at the element most recently pushed.
     #[inline]
-    fn iter_mut(&mut self) -> RingBufferMutIterator<T, Self> {
+    fn iter_mut(&mut self) -> RingBufferMutIterator<'_, T, Self> {
         RingBufferMutIterator::new(self)
     }
 
     /// Creates an iterator over the buffer starting from the item pushed the longest ago,
     /// and ending at the element most recently pushed.
     #[inline]
-    fn iter(&self) -> RingBufferIterator<T, Self> {
+    fn iter(&self) -> RingBufferIterator<'_, T, Self> {
         RingBufferIterator::new(self)
     }
 
