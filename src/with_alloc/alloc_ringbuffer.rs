@@ -322,14 +322,10 @@ impl<T> AllocRingBuffer<T> {
     pub fn new(capacity: usize) -> Self {
         assert_ne!(capacity, 0, "Capacity must be greater than 0");
         let size = capacity
-        .checked_next_power_of_two()
-        .expect("Capacity is too large");
-        let layout = alloc::alloc::Layout::array::<T>(size)
+            .checked_next_power_of_two()
             .expect("Capacity is too large");
-        assert!(
-            layout.size() <= (1usize << 40),
-            "Capacity is too large"
-        );
+        let layout = alloc::alloc::Layout::array::<T>(size).expect("Capacity is too large");
+        assert!(layout.size() <= (1usize << 40), "Capacity is too large");
         let buf: *mut T = unsafe { alloc::alloc::alloc(layout).cast() };
         if buf.is_null() {
             alloc::alloc::handle_alloc_error(layout);
