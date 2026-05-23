@@ -1697,11 +1697,52 @@ mod tests {
     }
 
     #[test]
+    fn test_copy_from_slice_partial() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init(&[3, 2, 1]);
+                assert_eq!(rb.capacity(), 7);
+                // we have some space left
+                assert!(rb.len() < rb.capacity());
+
+                // copy preserves length
+                rb.copy_from_slice(0, &[1, 2]);
+                assert_eq!(rb.to_vec(), alloc::vec![1, 2, 1]);
+
+                let _ = rb.enqueue(4);
+                let _ = rb.enqueue(5);
+                let _ = rb.enqueue(6);
+                assert_eq!(rb.to_vec(), alloc::vec![1, 2, 1, 4, 5, 6]);
+
+                // still preserving length
+                rb.copy_from_slice(1, &[5, 4, 3, 2, 1]);
+                assert_eq!(rb.to_vec(), alloc::vec![1, 5, 4, 3, 2, 1]);
+            };
+        }
+
+        test_concrete!(|values: &[i32]| {
+            let mut rb = ConstGenericRingBuffer::<_, 7>::new();
+            rb.extend(values.iter().copied());
+            rb
+        });
+        test_concrete!(|values: &[i32]| {
+            let mut rb = GrowableAllocRingBuffer::<_>::with_capacity(7);
+            rb.extend(values.iter().copied());
+            rb
+        });
+        test_concrete!(|values: &[i32]| {
+            let mut rb = AllocRingBuffer::<_>::new(7);
+            rb.extend(values.iter().copied());
+            rb
+        });
+    }
+
+    #[test]
     fn test_copy_from_slice_empty() {
         macro_rules! test_concrete {
             ($rb_init: expr) => {
                 let mut rb = $rb_init();
-                rb.copy_from_slice(0, &[0; 0]);
+                rb.copy_from_slice(0, &[]);
                 assert_eq!(rb.to_vec(), alloc::vec![]);
             };
         }
@@ -1908,13 +1949,67 @@ mod tests {
     }
 
     #[test]
+    fn test_copy_to_slice_partial() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init(&[1, 2, 3]);
+                assert_eq!(rb.capacity(), 7);
+                // we have some space left
+                assert!(rb.len() < rb.capacity());
+
+                // copy based on length
+                let mut slice = [0; 2];
+                rb.copy_to_slice(0, &mut slice);
+                assert_eq!(slice.as_slice(), &[1, 2]);
+
+                let _ = rb.enqueue(4);
+                let _ = rb.enqueue(5);
+                let _ = rb.enqueue(6);
+                // still based on length
+                let mut slice = [0; 5];
+                rb.copy_to_slice(0, &mut slice);
+                assert_eq!(slice.as_slice(), &[1, 2, 3, 4, 5]);
+
+                // making sure the read/write ptrs have traversed the ring
+                for i in 0..6 {
+                    let _ = rb.enqueue(i + 1);
+                    let _ = rb.dequeue();
+                }
+
+                // sanity check
+                assert_eq!(rb.to_vec(), alloc::vec![1, 2, 3, 4, 5, 6]);
+                // copy again
+                let mut slice = [0; 5];
+                rb.copy_to_slice(1, &mut slice);
+                assert_eq!(slice.as_slice(), &[2, 3, 4, 5, 6]);
+            };
+        }
+
+        test_concrete!(|values: &[i32]| {
+            let mut rb = ConstGenericRingBuffer::<_, 7>::new();
+            rb.extend(values.iter().copied());
+            rb
+        });
+        test_concrete!(|values: &[i32]| {
+            let mut rb = GrowableAllocRingBuffer::<_>::with_capacity(7);
+            rb.extend(values.iter().copied());
+            rb
+        });
+        test_concrete!(|values: &[i32]| {
+            let mut rb = AllocRingBuffer::<_>::new(7);
+            rb.extend(values.iter().copied());
+            rb
+        });
+    }
+
+    #[test]
     fn test_copy_to_slice_empty() {
         macro_rules! test_concrete {
             ($rb_init: expr) => {
                 let rb = $rb_init();
                 let mut slice = [];
                 rb.copy_to_slice(0, &mut slice);
-                assert_eq!(slice.as_slice(), &[0; 0]);
+                assert_eq!(slice.as_slice(), &[]);
             };
         }
 
@@ -2058,5 +2153,305 @@ mod tests {
             }
             rb
         });
+    }
+
+    #[test]
+    fn test_extend_from_slice() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                // leave some space
+                rb.extend_from_slice(&[9; 3]);
+                assert_eq!(&rb.to_vec(), &[9; 3]);
+                // leave some space
+                rb.extend_from_slice(&[6; 5]);
+                assert_eq!(&rb.to_vec(), &[9, 9, 9, 6, 6, 6, 6, 6]);
+                // fill up remaining slots
+                rb.extend_from_slice(&[1; 2]);
+                assert_eq!(&rb.to_vec(), &[9, 9, 9, 6, 6, 6, 6, 6, 1, 1]);
+                assert!(&rb.is_full());
+                // overwrite
+                rb.extend_from_slice(&[7; 2]);
+                assert_eq!(&rb.to_vec(), &[9, 6, 6, 6, 6, 6, 1, 1, 7, 7]);
+            };
+        }
+        test_concrete!(ConstGenericRingBuffer::<i32, 10>::new);
+        test_concrete!(|| AllocRingBuffer::<i32>::new(10));
+    }
+
+    #[test]
+    fn test_extend_from_slice_after_use() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                rb.extend_from_slice(&[7, 8, 9]);
+                assert_eq!(&rb.to_vec(), &[4, 5, 6, 7, 8, 9]);
+            };
+        }
+
+        test_concrete!(|| {
+            let mut rb = ConstGenericRingBuffer::<i32, 20>::new();
+            let _ = rb.enqueue(4);
+            let _ = rb.enqueue(5);
+            let _ = rb.enqueue(6);
+            rb
+        });
+        test_concrete!(|| {
+            let mut rb = AllocRingBuffer::<i32>::new(20);
+            let _ = rb.enqueue(4);
+            let _ = rb.enqueue(5);
+            let _ = rb.enqueue(6);
+            rb
+        });
+    }
+
+    #[test]
+    fn test_extend_from_slice_fill_capacity() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                rb.extend_from_slice(&[9; 3]);
+                assert_eq!(&rb.to_vec(), &[9; 3]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 3>::new);
+        test_concrete!(|| AllocRingBuffer::<i32>::new(3));
+    }
+
+    #[test]
+    fn test_extend_from_slice_partial() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                rb.extend_from_slice(&[9; 2]);
+                assert_eq!(&rb.to_vec(), &[9, 9]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 3>::new);
+        test_concrete!(|| AllocRingBuffer::<i32>::new(3));
+    }
+
+    #[test]
+    fn test_extend_from_slice_empty() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                rb.extend_from_slice(&[]);
+                assert_eq!(&rb.to_vec(), &[]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 1>::new);
+        test_concrete!(|| GrowableAllocRingBuffer::<i32>::with_capacity(1));
+        test_concrete!(|| AllocRingBuffer::<i32>::new(1));
+    }
+
+    #[test]
+    fn test_extend_from_slice_empty_alt() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                let _ = rb.enqueue(1);
+                rb.extend_from_slice(&[]);
+                assert_eq!(&rb.to_vec(), &[1]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 1>::new);
+        test_concrete!(|| GrowableAllocRingBuffer::<i32>::with_capacity(1));
+        test_concrete!(|| AllocRingBuffer::<i32>::new(1));
+    }
+
+    #[test]
+    fn test_extend_from_slice_wrap_around() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                rb.extend_from_slice(&[1, 2, 3, 4]);
+                assert_eq!(&rb.to_vec(), &[4]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 1>::new);
+        test_concrete!(|| AllocRingBuffer::<i32>::new(1));
+    }
+
+    #[test]
+    fn test_extend_from_slice_wrap_around_overwriting() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                rb.extend_from_slice(&[1, 2, 3, 4]);
+                rb.extend_from_slice(&[5, 6, 7, 8]);
+                assert_eq!(&rb.to_vec(), &[5, 6, 7, 8]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 4>::new);
+        test_concrete!(|| AllocRingBuffer::<i32>::new(4));
+    }
+
+    #[test]
+    fn test_extend_from_slice_wrap_around_partially_overwriting() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                rb.extend_from_slice(&[1, 2, 3, 4]);
+                rb.extend_from_slice(&[5, 6]);
+                assert_eq!(&rb.to_vec(), &[3, 4, 5, 6]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 4>::new);
+        test_concrete!(|| AllocRingBuffer::<i32>::new(4));
+    }
+
+    #[test]
+    fn test_extend_from_slice_longer_than_capacity() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                rb.extend_from_slice(&[1, 2, 3, 4, 6, 7, 8, 9, 10]);
+                assert_eq!(&rb.to_vec(), &[7, 8, 9, 10]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 4>::new);
+        test_concrete!(|| AllocRingBuffer::<i32>::new(4));
+    }
+
+    #[test]
+    fn test_drain_to_slice_fill_capacity() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                rb.extend_from_slice(&[9; 3]);
+                let mut slice = [0; 3];
+                rb.drain_to_slice(&mut slice);
+                assert_eq!(&slice, &[9; 3]);
+                rb.extend_from_slice(&[1, 2, 3]);
+                rb.drain_to_slice(&mut slice);
+                assert_eq!(&slice, &[1, 2, 3]);
+                assert_eq!(&rb.to_vec(), &[]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 3>::new);
+        test_concrete!(|| GrowableAllocRingBuffer::<i32>::with_capacity(3));
+        test_concrete!(|| AllocRingBuffer::<i32>::new(3));
+    }
+
+    #[test]
+    fn test_drain_to_slice_partial() {
+        macro_rules! test_concrete {
+            ($rb_init: expr, $growable: expr) => {
+                let mut rb = $rb_init();
+                rb.extend_from_slice(&[9; 3]);
+                let mut slice = [0; 2];
+                rb.drain_to_slice(&mut slice);
+                assert_eq!(&slice, &[9; 2]);
+                rb.extend_from_slice(&[1, 2, 3]);
+                rb.drain_to_slice(&mut slice);
+                if $growable {
+                    assert_eq!(&slice, &[9, 1]);
+                    assert_eq!(&rb.to_vec(), &[2, 3]);
+                } else {
+                    assert_eq!(&slice, &[1, 2]);
+                    assert_eq!(&rb.to_vec(), &[3]);
+                }
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 3>::new, false);
+        test_concrete!(|| GrowableAllocRingBuffer::<i32>::with_capacity(3), true);
+        test_concrete!(|| AllocRingBuffer::<i32>::new(3), false);
+    }
+
+    #[test]
+    fn test_drain_to_slice_empty() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                let mut slice = [];
+                rb.drain_to_slice(&mut slice);
+                assert_eq!(&slice, &[]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 1>::new);
+        test_concrete!(|| GrowableAllocRingBuffer::<i32>::with_capacity(1));
+        test_concrete!(|| AllocRingBuffer::<i32>::new(1));
+    }
+
+    #[test]
+    fn test_drain_to_slice_empty_alt() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                let _ = rb.enqueue(1);
+                let mut slice = [];
+                rb.drain_to_slice(&mut slice);
+                assert_eq!(&slice, &[]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 1>::new);
+        test_concrete!(|| GrowableAllocRingBuffer::<i32>::with_capacity(1));
+        test_concrete!(|| AllocRingBuffer::<i32>::new(1));
+    }
+
+    #[test]
+    fn test_drain_to_slice_wrap_around() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                rb.extend_from_slice(&[1, 2, 3]);
+                rb.extend_from_slice(&[4, 5, 6]);
+                let mut slice = [0; 4];
+                rb.drain_to_slice(&mut slice);
+                assert_eq!(&slice, &[3, 4, 5, 6]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 4>::new);
+        test_concrete!(|| AllocRingBuffer::<i32>::new(4));
+    }
+
+    #[test]
+    fn test_drain_to_slice_wrap_around_overwrite() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                rb.extend_from_slice(&[1, 2, 3, 4]);
+                rb.extend_from_slice(&[5, 6, 7, 8]);
+                let mut slice = [0; 4];
+                rb.drain_to_slice(&mut slice);
+                assert_eq!(&slice, &[5, 6, 7, 8]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 4>::new);
+        test_concrete!(|| AllocRingBuffer::<i32>::new(4));
+    }
+
+    #[test]
+    fn test_drain_to_slice_longer_than_len() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let mut rb = $rb_init();
+                let mut slice = [0; 10];
+                rb.drain_to_slice(&mut slice);
+                assert_eq!(slice, [0; 10]);
+                rb.extend_from_slice(&[1, 2]);
+                rb.drain_to_slice(&mut slice);
+                assert_eq!(slice, [1, 2, 0, 0, 0, 0, 0, 0, 0, 0]);
+            };
+        }
+
+        test_concrete!(ConstGenericRingBuffer::<i32, 4>::new);
+        test_concrete!(|| GrowableAllocRingBuffer::<i32>::with_capacity(4));
+        test_concrete!(|| AllocRingBuffer::<i32>::new(4));
     }
 }

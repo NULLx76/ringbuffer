@@ -257,7 +257,7 @@ pub unsafe trait RingBuffer<T>:
     /// Efficiently copy items from the ringbuffer to a target slice.
     ///
     /// # Panics
-    /// Panics if the buffer length minus the offset is NOT equal to `target.len()`.
+    /// Panics if the buffer length minus the offset is smaller than `dst.len()`.
     ///
     /// # Safety
     /// ONLY SAFE WHEN self is a *const to to an implementor of `RingBuffer`
@@ -268,7 +268,7 @@ pub unsafe trait RingBuffer<T>:
     /// Efficiently copy items from the ringbuffer to a target slice.
     ///
     /// # Panics
-    /// Panics if the buffer length minus the offset is NOT equal to `target.len()`.
+    /// Panics if the buffer length minus the offset is smaller than `dst.len()`.
     fn copy_to_slice(&self, offset: usize, dst: &mut [T])
     where
         T: Copy,
@@ -277,8 +277,9 @@ pub unsafe trait RingBuffer<T>:
     }
 
     /// Efficiently copy items from a slice to the ringbuffer.
+    ///
     /// # Panics
-    /// Panics if the buffer length minus the offset is NOT equal to `source.len()`.
+    /// Panics if the buffer length minus the offset is smaller than `src.len()`.
     ///
     /// # Safety
     /// ONLY SAFE WHEN self is a *mut to to an implementor of `RingBuffer`
@@ -289,12 +290,83 @@ pub unsafe trait RingBuffer<T>:
     /// Efficiently copy items from a slice to the ringbuffer.
     ///
     /// # Panics
-    /// Panics if the buffer length minus the offset is NOT equal to `source.len()`.
+    /// Panics if the buffer length minus the offset is smaller than `src.len()`.
     fn copy_from_slice(&mut self, offset: usize, src: &[T])
     where
         T: Copy,
     {
         unsafe { Self::ptr_copy_from_slice(self, offset, src) }
+    }
+
+    /// Efficiently extend the ringbuffer with the content of a slice.
+    ///
+    /// Note: the semantics of this method are the same as `.extend`,
+    /// thus the slice can be longer than the capacity of the ringbuffer.
+    ///
+    /// # Safety
+    /// ONLY SAFE WHEN self is a *mut to to an implementor of `RingBuffer`
+    unsafe fn ptr_extend_from_slice(rb: *mut Self, src: &[T])
+    where
+        T: Copy;
+
+    /// Efficiently extend the ringbuffer with the content of a slice.
+    ///
+    /// Note: the semantics of this method are the same as `.extend`,
+    /// thus the slice can be longer than the capacity of the ringbuffer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ringbuffer::AllocRingBuffer;
+    /// use crate::ringbuffer::RingBuffer;
+    ///
+    /// let mut rb = AllocRingBuffer::with_capacity(4);
+    /// rb.extend_from_slice(&[1, 2, 3]);
+    /// assert_eq!(&rb.to_vec(), &[1, 2, 3]);
+    /// rb.extend_from_slice(&[4, 5, 6]);
+    /// assert_eq!(&rb.to_vec(), &[3, 4, 5, 6]);
+    ///
+    /// let mut rb = AllocRingBuffer::with_capacity(4);
+    /// rb.extend_from_slice(&[1, 2, 3, 4, 5, 6, 7, 8]);
+    /// assert_eq!(&rb.to_vec(), &[5, 6, 7, 8]);
+    /// ```
+    fn extend_from_slice(&mut self, src: &[T])
+    where
+        T: Copy,
+    {
+        unsafe { Self::ptr_extend_from_slice(self, src) }
+    }
+
+    /// Efficiently drain the ringbuffer, transferring items to a slice.
+    ///
+    /// # Safety
+    /// ONLY SAFE WHEN self is a *mut to to an implementor of `RingBuffer`
+    unsafe fn ptr_drain_to_slice(rb: *mut Self, dst: &mut [T])
+    where
+        T: Copy;
+
+    /// Efficiently drain the ringbuffer, transferring items to a slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ringbuffer::AllocRingBuffer;
+    /// use crate::ringbuffer::RingBuffer;
+    ///
+    /// let mut slice = vec![0; 3];
+    /// let mut rb = AllocRingBuffer::from([1, 2, 3, 4]);
+    /// rb.drain_to_slice(&mut slice);
+    /// assert_eq!(&slice, &[1, 2, 3]);
+    /// assert_eq!(&rb.to_vec(), &[4]);
+    /// rb.drain_to_slice(&mut slice[..1]);
+    /// assert_eq!(&slice, &[4, 2, 3]);
+    /// assert_eq!(&rb.to_vec(), &[]);
+    /// ```
+    fn drain_to_slice(&mut self, dst: &mut [T])
+    where
+        T: Copy,
+    {
+        unsafe { Self::ptr_drain_to_slice(self, dst) }
     }
 }
 
@@ -608,10 +680,10 @@ macro_rules! impl_ringbuffer_ext {
             let len = Self::ptr_len(rb);
             let dst_len = dst.len();
             assert!(
-                (offset == 0 && len == 0) || offset < len,
+                offset < len || (offset == len && dst_len == 0),
                 "offset ({offset}) is out of bounds for the current buffer length ({len})"
             );
-            assert!(len - offset == dst_len, "destination slice length ({dst_len}) doesn't match buffer length ({len}) when considering the specified offset ({offset})");
+            assert!(len - offset >= dst_len, "destination slice length ({dst_len}) greater than buffer length ({len}) when considering the specified offset ({offset})");
 
             if dst_len == 0 {
                 return;
@@ -651,10 +723,10 @@ macro_rules! impl_ringbuffer_ext {
             let len = Self::ptr_len(rb);
             let src_len = src.len();
             assert!(
-                (offset == 0 && len == 0) || offset < len,
+                offset < len || (offset == len && src_len == 0),
                 "offset ({offset}) is out of bounds for the current buffer length ({len})"
             );
-            assert!(len - offset == src_len, "source slice length ({src_len}) doesn't match buffer length ({len}) when considering the specified offset ({offset})");
+            assert!(len - offset >= src_len, "source slice length ({src_len}) greater than buffer length ({len}) when considering the specified offset ({offset})");
 
             if src_len == 0 {
                 return;
@@ -688,6 +760,31 @@ macro_rules! impl_ringbuffer_ext {
                 }
                 .copy_from_slice(&src[size - from_idx..]);
             }
+        }
+
+        unsafe fn ptr_extend_from_slice(rb: *mut Self, src: &[T])
+        where
+            T: Copy,
+        {
+            let len = Self::ptr_len(rb);
+            let capacity = Self::ptr_capacity(rb);
+            (*rb).$writeptr += src.len();
+            (*rb).$readptr = (*rb).$writeptr - (len + src.len()).min(capacity);
+            let final_len = Self::ptr_len(rb);
+
+            let src_offset = src.len().saturating_sub(capacity);
+            Self::ptr_copy_from_slice(rb, final_len - (src.len() - src_offset), &src[src_offset..]);
+        }
+
+        unsafe fn ptr_drain_to_slice(rb: *mut Self, dst: &mut [T])
+        where
+            T: Copy,
+        {
+            let len = Self::ptr_len(rb);
+            let truncated_dst_len = dst.len().min(len);
+            Self::ptr_copy_to_slice(rb, 0, &mut dst[..truncated_dst_len]);
+
+            (*rb).$readptr += truncated_dst_len;
         }
     };
 }

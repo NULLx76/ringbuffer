@@ -263,10 +263,10 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
         let len = Self::ptr_len(rb);
         let dst_len = dst.len();
         assert!(
-            (offset == 0 && len == 0) || offset < len,
+            offset < len || (offset == len && dst_len == 0),
             "offset ({offset}) is out of bounds for the current buffer length ({len})"
         );
-        assert!(len - offset == dst_len, "destination slice length ({dst_len}) doesn't match buffer length ({len}) when considering the specified offset ({offset})");
+        assert!(len - offset >= dst_len, "destination slice length ({dst_len}) greater than buffer length ({len}) when considering the specified offset ({offset})");
 
         if dst_len == 0 {
             return;
@@ -277,13 +277,14 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
 
         if offset < first_len {
             let n_in_first = first_len - offset;
-            dst[..n_in_first].copy_from_slice(&front[offset..]);
+            dst[..n_in_first.min(dst_len)]
+                .copy_from_slice(&front[offset..][..n_in_first.min(dst_len)]);
 
             if n_in_first < dst_len {
                 dst[n_in_first..].copy_from_slice(&back[..dst_len - n_in_first]);
             }
         } else {
-            dst.copy_from_slice(&back[offset - first_len..]);
+            dst.copy_from_slice(&back[offset - first_len..][..dst_len]);
         }
     }
 
@@ -294,10 +295,10 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
         let len = Self::ptr_len(rb);
         let src_len = src.len();
         assert!(
-            (offset == 0 && len == 0) || offset < len,
+            offset < len || (offset == len && src_len == 0),
             "offset ({offset}) is out of bounds for the current buffer length ({len})"
         );
-        assert!(len - offset == src_len, "source slice length ({src_len}) doesn't match buffer length ({len}) when considering the specified offset ({offset})");
+        assert!(len - offset >= src_len, "source slice length ({src_len}) greater than buffer length ({len}) when considering the specified offset ({offset})");
 
         if src_len == 0 {
             return;
@@ -308,14 +309,36 @@ unsafe impl<T> RingBuffer<T> for GrowableAllocRingBuffer<T> {
 
         if offset < first_len {
             let n_in_first = first_len - offset;
-            front[offset..].copy_from_slice(&src[..n_in_first]);
+            front[offset..][..n_in_first.min(src_len)]
+                .copy_from_slice(&src[..n_in_first.min(src_len)]);
 
             if n_in_first < src_len {
                 back[..src_len - n_in_first].copy_from_slice(&src[n_in_first..]);
             }
         } else {
-            back[offset - first_len..].copy_from_slice(src);
+            back[offset - first_len..][..src_len].copy_from_slice(src);
         }
+    }
+
+    unsafe fn ptr_extend_from_slice(rb: *mut Self, src: &[T])
+    where
+        T: Copy,
+    {
+        (*rb).0.extend(src.iter());
+    }
+
+    unsafe fn ptr_drain_to_slice(rb: *mut Self, dst: &mut [T])
+    where
+        T: Copy,
+    {
+        let len = Self::ptr_len(rb);
+        let truncated_dst_len = dst.len().min(len);
+
+        dst.iter_mut()
+            .zip((*rb).0.drain(0..truncated_dst_len))
+            .for_each(|(dst, src)| {
+                *dst = src;
+            });
     }
 }
 
