@@ -306,7 +306,7 @@ impl<T> AllocRingBuffer<T> {
     }
 
     #[inline]
-    /// Alias of [`with_capacity`](AllocRingBuffer::new).
+    /// Alias of [`new`](AllocRingBuffer::new).
     #[must_use]
     #[deprecated = "alias of new"]
     pub fn with_capacity(cap: usize) -> Self {
