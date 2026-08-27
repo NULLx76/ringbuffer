@@ -328,8 +328,12 @@ unsafe impl<T, const CAP: usize> RingBuffer<T> for ConstGenericRingBuffer<T, CAP
     fn fill_with<F: FnMut() -> T>(&mut self, mut f: F) {
         self.clear();
         self.readptr = 0;
-        self.writeptr = CAP;
-        self.buf.fill_with(|| MaybeUninit::new(f()));
+        self.writeptr = 0;
+
+        for i in 0..CAP {
+            self.buf[i] = MaybeUninit::new(f());
+            self.writeptr = i + 1;
+        }
     }
 }
 

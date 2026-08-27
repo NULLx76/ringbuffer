@@ -288,10 +288,14 @@ unsafe impl<T> RingBuffer<T> for AllocRingBuffer<T> {
         self.clear();
 
         self.readptr = 0;
-        self.writeptr = self.capacity;
+        self.writeptr = 0;
 
         for i in 0..self.capacity {
             unsafe { ptr::write(get_unchecked_mut(self, i), f()) };
+            // Commit each slot as it is written. If `f` panics, `writeptr` then
+            // covers only the slots that were actually initialised, instead of
+            // claiming the whole buffer is live.
+            self.writeptr = i + 1;
         }
     }
 }
