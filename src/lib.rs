@@ -2059,4 +2059,48 @@ mod tests {
             rb
         });
     }
+
+    #[test]
+    fn run_test_fill_with_panicking_closure() {
+        //! A panic in the filler must not leave the buffer claiming slots that
+        //! were never written.
+
+        use core::cell::Cell;
+        use std::panic::{catch_unwind, AssertUnwindSafe};
+
+        const capacity: usize = 8;
+
+        fn test_fill_with(mut b: impl RingBuffer<Vec<u8>>) {
+            let calls = Cell::new(0);
+
+            let r = catch_unwind(AssertUnwindSafe(|| {
+                b.fill_with(|| {
+                    let n = calls.get();
+                    calls.set(n + 1);
+                    if n == 3 {
+                        panic!("filler panics");
+                    }
+                    vec![0xAA; 20]
+                });
+            }));
+            assert!(r.is_err(), "the filler should have panicked");
+
+            // Only the slots the filler actually reached are initialised, so the
+            // buffer must not report more than that.
+            assert!(
+                b.len() <= 3,
+                "buffer reports {} live slots but only 3 were written",
+                b.len()
+            );
+
+            // Reading and dropping must not touch an uninitialised slot.
+            while let Some(v) = b.dequeue() {
+                assert_eq!(v.len(), 20);
+            }
+        }
+
+        test_fill_with(AllocRingBuffer::new(capacity));
+        test_fill_with(ConstGenericRingBuffer::<Vec<u8>, capacity>::new());
+        test_fill_with(GrowableAllocRingBuffer::with_capacity(capacity));
+    }
 }
