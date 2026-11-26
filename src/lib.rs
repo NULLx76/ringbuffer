@@ -1511,6 +1511,47 @@ mod tests {
     }
 
     #[test]
+    fn iter_len_after_next() {
+        macro_rules! test_concrete {
+            ($rb_init: expr) => {
+                let rb = $rb_init([1, 2, 3, 4]);
+                let mut it = rb.iter();
+                assert_eq!(it.len(), 4);
+                let _ = it.next();
+                assert_eq!(it.len(), 3);
+                let _ = it.next_back();
+                assert_eq!(it.len(), 2);
+                let _ = it.nth(1);
+                assert_eq!(it.len(), 0);
+
+                let mut it = rb.iter();
+                let _ = it.nth(1);
+                let _ = it.nth_back(3);
+                assert_eq!(it.len(), 0);
+
+                let mut rb = $rb_init([1, 2, 3, 4]);
+                let mut it = rb.iter_mut();
+                assert_eq!(it.len(), 4);
+                let _ = it.next();
+                assert_eq!(it.len(), 3);
+                let _ = it.next_back();
+                assert_eq!(it.len(), 2);
+                let _ = it.nth(1);
+                assert_eq!(it.len(), 0);
+
+                let mut it = rb.iter_mut();
+                let _ = it.nth(1);
+                let _ = it.nth_back(3);
+                assert_eq!(it.len(), 0);
+            };
+        }
+
+        test_concrete!(|values: [i32; 4]| ConstGenericRingBuffer::<_, 4>::from(values));
+        test_concrete!(|values: [i32; 4]| GrowableAllocRingBuffer::<_>::from(values));
+        test_concrete!(|values: [i32; 4]| AllocRingBuffer::<_>::from(values));
+    }
+
+    #[test]
     fn test_copy_from_slice_power_of_two() {
         macro_rules! test_concrete {
             ($rb_init: expr) => {
