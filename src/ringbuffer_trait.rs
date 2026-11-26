@@ -340,7 +340,8 @@ mod iter {
         }
 
         fn size_hint(&self) -> (usize, Option<usize>) {
-            (self.len, Some(self.len))
+            let remaining = self.len.saturating_sub(self.index);
+            (remaining, Some(remaining))
         }
 
         fn nth(&mut self, n: usize) -> Option<Self::Item> {
@@ -433,7 +434,8 @@ mod iter {
         }
 
         fn size_hint(&self) -> (usize, Option<usize>) {
-            (self.len, Some(self.len))
+            let remaining = self.len.saturating_sub(self.index);
+            (remaining, Some(remaining))
         }
 
         fn nth(&mut self, n: usize) -> Option<Self::Item> {
